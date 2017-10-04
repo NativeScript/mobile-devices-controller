@@ -1,6 +1,10 @@
+!**/*.d.ts
+
 **/*.map
 **/*.ts
-!**/*.d.ts
+**/*.tgz
 node_modules
 .vscode
-**/*.tgz
+.git
+.gitignore
+.tsconfig.json
