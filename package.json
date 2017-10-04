@@ -1,6 +1,6 @@
 {
   "name": "mobile-devices-controller",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Manage simulators, emulators and devices",
   "main": "index.js",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SvetoslavTsenov/mobile-devices-controller.git"
+    "url": "git+https://github.com/NativeScript/mobile-devices-controller.git"
   },
   "keywords": [
     "simulator",
@@ -19,12 +19,11 @@
   "author": "SvetoslavTsenov",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/SvetoslavTsenov/mobile-devices-controller/issues"
+    "url": "https://github.com/NativeScript/mobile-devices-controller/issues"
   },
-  "homepage": "https://github.com/SvetoslavTsenov/mobile-devices-controller#readme",
+  "homepage": "https://github.com/NativeScript/mobile-devices-controller#readme",
   "devDependencies": {
     "@types/node": "^8.0.31",
     "typescript": "^2.5.3"
-  },
-  "dependencies": {}
+  }
 }
