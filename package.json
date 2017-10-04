@@ -1,0 +1,30 @@
+{
+  "name": "mobile-devices-controller",
+  "version": "0.0.1",
+  "description": "Manage simulators, emulators and devices",
+  "main": "index.js",
+  "scripts": {
+    "compile": "tsc",
+    "compile-w": "tsc -watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SvetoslavTsenov/mobile-devices-controller.git"
+  },
+  "keywords": [
+    "simulator",
+    "emulator"
+  ],
+  "author": "SvetoslavTsenov",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SvetoslavTsenov/mobile-devices-controller/issues"
+  },
+  "homepage": "https://github.com/SvetoslavTsenov/mobile-devices-controller#readme",
+  "devDependencies": {
+    "@types/node": "^8.0.31",
+    "typescript": "^2.5.3"
+  },
+  "dependencies": {}
+}
