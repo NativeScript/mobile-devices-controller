@@ -9,6 +9,8 @@ export declare class AndroidManager {
     private static _emulatorIds;
     static getAllDevices(): Map<string, IDevice[]>;
     static startEmulator(emulator: IDevice, options?: any): Promise<IDevice>;
+    static getPhysicalDensity(token: string): number;
+    static getPixelsOffset(token: string): number;
     /**
      * Implement kill process
      * @param emulator

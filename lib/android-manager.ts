@@ -4,6 +4,8 @@ import { resolve } from "path";
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
 
+const OFFSET_DI_PIXELS = 16;
+
 export class AndroidManager {
     private static ANDROID_HOME = process.env["ANDROID_HOME"];
     private static EMULATOR = resolve(AndroidManager.ANDROID_HOME, DeviceType.EMULATOR, DeviceType.EMULATOR);
@@ -33,9 +35,22 @@ export class AndroidManager {
             emulator.startedAt = Date.now();
         }
 
+        const density = AndroidManager.getPhysicalDensity(emulator.token);
+        const offsetPixels = AndroidManager.getPixelsOffset(emulator.token);
+        emulator.config = {
+            density: density,
+            offsetPixels: offsetPixels,
+        };
         return emulator;
     }
 
+    public static getPhysicalDensity(token: string) {
+        return parseInt(executeCommand(AndroidManager.ADB + " -s emulator-" + token + " shell wm density").split(":")[1]) * 0.01;
+    }
+
+    public static getPixelsOffset(token: string) {
+        return Math.floor(OFFSET_DI_PIXELS * AndroidManager.getPhysicalDensity(token));
+    }
     /**
      * Implement kill process
      * @param emulator 
@@ -128,12 +143,12 @@ export class AndroidManager {
         const emulators: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>();
         executeCommand(AndroidManager.LIST_AVDS).split("-----").forEach(dev => {
             if (dev.toLowerCase().includes("available android")) {
-            } else {
-                const emu = AndroidManager.parseAvdAsEmulator(dev);
-                if (!emulators.has(emu.name)) {
-                    emulators.set(emu.name, new Array<IDevice>());
-                    emulators.get(emu.name).push(emu);
-                }
+                dev = dev.replace("available android", "").trim();
+            }
+            const emu = AndroidManager.parseAvdAsEmulator(dev);
+            if (!emulators.has(emu.name)) {
+                emulators.set(emu.name, new Array<IDevice>());
+                emulators.get(emu.name).push(emu);
             }
         });
 
@@ -172,7 +187,6 @@ export class AndroidManager {
         });
 
         const emulator = new AndroidDevice(name, apiLevel, DeviceType.EMULATOR, undefined, "shutdown");
-
         return emulator;
     }
 }

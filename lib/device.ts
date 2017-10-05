@@ -9,14 +9,14 @@ export interface IDevice {
   procPid?: number,
   apiLevel?: string,
   info?: string,
-  config?: string
+  config?: any,
 }
 
 export class Device implements IDevice {
   private _startedAt?: number;
   private _busySince?: number;
   private _info?: string;
-  private _config?: string;
+  private _config?: any;
 
   constructor(private _name: string, private _apiLevel: string, private _type: "emulator" | "simulator" | "device", private _platform: "android" | "ios", private _token: string, private _status: "free" | "busy" | "shutdown" | "booted", private _procPid?) {
     this._startedAt = -1;

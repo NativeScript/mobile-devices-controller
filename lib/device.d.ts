@@ -9,7 +9,7 @@ export interface IDevice {
     procPid?: number;
     apiLevel?: string;
     info?: string;
-    config?: string;
+    config?: any;
 }
 export declare class Device implements IDevice {
     private _name;
@@ -34,14 +34,14 @@ export declare class Device implements IDevice {
     startedAt: number;
     busySince: number;
     info: string;
-    config: string;
+    config: any;
     toJson(): {
         name: string;
         token: string;
         type: "emulator" | "simulator" | "device";
         platform: "android" | "ios";
         info: string;
-        config: string;
+        config: any;
         status: "booted" | "free" | "busy" | "shutdown";
         startedAt: number;
         procPid: any;
