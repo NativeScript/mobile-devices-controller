@@ -1,9 +1,10 @@
+import { Status, DeviceType, Platform } from "./enums";
 export interface IDevice {
     name: string;
     token: string;
-    type: string;
-    platform: string;
-    status?: string;
+    type: DeviceType;
+    platform: Platform;
+    status?: Status;
     startedAt?: number;
     busySince?: number;
     procPid?: number;
@@ -23,14 +24,14 @@ export declare class Device implements IDevice {
     private _busySince?;
     private _info?;
     private _config?;
-    constructor(_name: string, _apiLevel: string, _type: "emulator" | "simulator" | "device", _platform: "android" | "ios", _token: string, _status: "free" | "busy" | "shutdown" | "booted", _procPid?: any);
+    constructor(_name: string, _apiLevel: string, _type: DeviceType, _platform: Platform, _token: string, _status: Status, _procPid?: any);
     name: string;
     apiLevel: string;
     token: string;
-    type: "emulator" | "simulator" | "device";
-    platform: "android" | "ios";
+    type: DeviceType;
+    platform: Platform;
     procPid: any;
-    status: "booted" | "free" | "busy" | "shutdown";
+    status: Status;
     startedAt: number;
     busySince: number;
     info: string;
@@ -38,11 +39,11 @@ export declare class Device implements IDevice {
     toJson(): {
         name: string;
         token: string;
-        type: "emulator" | "simulator" | "device";
-        platform: "android" | "ios";
+        type: DeviceType;
+        platform: Platform;
         info: string;
         config: any;
-        status: "booted" | "free" | "busy" | "shutdown";
+        status: Status;
         startedAt: number;
         procPid: any;
         apiLevel: string;

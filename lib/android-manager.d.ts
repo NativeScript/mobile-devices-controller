@@ -1,3 +1,4 @@
+import { DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
 export declare class AndroidManager {
     private static ANDROID_HOME;
@@ -23,11 +24,15 @@ export declare class AndroidManager {
     private static waitUntilEmulatorBoot(deviceId, timeOut);
     private static checkIfEmulatorIsRunning(token);
     static emulatorId(platformVersion: any): string;
+    static restartDevice(device: IDevice): Promise<IDevice>;
     private static startEmulatorProcess(emulator, options);
     private static loadEmulatorsIds();
-    private static parseEmulators();
-    private static parseAvdAsEmulator(args);
+    private static parseEmulators(runningDevices, emulators?);
+    private static checkTelnetReport(avdInfo);
+    private static parseRunningDevicesList();
+    private static parseRealDevices(runningDevices, devices?);
+    private static parseAvdInfoToAndroidDevice(args);
 }
 export declare class AndroidDevice extends Device {
-    constructor(name: string, apiLevel: any, type: "emulator" | "device", token?: string, status?: "free" | "busy" | "shutdown" | "booted", procPid?: number);
+    constructor(name: string, apiLevel: any, type: DeviceType, token?: string, status?: Status, procPid?: number);
 }

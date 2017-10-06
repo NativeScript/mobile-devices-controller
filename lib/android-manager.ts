@@ -1,27 +1,30 @@
 import * as child_process from "child_process";
+import { Platform, DeviceType, Status } from "./enums";
+import { IDevice, Device } from "./device";
 import { waitForOutput, executeCommand } from "./utils";
 import { resolve } from "path";
-import { IDevice, Device } from "./device";
-import { Platform, DeviceType, Status } from "./enums";
 
 const OFFSET_DI_PIXELS = 16;
 
 export class AndroidManager {
     private static ANDROID_HOME = process.env["ANDROID_HOME"];
-    private static EMULATOR = resolve(AndroidManager.ANDROID_HOME, DeviceType.EMULATOR, DeviceType.EMULATOR);
+    private static EMULATOR = resolve(AndroidManager.ANDROID_HOME, "emulator", "emulator");
     private static ADB = resolve(AndroidManager.ANDROID_HOME, "platform-tools", "adb");
-    private static LIST_DEVICES_COMMAND = AndroidManager.ADB + " devices";
+    private static LIST_DEVICES_COMMAND = AndroidManager.ADB + " devices -l";
     private static AVD_MANAGER = resolve(AndroidManager.ANDROID_HOME, "tools", "bin", "avdmanager");
     private static LIST_AVDS = AndroidManager.AVD_MANAGER + " list avd";
     private static _emulatorIds: Map<string, string> = new Map();
 
     public static getAllDevices() {
+        const runningDevices = AndroidManager.parseRunningDevicesList();
         if (AndroidManager._emulatorIds.size === 0) {
             AndroidManager.loadEmulatorsIds();
         }
-        const emulators = AndroidManager.parseEmulators();
+        const devices: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>();
+        AndroidManager.parseEmulators(runningDevices, devices);
+        AndroidManager.parseRealDevices(runningDevices, devices);
 
-        return emulators;
+        return devices;
     }
 
     public static async startEmulator(emulator: IDevice, options?) {
@@ -66,6 +69,9 @@ export class AndroidManager {
                 } catch (error) {
                 }
             }
+
+            emulator.status = Status.SHUTDOWN;
+            emulator.procPid = undefined;
         }
     }
 
@@ -113,8 +119,20 @@ export class AndroidManager {
         return AndroidManager._emulatorIds.get(platformVersion);
     }
 
+    public static async restartDevice(device: IDevice) {
+        if (device.type === DeviceType.EMULATOR) {
+            AndroidManager.kill(device);
+            AndroidManager.startEmulator(device);
+        } else {
+
+        }
+
+        return device;
+    }
+
     private static async startEmulatorProcess(emulator, options) {
-        const process = child_process.spawn(AndroidManager.EMULATOR,
+        const process = child_process.spawn
+            (AndroidManager.EMULATOR,
             [" -avd ", emulator.name, "-port ", emulator.token, options || " -wipe-data"], {
                 shell: true,
                 detached: false
@@ -138,42 +156,94 @@ export class AndroidManager {
         AndroidManager._emulatorIds.set("8.0", "5572");
     }
 
-    private static parseEmulators() {
-        let devices = executeCommand(AndroidManager.LIST_DEVICES_COMMAND).split("\n");
-        const emulators: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>();
+    private static parseEmulators(runningDevices: Array<AndroidDevice>, emulators: Map<string, Array<IDevice>> = new Map<string, Array<Device>>()) {
         executeCommand(AndroidManager.LIST_AVDS).split("-----").forEach(dev => {
             if (dev.toLowerCase().includes("available android")) {
                 dev = dev.replace("available android", "").trim();
             }
-            const emu = AndroidManager.parseAvdAsEmulator(dev);
+            const emu = AndroidManager.parseAvdInfoToAndroidDevice(dev);
             if (!emulators.has(emu.name)) {
                 emulators.set(emu.name, new Array<IDevice>());
                 emulators.get(emu.name).push(emu);
             }
         });
 
-        devices.forEach((dev) => {
-            const numberAsString = dev.replace(/\D+/ig, '');
-            try {
-                const port = parseInt(numberAsString);
-                const avdInfo = executeCommand("(sleep 2; echo avd name) | telnet localhost " + port).trim();
+        runningDevices.forEach((dev) => {
+            if (dev.type === DeviceType.EMULATOR) {
+                try {
+                    const port = dev.token;
+                    let avdInfo = executeCommand("(sleep 3; echo avd name & sleep 3 exit) | telnet localhost " + port).trim();
 
-                if (port !== NaN && avdInfo !== "" && avdInfo.toLowerCase().includes("ok") && avdInfo.toLowerCase().includes("connected to localhost")) {
-                    for (let key of emulators.keys()) {
-                        if (avdInfo.includes(key)) {
-                            emulators.get(key)[0].status = "free";
-                            emulators.get(key)[0].token = numberAsString;
+                    if (!AndroidManager.checkTelnetReport(avdInfo)) {
+                        avdInfo = executeCommand("(sleep 3; echo avd name & sleep 3 exit) | telnet localhost " + port).trim();
+                    }
+                    if (AndroidManager.checkTelnetReport(avdInfo)) {
+                        for (let key of emulators.keys()) {
+                            if (avdInfo.includes(key)) {
+                                emulators.get(key)[0].status = Status.FREE;
+                                emulators.get(key)[0].token = dev.token;
+                            }
                         }
                     }
+                } catch (error) {
                 }
-            } catch (error) {
             }
         });
 
         return emulators;
     }
 
-    private static parseAvdAsEmulator(args): IDevice {
+    private static checkTelnetReport(avdInfo) {
+        return avdInfo !== "" && avdInfo.toLowerCase().includes("ok") && avdInfo.toLowerCase().includes("connected to localhost")
+    }
+
+    private static parseRunningDevicesList() {
+        // examples
+        // List of devices attached
+        // ce0217125d20e41304     unauthorized usb:337641472X
+        // emulator-5566          device product:sdk_phone_x86 model:Android_SDK_built_for_x86 device:generic_x86
+
+        // ce0217125d20e41304     device usb:337641472X product:dreamltexx model:SM_G950F device:dreamlte
+        // emulator-5566          device product:sdk_phone_x86 model:Android_SDK_built_for_x86 device:generic_x86
+
+        const runningDevices = executeCommand(AndroidManager.LIST_DEVICES_COMMAND)
+            .replace("List of devices attached", "")
+            .trim()
+            .split("\n");
+        const devices: Array<AndroidDevice> = new Array();
+
+        runningDevices.forEach(line => {
+            if (line.trim().includes("device")) {
+                if (line.includes(DeviceType.EMULATOR)) {
+                    const token = line.split("   ")[0].replace(/\D+/ig, '');
+                    devices.push(new AndroidDevice(undefined, undefined, DeviceType.EMULATOR, token, Status.BOOTED));
+                } else if (line.includes("unauthorized") || line.includes("usb")) {
+                    const token = line.split("   ")[0].trim();
+                    let name = undefined;
+                    let status: Status = Status.SHUTDOWN;
+                    if (!line.includes("unauthorized")) {
+                        name = line.split("model:")[1].trim().split(" ")[0].trim();
+                        status = Status.BOOTED;
+                    }
+
+                    devices.push(new AndroidDevice(name, undefined, DeviceType.DEVICE, token, status));
+                }
+            }
+        });
+
+        return devices;
+    }
+
+    private static parseRealDevices(runningDevices: Array<AndroidDevice>, devices: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>()) {
+        runningDevices.forEach(d => {
+            if (d.type === DeviceType.DEVICE) {
+                devices.set(d.name, new Array());
+                devices.get(d.name).push(d);
+            }
+        });
+    }
+
+    private static parseAvdInfoToAndroidDevice(args): IDevice {
         let name = "";
         let apiLevel = 6.0;
 
@@ -186,13 +256,13 @@ export class AndroidManager {
             }
         });
 
-        const emulator = new AndroidDevice(name, apiLevel, DeviceType.EMULATOR, undefined, "shutdown");
+        const emulator = new AndroidDevice(name, apiLevel, DeviceType.EMULATOR, undefined, Status.SHUTDOWN);
         return emulator;
     }
 }
 
 export class AndroidDevice extends Device {
-    constructor(name: string, apiLevel, type: "emulator" | "device", token?: string, status?: "free" | "busy" | "shutdown" | "booted", procPid?: number) {
+    constructor(name: string, apiLevel, type: DeviceType, token?: string, status?: Status, procPid?: number) {
         super(name, apiLevel, type, Platform.ANDROID, token, status, procPid);
     }
 }

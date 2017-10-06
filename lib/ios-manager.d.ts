@@ -1,4 +1,5 @@
 import { IDevice, Device } from "./device";
+import { DeviceType, Status } from "./enums";
 export declare class IOSManager {
     private static XCRUN;
     private static SIMCTL;
@@ -10,6 +11,7 @@ export declare class IOSManager {
     private static IOS_DEVICE;
     static getAllDevices(): Map<string, Array<IDevice>>;
     static startSimulator(simulator: IDevice): Promise<IDevice>;
+    static restartDevice(device: IDevice): Promise<void>;
     static killAll(): void;
     static kill(udid: string): void;
     private static startSimulatorProcess(udid);
@@ -18,5 +20,5 @@ export declare class IOSManager {
     private static waitUntilSimulatorBoot(udid, timeout);
 }
 export declare class IOSDevice extends Device {
-    constructor(token: string, name: string, status: "free" | "busy" | "shutdown" | "booted", type: "simulator" | "device", procPid?: number);
+    constructor(token: string, name: string, status: Status, type: DeviceType, procPid?: number);
 }

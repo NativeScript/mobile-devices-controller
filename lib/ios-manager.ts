@@ -27,7 +27,7 @@ export class IOSManager {
         if (responce === true) {
             IOSManager.waitUntilSimulatorBoot(udid, 180000);
             simulator.type = DeviceType.SIMULATOR;
-            simulator.status = "free";
+            simulator.status = Status.FREE;
             simulator.procPid = process.pid;
             simulator.startedAt = Date.now();
             console.log(`Launched simulator with name: ${simulator.name}; udid: ${simulator.token}; status: ${simulator.status}`);
@@ -39,6 +39,17 @@ export class IOSManager {
         }
 
         return simulator;
+    }
+
+    public static async restartDevice(device: IDevice) {
+        if (device.type === DeviceType.SIMULATOR) {
+            IOSManager.kill(device.token);
+            device.status = Status.SHUTDOWN;
+            device.procPid = undefined;
+            device.startedAt = -1;
+            device.busySince = -1;
+            await IOSManager.startSimulator(device);
+        }
     }
 
     public static killAll() {
@@ -97,9 +108,9 @@ export class IOSManager {
         }
         const name = parts[0].trim();
         const udid = parts[1].replace(")", "").trim();
-        let args: "booted" | "shutdown";
+        let args: Status;
         if (parts.length === 3) {
-            args = parts[2].replace(")", "").trim().toLowerCase() === "booted" ? "booted" : "shutdown";
+            args = Status[parts[2].replace(")", "").trim().toLowerCase() === Status.BOOTED ? Status.BOOTED : Status.SHUTDOWN];
         }
 
         return new IOSDevice(udid, name, args, DeviceType.SIMULATOR);
@@ -128,7 +139,7 @@ export class IOSManager {
 }
 
 export class IOSDevice extends Device {
-    constructor(token: string, name: string, status: "free" | "busy" | "shutdown" | "booted", type: "simulator" | "device", procPid?: number) {
+    constructor(token: string, name: string, status: Status, type: DeviceType, procPid?: number) {
         super(name, undefined, type, Platform.IOS, token, status, procPid);
     }
 }
