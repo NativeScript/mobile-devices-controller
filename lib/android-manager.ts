@@ -175,7 +175,7 @@ export class AndroidManager {
                     let avdInfo = executeCommand("(sleep 3; echo avd name & sleep 3 exit) | telnet localhost " + port).trim();
 
                     if (!AndroidManager.checkTelnetReport(avdInfo)) {
-                        avdInfo = executeCommand("(sleep 3; echo avd name & sleep 3 exit) | telnet localhost " + port).trim();
+                        avdInfo = executeCommand("(sleep 5; echo avd name & sleep 5 exit) | telnet localhost " + port).trim();
                     }
                     if (AndroidManager.checkTelnetReport(avdInfo)) {
                         for (let key of emulators.keys()) {
