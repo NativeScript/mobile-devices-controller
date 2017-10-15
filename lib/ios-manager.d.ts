@@ -9,7 +9,6 @@ export declare class IOSManager {
     private static SHUTDOWN;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND;
     private static IOS_DEVICE;
-    private static SIM_ROOT;
     static getAllDevices(): Map<string, Array<IDevice>>;
     static startSimulator(simulator: IDevice): Promise<IDevice>;
     private static isRunning(token);

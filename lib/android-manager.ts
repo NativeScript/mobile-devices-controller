@@ -84,7 +84,9 @@ export class AndroidManager {
             if (emulator.procPid) {
                 try {
                     killPid(emulator.procPid);
-                    killPid(emulator.procPid);
+                    if (!isWin) {
+                        killPid(emulator.procPid);
+                    }
                     isAlive = false;
                 } catch (error) {
                 }

@@ -14,7 +14,6 @@ export class IOSManager {
     private static SHUTDOWN = "Shutdown";
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
     private static IOS_DEVICE = "ios-device";
-    private static SIM_ROOT = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/");
 
     public static getAllDevices(): Map<string, Array<IDevice>> {
         return IOSManager.findSimulatorByParameter();
@@ -85,7 +84,8 @@ export class IOSManager {
     }
 
     private static getSimLocation(token) {
-        return IOSManager.SIM_ROOT + token;
+        const simRoot = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/");
+        return simRoot + token;
     }
 
     public static installApp(token, fullAppName) {
