@@ -35,3 +35,23 @@ export function waitForOutput(process, matcher, errorMatcher, timeout) {
         });
     });
 }
+
+export function isWin() {
+    return /^win/.test(process.platform);
+}
+
+export function killProcessByName(name) {
+    if (!isWin) {
+        executeCommand("killall " + name);
+    } else {
+        childProcess.execSync('taskkill /IM ' + name + ' /T /F');
+    }
+}
+
+export function killPid(pid, signal = "SIGINT") {
+    if (!isWin) {
+        process.kill(pid, signal);
+    } else {
+        childProcess.execSync('taskkill /PID ' + pid + ' /T /F');
+    }
+}

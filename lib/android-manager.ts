@@ -1,8 +1,15 @@
-import * as child_process from "child_process";
+import { spawn, ChildProcess } from "child_process";
+import { resolve, delimiter, sep } from "path";
+import { existsSync } from "fs";
 import { Platform, DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
-import { waitForOutput, executeCommand } from "./utils";
-import { resolve } from "path";
+import {
+    waitForOutput,
+    executeCommand,
+    isWin,
+    killProcessByName,
+    killPid
+} from "./utils";
 
 const OFFSET_DI_PIXELS = 16;
 
@@ -16,6 +23,7 @@ export class AndroidManager {
     private static _emulatorIds: Map<string, string> = new Map();
 
     public static getAllDevices() {
+        AndroidManager.checkAndroid();
         const runningDevices = AndroidManager.parseRunningDevicesList();
         if (AndroidManager._emulatorIds.size === 0) {
             AndroidManager.loadEmulatorsIds();
@@ -27,14 +35,27 @@ export class AndroidManager {
         return devices;
     }
 
-    public static async startEmulator(emulator: IDevice, options?) {
-        if (emulator.token === undefined) {
+    public static getPhysicalDensity(token: string) {
+        return parseInt(executeCommand(AndroidManager.ADB + " -s emulator-" + token + " shell wm density").split(":")[1]) * 0.01;
+    }
+
+    public static getPixelsOffset(token: string) {
+        return Math.floor(OFFSET_DI_PIXELS * AndroidManager.getPhysicalDensity(token));
+    }
+
+    public static async startEmulator(emulator: IDevice, options = "", emulatorStartLogPath?) {
+        if (!emulator.token) {
             emulator.token = AndroidManager.emulatorId(emulator.apiLevel) || "5554";
         }
-        emulator = await AndroidManager.startEmulatorProcess(emulator, options);
-        const result = await AndroidManager.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || 180000) === true ? Status.FREE : Status.SHUTDOWN;
 
-        if (result === Status.FREE) {
+        if (emulatorStartLogPath) {
+            options = options + " > " + emulatorStartLogPath + " 2>&1";
+        }
+
+        emulator = await AndroidManager.startEmulatorProcess(emulator, options);
+        const result = await AndroidManager.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || 180000) === true ? Status.BOOTED : Status.SHUTDOWN;
+
+        if (result === Status.BOOTED) {
             emulator.startedAt = Date.now();
         }
 
@@ -47,41 +68,166 @@ export class AndroidManager {
         return emulator;
     }
 
-    public static getPhysicalDensity(token: string) {
-        return parseInt(executeCommand(AndroidManager.ADB + " -s emulator-" + token + " shell wm density").split(":")[1]) * 0.01;
-    }
-
-    public static getPixelsOffset(token: string) {
-        return Math.floor(OFFSET_DI_PIXELS * AndroidManager.getPhysicalDensity(token));
-    }
     /**
      * Implement kill process
      * @param emulator 
      */
     public static kill(emulator: IDevice) {
+        let isAlive: boolean = true;
         if (emulator.type === DeviceType.EMULATOR) {
-            executeCommand(AndroidManager.ADB + " -s " + DeviceType.EMULATOR + "-" + emulator.token + " emu kill");
-            //kill process
+
+            if (emulator.token) {
+                executeCommand(AndroidManager.ADB + " -s " + DeviceType.EMULATOR + "-" + emulator.token + " emu kill");
+                isAlive = false;
+            }
+
             if (emulator.procPid) {
                 try {
-                    process.kill(emulator.procPid, "SIGINT");
-                    process.kill(emulator.procPid, "SIGINT");
+                    killPid(emulator.procPid);
+                    killPid(emulator.procPid);
+                    isAlive = false;
                 } catch (error) {
                 }
             }
 
-            emulator.status = Status.SHUTDOWN;
-            emulator.procPid = undefined;
+            if (!isAlive) {
+                emulator.status = Status.SHUTDOWN;
+                emulator.procPid = undefined;
+            }
         }
     }
 
-    /**
-     * Not compatible with windows
-     */
     public static killAll() {
-        const log = executeCommand("killall qemu-system-i386 ");
-        const OSASCRIPT_QUIT_QEMU_PROCESS_COMMAND = "osascript -e 'tell application \"qemu-system-i386\" to quit'";
-        executeCommand(OSASCRIPT_QUIT_QEMU_PROCESS_COMMAND);
+        killProcessByName("qemu-system-i386");
+    }
+
+    public static async restartDevice(device: IDevice) {
+        if (device.type === DeviceType.EMULATOR) {
+            AndroidManager.kill(device);
+            AndroidManager.startEmulator(device);
+        } else {
+            console.log("Not implemented for real device!")
+        }
+
+        return device;
+    }
+
+    public static startAdb() {
+        console.log("Start adb");
+        executeCommand(AndroidManager.ADB + " start-server");
+    }
+
+    public static stopAdb() {
+        console.log("Stop adb");
+        executeCommand(AndroidManager.ADB + " kill-server");
+    }
+
+    public static killAdbProcess() {
+        killProcessByName("adb.exe");
+    }
+
+    public isAppRunning(device: IDevice, appId: string) {
+        const result = AndroidManager.executeAdbCommand(device, "shell ps");
+        if (result.includes(appId)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public static startApplication(device: IDevice, appId: string, activity?) {
+        console.log("Start " + appId + " with command:");
+        let command = "shell monkey -p " + appId + " 1";
+        if (activity) {
+            command = "shell am start -a android.intent.action.MAIN -n " + appId + "/" + activity;
+        }
+
+        console.log(command);
+        AndroidManager.executeAdbCommand(device, command);
+    }
+
+    public static stopApplication(device: IDevice, appId: string) {
+        console.log("Stop " + appId);
+        const command = "shell am force-stop " + appId;
+        AndroidManager.executeAdbCommand(device, command);
+    }
+
+    public static pullFile(device: IDevice, remotePath, destinationFolder) {
+
+        // Verify remotePath
+        const remoteBasePath = remotePath.substring(0, remotePath.lastIndexOf("/"));
+        const sdcardFiles = AndroidManager.executeAdbCommand(device, " shell ls -la " + remoteBasePath);
+        if (sdcardFiles.includes("No such file or directory")) {
+            const error = remoteBasePath + " does not exist.";
+            console.log(error);
+            throw new Error(error);
+        }
+
+        if (!existsSync(destinationFolder)) {
+            throw new Error(`The folder ${destinationFolder} doesn't exist!`);
+        }
+
+        // Pull files
+        const output = AndroidManager.executeAdbCommand(device, "pull " + remotePath + " " + destinationFolder);
+        console.log(output);
+        const o = output.toLowerCase();
+        if ((o.includes("error")) || (o.includes("failed")) || (o.includes("does not exist"))) {
+            const error = "Failed to transfer " + remotePath + " to " + destinationFolder;
+            console.log(error);
+            console.log("Error: " + output);
+            throw new Error(error);
+        } else {
+            console.log(remotePath + " transferred to " + destinationFolder);
+        }
+    }
+
+    public static pushFile(device: IDevice, localPath, remotePath) {
+
+        let output = AndroidManager.executeAdbCommand(device, "shell mount -o rw,remount -t rootfs /");
+
+        // Verify remotePath
+        const remoteBasePath = remotePath.substring(0, remotePath.lastIndexOf("/"));
+        const sdcardFiles = AndroidManager.executeAdbCommand(device, "shell ls -la " + remoteBasePath);
+        if (sdcardFiles.includes("No such file or directory")) {
+            const error = remoteBasePath + " does not exist.";
+            console.log(error);
+            throw new Error(error);
+        }
+
+        // Verify localPath
+        localPath = localPath.replace("/", sep);
+        localPath = localPath.replace("\\", sep);
+        const localFilePath = localPath;
+        if (!existsSync(localFilePath)) {
+            const error = localPath + " does not exist.";
+            console.log(error);
+            throw new Error(error);
+        }
+
+        // Push files
+        output = AndroidManager.executeAdbCommand(device, "push " + localFilePath + " " + remotePath);
+        console.log(output);
+        if ((output.toLowerCase().includes("error")) || (output.toLowerCase().includes("failed"))) {
+            const error = "Failed to transfer " + localPath + " to " + remotePath;
+            console.log(error);
+            console.log("Error: " + output);
+            throw new Error(error);
+        } else {
+            console.log(localPath + " transferred to " + remotePath);
+        }
+    }
+
+    private static async startEmulatorProcess(emulator, options) {
+        const process = spawn
+            (AndroidManager.EMULATOR,
+            [" -avd ", emulator.name, "-port ", emulator.token, options || " -wipe-data"], {
+                shell: true,
+                detached: false
+            });
+
+        emulator.procPid = process.pid;
+
+        return emulator;
     }
 
     private static waitUntilEmulatorBoot(deviceId, timeOut: number): boolean {
@@ -115,47 +261,6 @@ export class AndroidManager {
         return isBooted;
     }
 
-    public static emulatorId(platformVersion) {
-        return AndroidManager._emulatorIds.get(platformVersion);
-    }
-
-    public static async restartDevice(device: IDevice) {
-        if (device.type === DeviceType.EMULATOR) {
-            AndroidManager.kill(device);
-            AndroidManager.startEmulator(device);
-        } else {
-
-        }
-
-        return device;
-    }
-
-    private static async startEmulatorProcess(emulator, options) {
-        const process = child_process.spawn
-            (AndroidManager.EMULATOR,
-            [" -avd ", emulator.name, "-port ", emulator.token, options || " -wipe-data"], {
-                shell: true,
-                detached: false
-            });
-
-        emulator.procPid = process.pid;
-
-        return emulator;
-    }
-
-    private static loadEmulatorsIds() {
-        AndroidManager._emulatorIds.set("4.2", "5554");
-        AndroidManager._emulatorIds.set("4.3", "5556");
-        AndroidManager._emulatorIds.set("4.4", "5558");
-        AndroidManager._emulatorIds.set("5.0", "5560");
-        AndroidManager._emulatorIds.set("5.1", "5562");
-        AndroidManager._emulatorIds.set("6.0", "5564");
-        AndroidManager._emulatorIds.set("7.0", "5566");
-        AndroidManager._emulatorIds.set("7.1", "5568");
-        AndroidManager._emulatorIds.set("7.1.1", "5570");
-        AndroidManager._emulatorIds.set("8.0", "5572");
-    }
-
     private static parseEmulators(runningDevices: Array<AndroidDevice>, emulators: Map<string, Array<IDevice>> = new Map<string, Array<Device>>()) {
         executeCommand(AndroidManager.LIST_AVDS).split("-----").forEach(dev => {
             if (dev.toLowerCase().includes("available android")) {
@@ -168,21 +273,29 @@ export class AndroidManager {
             }
         });
 
-        runningDevices.forEach((dev) => {
+        runningDevices.forEach(async (dev) => {
             if (dev.type === DeviceType.EMULATOR) {
                 try {
-                    const port = dev.token;
-                    let avdInfo = executeCommand("(sleep 3; echo avd name & sleep 3 exit) | telnet localhost " + port).trim();
-
-                    if (!AndroidManager.checkTelnetReport(avdInfo)) {
-                        avdInfo = executeCommand("(sleep 5; echo avd name & sleep 5 exit) | telnet localhost " + port).trim();
+                    let avdIfno = "";
+                    if (!isWin) {
+                        const port = dev.token;
+                        const result = executeCommand("ps aux | grep qemu | grep " + port);
+                        avdIfno = result.split("-avd")[1].split(" ")[1].trim();
+                        // let avdInfo = executeCommand("(sleep 3; echo avd name & sleep 3 exit) | telnet localhost " + port).trim();
+                        // if (!AndroidManager.checkTelnetReport(avdInfo)) {
+                        //     avdInfo = executeCommand("(sleep 5; echo avd name & sleep 5 exit) | telnet localhost " + port).trim();
+                        // }
+                        // if (AndroidManager.checkTelnetReport(avdInfo)) {
+                        //}
+                    } else {
+                        // qemu-system-x86_64.exe 9528 Console 1  2 588 980 K Running SVS\tseno  0:01:10 Android Emulator - Emulator-Api25-Google:5564             
+                        avdIfno = executeCommand("tasklist /v /fi \"windowtitle eq Android*\"");
                     }
-                    if (AndroidManager.checkTelnetReport(avdInfo)) {
-                        for (let key of emulators.keys()) {
-                            if (avdInfo.includes(key)) {
-                                emulators.get(key)[0].status = Status.FREE;
-                                emulators.get(key)[0].token = dev.token;
-                            }
+
+                    for (let key of emulators.keys()) {
+                        if (avdIfno.includes(key)) {
+                            emulators.get(key)[0].status = Status.BOOTED;
+                            emulators.get(key)[0].token = dev.token;
                         }
                     }
                 } catch (error) {
@@ -214,7 +327,7 @@ export class AndroidManager {
 
         runningDevices.forEach(line => {
             if (line.trim().includes("device")) {
-                if (line.includes(DeviceType.EMULATOR)) {
+                if (line.includes(DeviceType.EMULATOR.toString().toLowerCase())) {
                     const token = line.split("   ")[0].replace(/\D+/ig, '');
                     devices.push(new AndroidDevice(undefined, undefined, DeviceType.EMULATOR, token, Status.BOOTED));
                 } else if (line.includes("unauthorized") || line.includes("usb")) {
@@ -258,6 +371,43 @@ export class AndroidManager {
 
         const emulator = new AndroidDevice(name, apiLevel, DeviceType.EMULATOR, undefined, Status.SHUTDOWN);
         return emulator;
+    }
+
+    public static emulatorId(platformVersion) {
+        return AndroidManager._emulatorIds.get(platformVersion.toString());
+    }
+
+    private static loadEmulatorsIds() {
+        AndroidManager._emulatorIds.set("4.2", "5554");
+        AndroidManager._emulatorIds.set("4.3", "5556");
+        AndroidManager._emulatorIds.set("4.4", "5558");
+        AndroidManager._emulatorIds.set("5.0", "5560");
+        AndroidManager._emulatorIds.set("5.1", "5562");
+        AndroidManager._emulatorIds.set("6", "5564");
+        AndroidManager._emulatorIds.set("6.", "5564");
+        AndroidManager._emulatorIds.set("6.0", "5564");
+        AndroidManager._emulatorIds.set("7", "5566");
+        AndroidManager._emulatorIds.set("7.", "5566");
+        AndroidManager._emulatorIds.set("7.0", "5566");
+        AndroidManager._emulatorIds.set("7.1", "5568");
+        AndroidManager._emulatorIds.set("7.1.1", "5570");
+        AndroidManager._emulatorIds.set("8", "5572");
+        AndroidManager._emulatorIds.set("8.", "5572");
+        AndroidManager._emulatorIds.set("8.0", "5572");
+    }
+
+    private static checkAndroid() {
+        if (!existsSync(AndroidManager.AVD_MANAGER)) {
+            AndroidManager.LIST_AVDS = " android list avds ";
+        }
+
+        if (!existsSync(AndroidManager.EMULATOR)) {
+            AndroidManager.EMULATOR = " emulator ";
+        }
+    }
+
+    private static executeAdbCommand(device: IDevice, command: string) {
+        return executeCommand(AndroidManager.ADB + " -s " + device.token + " " + command);
     }
 }
 
