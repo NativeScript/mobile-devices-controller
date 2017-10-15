@@ -1,4 +1,5 @@
-import * as child_process from "child_process";
+import { spawn } from "child_process";
+import { resolve } from "path";
 import { waitForOutput, executeCommand } from "./utils";
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
@@ -13,6 +14,7 @@ export class IOSManager {
     private static SHUTDOWN = "Shutdown";
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
     private static IOS_DEVICE = "ios-device";
+    private static SIM_ROOT = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/");
 
     public static getAllDevices(): Map<string, Array<IDevice>> {
         return IOSManager.findSimulatorByParameter();
@@ -25,20 +27,24 @@ export class IOSManager {
 
         let responce: boolean = await waitForOutput(process, /Waiting for device to boot/, new RegExp("Failed to load", "i"), 180000);
         if (responce === true) {
-            IOSManager.waitUntilSimulatorBoot(udid, 180000);
-            simulator.type = DeviceType.SIMULATOR;
-            simulator.status = Status.FREE;
-            simulator.procPid = process.pid;
-            simulator.startedAt = Date.now();
-            console.log(`Launched simulator with name: ${simulator.name}; udid: ${simulator.token}; status: ${simulator.status}`);
-            await setTimeout(function () {
-
-            }, 10000);
+            responce = IOSManager.waitUntilSimulatorBoot(udid, 180000);
+            if (responce) {
+                simulator.type = DeviceType.SIMULATOR;
+                simulator.status = Status.BOOTED;
+                simulator.procPid = process.pid;
+                simulator.startedAt = Date.now();
+                console.log(`Launched simulator with name: ${simulator.name}; udid: ${simulator.token}; status: ${simulator.status}`);
+            }
         } else {
             console.log("Simulator is probably already started!");
         }
 
         return simulator;
+    }
+
+    private static isRunning(token) {
+        const out = executeCommand(IOSManager.SIMCTL + " spawn" + token + " launchctl print system | grep com.apple.springboard.services ");
+        return out.includes("M   A   com.apple.springboard.services");
     }
 
     public static async restartDevice(device: IDevice) {
@@ -60,10 +66,38 @@ export class IOSManager {
     public static kill(udid: string) {
         console.log(`Killing simulator with udid ${udid}`);
         executeCommand(IOSManager.SIMCTL + "  shutdown " + udid);
+
+        // Kill all the processes related with sim.id (for example WDA agents).
+        const killAllRelatedProcessesCommand = "ps aux | grep -ie " + udid + " | awk '{print $2}' | xargs kill -9";
+        executeCommand(killAllRelatedProcessesCommand);
+    }
+
+    public static getInstalledApps(token) {
+        const apps = new Array();
+        const rowData = executeCommand("find " + IOSManager.getSimLocation(token) + "/data/Containers/Bundle/Application -type d -name *.app").split("\\r?\\n");
+        rowData.forEach(sim => {
+            const rowBundle = executeCommand("defaults read " + sim + "/Info.plist | grep CFBundleIdentifier");
+            const appId = rowBundle.split("\"")[1];
+            apps.push(appId);
+        });
+
+        return apps;
+    }
+
+    private static getSimLocation(token) {
+        return IOSManager.SIM_ROOT + token;
+    }
+
+    public static installApp(token, fullAppName) {
+        executeCommand(IOSManager.SIMCTL + " install " + token, fullAppName);
+    }
+
+    public static uninstallApp(token, bundleId) {
+        executeCommand(IOSManager.SIMCTL + " uninstall " + token + " " + bundleId);
     }
 
     private static startSimulatorProcess(udid) {
-        const simProcess = child_process.spawn(IOSManager.BOOT_DEVICE_COMMAND, [udid], {
+        const simProcess = spawn(IOSManager.BOOT_DEVICE_COMMAND, [udid], {
             shell: true,
             detached: false
         });
@@ -126,7 +160,7 @@ export class IOSManager {
 
         while ((currentTime - startTime) < timeout && !booted) {
             currentTime = new Date().getTime();
-            booted = IOSManager.findSimulatorByParameter(udid, IOSManager.BOOTED).size > 0;
+            booted = IOSManager.findSimulatorByParameter(udid, IOSManager.BOOTED).size > 0 && IOSManager.isRunning(udid);
         }
 
         if (!booted) {
@@ -135,6 +169,8 @@ export class IOSManager {
         } else {
             console.log("Simulator is booted!");
         }
+
+        return booted;
     }
 }
 
