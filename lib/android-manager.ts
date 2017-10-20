@@ -22,15 +22,15 @@ export class AndroidManager {
     private static LIST_AVDS = AndroidManager.AVD_MANAGER + " list avd";
     private static _emulatorIds: Map<string, string> = new Map();
 
-    public static getAllDevices() {
+    public static async getAllDevices() {
         AndroidManager.checkAndroid();
         const runningDevices = AndroidManager.parseRunningDevicesList();
         if (AndroidManager._emulatorIds.size === 0) {
             AndroidManager.loadEmulatorsIds();
         }
         const devices: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>();
-        AndroidManager.parseEmulators(runningDevices, devices);
-        AndroidManager.parseRealDevices(runningDevices, devices);
+        await AndroidManager.parseEmulators(runningDevices, devices);
+        await AndroidManager.parseRealDevices(runningDevices, devices);
 
         return devices;
     }
@@ -263,7 +263,7 @@ export class AndroidManager {
         return isBooted;
     }
 
-    private static parseEmulators(runningDevices: Array<AndroidDevice>, emulators: Map<string, Array<IDevice>> = new Map<string, Array<Device>>()) {
+    private static async parseEmulators(runningDevices: Array<AndroidDevice>, emulators: Map<string, Array<IDevice>> = new Map<string, Array<Device>>()) {
         executeCommand(AndroidManager.LIST_AVDS).split("-----").forEach(dev => {
             if (dev.toLowerCase().includes("available android")) {
                 dev = dev.replace("available android", "").trim();
@@ -278,29 +278,30 @@ export class AndroidManager {
         runningDevices.forEach(async (dev) => {
             if (dev.type === DeviceType.EMULATOR) {
                 try {
-                    let avdIfno = "";
-                    if (!isWin) {
+                    let avdInfo = "";
+                    if (!isWin()) {
                         const port = dev.token;
-                        const result = executeCommand("ps aux | grep qemu | grep " + port);
-                        avdIfno = result.split("-avd")[1].split(" ")[1].trim();
-                        // let avdInfo = executeCommand("(sleep 3; echo avd name & sleep 3 exit) | telnet localhost " + port).trim();
-                        // if (!AndroidManager.checkTelnetReport(avdInfo)) {
-                        //     avdInfo = executeCommand("(sleep 5; echo avd name & sleep 5 exit) | telnet localhost " + port).trim();
-                        // }
-                        // if (AndroidManager.checkTelnetReport(avdInfo)) {
-                        //}
+                        //const result = executeCommand("ps aux | grep qemu | grep " + port);
+                        //avdIfno = result.split("-avd")[1].split(" ")[1].trim();
+                        avdInfo = executeCommand("(sleep 3; echo avd name & sleep 3 exit) | telnet localhost " + port).trim();
+                        if (!AndroidManager.checkTelnetReport(avdInfo)) {
+                            avdInfo = executeCommand("(sleep 5; echo avd name & sleep 5 exit) | telnet localhost " + port).trim();
+                        }
+                        if (!AndroidManager.checkTelnetReport(avdInfo)) {
+                        }
                     } else {
                         // qemu-system-x86_64.exe 9528 Console 1  2 588 980 K Running SVS\tseno  0:01:10 Android Emulator - Emulator-Api25-Google:5564             
-                        avdIfno = executeCommand("tasklist /v /fi \"windowtitle eq Android*\"");
+                        avdInfo = executeCommand("tasklist /v /fi \"windowtitle eq Android*\"");
                     }
 
                     for (let key of emulators.keys()) {
-                        if (avdIfno.includes(key)) {
+                        if (avdInfo.includes(key)) {
                             emulators.get(key)[0].status = Status.BOOTED;
                             emulators.get(key)[0].token = dev.token;
                         }
                     }
                 } catch (error) {
+                    console.log(error);
                 }
             }
         });
@@ -309,7 +310,7 @@ export class AndroidManager {
     }
 
     private static checkTelnetReport(avdInfo) {
-        return avdInfo !== "" && avdInfo.toLowerCase().includes("ok") && avdInfo.toLowerCase().includes("connected to localhost")
+        return avdInfo !== "" && avdInfo.toLowerCase().includes("ok") && avdInfo.toLowerCase().includes("connected to localhost");
     }
 
     private static parseRunningDevicesList() {

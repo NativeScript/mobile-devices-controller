@@ -8,7 +8,7 @@ export declare class AndroidManager {
     private static AVD_MANAGER;
     private static LIST_AVDS;
     private static _emulatorIds;
-    static getAllDevices(): Map<string, IDevice[]>;
+    static getAllDevices(): Promise<Map<string, IDevice[]>>;
     static getPhysicalDensity(token: string): number;
     static getPixelsOffset(token: string): number;
     static startEmulator(emulator: IDevice, options?: string, emulatorStartLogPath?: any): Promise<IDevice>;

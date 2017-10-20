@@ -136,15 +136,15 @@ export class IOSManager {
     }
 
     private static parseSimulator(sim) {
-        var parts = sim.split(" (");
+        const parts = sim.split(" (");
         if (parts.length < 2) {
             return undefined;
         }
         const name = parts[0].trim();
         const udid = parts[1].replace(")", "").trim();
         let args: Status;
-        if (parts.length === 3) {
-            args = Status[parts[2].replace(")", "").trim().toLowerCase() === Status.BOOTED ? Status.BOOTED : Status.SHUTDOWN];
+        if (parts.length >= 3) {
+            args = parts[2].replace(")", "").trim().toLowerCase() === Status.BOOTED.toLowerCase() ? Status.BOOTED : Status.SHUTDOWN;
         }
 
         return new IOSDevice(udid, name, args, DeviceType.SIMULATOR);
