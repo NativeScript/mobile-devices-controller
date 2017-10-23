@@ -22,9 +22,9 @@ export class AndroidManager {
     private static LIST_AVDS = AndroidManager.AVD_MANAGER + " list avd";
     private static _emulatorIds: Map<string, string> = new Map();
 
-    public static async getAllDevices() {
+    public static async getAllDevices(verbose: boolean = false) {
         AndroidManager.checkAndroid();
-        const runningDevices = AndroidManager.parseRunningDevicesList();
+        const runningDevices = AndroidManager.parseRunningDevicesList(verbose);
         if (AndroidManager._emulatorIds.size === 0) {
             AndroidManager.loadEmulatorsIds();
         }
@@ -84,7 +84,7 @@ export class AndroidManager {
             if (emulator.procPid) {
                 try {
                     killPid(emulator.procPid);
-                    if (!isWin) {
+                    if (!isWin()) {
                         killPid(emulator.procPid);
                     }
                     isAlive = false;
@@ -263,15 +263,40 @@ export class AndroidManager {
         return isBooted;
     }
 
-    private static async parseEmulators(runningDevices: Array<AndroidDevice>, emulators: Map<string, Array<IDevice>> = new Map<string, Array<Device>>()) {
-        executeCommand(AndroidManager.LIST_AVDS).split("-----").forEach(dev => {
-            if (dev.toLowerCase().includes("available android")) {
-                dev = dev.replace("available android", "").trim();
+    private static async parseEmulators(runningDevices: Array<AndroidDevice>, emulators: Map<string, Array<IDevice>> = new Map<string, Array<Device>>(), verbose = false) {
+        let availableDevices = false;
+        const info = executeCommand(AndroidManager.LIST_AVDS);
+        const infoLines = info.split("\n");
+        let emulator = null;
+        let status: Status = Status.SHUTDOWN;
+        // Name: Emulator-Api25-Google
+        // Path: /Users/progressuser/.android/avd/Emulator-Api25-Google.avd
+        // Target: Google APIs (Google Inc.)
+        //         Based on: Android 7.1.1 (Nougat) Tag/ABI: google_apis/x86
+        //   Skin: 480x800
+        // Sdcard: 12M
+        infoLines.forEach(line => {
+            if (line.toLowerCase().includes("available android")) {
+                status = Status.SHUTDOWN;
             }
-            const emu = AndroidManager.parseAvdInfoToAndroidDevice(dev);
-            if (!emulators.has(emu.name)) {
-                emulators.set(emu.name, new Array<IDevice>());
-                emulators.get(emu.name).push(emu);
+            if (line.toLowerCase().includes("following android virtual devices could not be loaded")) {
+                status = Status.INVALID;
+            }
+
+            if (line.toLowerCase().includes("name")) {
+                const name = line.split("Name: ")[1].trim();
+                emulator = new AndroidDevice(name, undefined, DeviceType.EMULATOR, undefined, Status.SHUTDOWN);
+            }
+            if (line.includes("Based on: Android")) {
+                const apiLevel = line.split("Based on: Android")[1].split(" (")[0].trim();
+                emulator.apiLevel = apiLevel;
+            }
+
+            if (emulator != null && emulator.name && emulator.apiLevel) {
+                if (!emulators.has(emulator.name)) {
+                    emulators.set(emulator.name, new Array<IDevice>());
+                    emulators.get(emulator.name).push(emulator);
+                }
             }
         });
 
@@ -283,11 +308,13 @@ export class AndroidManager {
                         const port = dev.token;
                         //const result = executeCommand("ps aux | grep qemu | grep " + port);
                         //avdIfno = result.split("-avd")[1].split(" ")[1].trim();
-                        avdInfo = executeCommand("(sleep 3; echo avd name & sleep 3 exit) | telnet localhost " + port).trim();
+                        //progressuser    10532  14.1  0.3  4554328  13024 s006  S+   10:15AM  18:21.84 /Users/progressuser/Library/Android/sdk/emulator/qemu/darwin-x86_64/qemu-system-i386 -avd Emulator-Api25-Google
+                        avdInfo = executeCommand("(sleep 2; echo avd name & sleep 2 exit) | telnet localhost " + port).trim();
                         if (!AndroidManager.checkTelnetReport(avdInfo)) {
-                            avdInfo = executeCommand("(sleep 5; echo avd name & sleep 5 exit) | telnet localhost " + port).trim();
+                            avdInfo = executeCommand("(sleep 6; echo avd name & sleep 6 exit) | telnet localhost " + port).trim();
                         }
                         if (!AndroidManager.checkTelnetReport(avdInfo)) {
+                            avdInfo = executeCommand("(sleep 8; echo avd name & sleep 8 exit) | telnet localhost " + port).trim();
                         }
                     } else {
                         // qemu-system-x86_64.exe 9528 Console 1  2 588 980 K Running SVS\tseno  0:01:10 Android Emulator - Emulator-Api25-Google:5564             
@@ -306,6 +333,11 @@ export class AndroidManager {
             }
         });
 
+        if (verbose) {
+            console.log("Avds lAist: ", info);
+            console.log("Parsed emulators: ", emulators);
+        }
+
         return emulators;
     }
 
@@ -313,7 +345,7 @@ export class AndroidManager {
         return avdInfo !== "" && avdInfo.toLowerCase().includes("ok") && avdInfo.toLowerCase().includes("connected to localhost");
     }
 
-    private static parseRunningDevicesList() {
+    private static parseRunningDevicesList(verbose) {
         // examples
         // List of devices attached
         // ce0217125d20e41304     unauthorized usb:337641472X
@@ -347,6 +379,10 @@ export class AndroidManager {
             }
         });
 
+        if (verbose) {
+            console.log("Running devices: ", runningDevices);
+        }
+
         return devices;
     }
 
@@ -357,23 +393,6 @@ export class AndroidManager {
                 devices.get(d.name).push(d);
             }
         });
-    }
-
-    private static parseAvdInfoToAndroidDevice(args): IDevice {
-        let name = "";
-        let apiLevel = 6.0;
-
-        args.split("\n").forEach(line => {
-            if (line.toLowerCase().includes("name")) {
-                name = line.split("Name: ")[1].trim();
-            }
-            if (line.includes("Based on: Android")) {
-                apiLevel = line.split("Based on: Android")[1].split(" (")[0].trim();
-            }
-        });
-
-        const emulator = new AndroidDevice(name, apiLevel, DeviceType.EMULATOR, undefined, Status.SHUTDOWN);
-        return emulator;
     }
 
     public static emulatorId(platformVersion) {

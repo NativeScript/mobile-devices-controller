@@ -48,4 +48,5 @@ export declare class Device implements IDevice {
         procPid: any;
         apiLevel: string;
     };
+    toString(): string;
 }

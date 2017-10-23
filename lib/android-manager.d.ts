@@ -8,7 +8,7 @@ export declare class AndroidManager {
     private static AVD_MANAGER;
     private static LIST_AVDS;
     private static _emulatorIds;
-    static getAllDevices(): Promise<Map<string, IDevice[]>>;
+    static getAllDevices(verbose?: boolean): Promise<Map<string, IDevice[]>>;
     static getPhysicalDensity(token: string): number;
     static getPixelsOffset(token: string): number;
     static startEmulator(emulator: IDevice, options?: string, emulatorStartLogPath?: any): Promise<IDevice>;
@@ -30,11 +30,10 @@ export declare class AndroidManager {
     private static startEmulatorProcess(emulator, options);
     private static waitUntilEmulatorBoot(deviceId, timeOut);
     private static checkIfEmulatorIsRunning(token);
-    private static parseEmulators(runningDevices, emulators?);
+    private static parseEmulators(runningDevices, emulators?, verbose?);
     private static checkTelnetReport(avdInfo);
-    private static parseRunningDevicesList();
+    private static parseRunningDevicesList(verbose);
     private static parseRealDevices(runningDevices, devices?);
-    private static parseAvdInfoToAndroidDevice(args);
     static emulatorId(platformVersion: any): string;
     private static loadEmulatorsIds();
     private static checkAndroid();

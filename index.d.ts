@@ -5,7 +5,7 @@ export { IDevice, Device } from "./lib/device";
 export { AndroidManager, AndroidDevice } from "./lib/android-manager";
 export { IOSManager, IOSDevice } from "./lib/ios-manager";
 export { DeviceManager } from "./lib/device-manager";
-export declare function getAndroidDevices(): Promise<void>;
+export declare function getAndroidDevices(verbose?: boolean): Promise<void>;
 export declare function getIOSDevices(): Promise<void>;
 export declare function getAllDevices(platform: Platform): Promise<void>;
 export declare function startEmulator(emulator: IDevice, options?: any): Promise<void>;

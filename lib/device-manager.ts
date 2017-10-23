@@ -5,12 +5,12 @@ import { IOSManager } from "./ios-manager";
 
 export class DeviceManager {
 
-    public static async getAllDevices(platform: Platform, name?: string) {
+    public static async getAllDevices(platform: Platform, name?: string, verbose: boolean = false) {
         let devices;
         if (platform === Platform.ANDROID) {
-            devices = await AndroidManager.getAllDevices();
+            devices = await AndroidManager.getAllDevices(verbose);
         } else {
-            devices = await IOSManager.getAllDevices();
+            devices = await IOSManager.getAllDevices(verbose);
         }
 
         if (name) {

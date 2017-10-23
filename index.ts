@@ -10,8 +10,8 @@ export { AndroidManager, AndroidDevice } from "./lib/android-manager";
 export { IOSManager, IOSDevice } from "./lib/ios-manager";
 export { DeviceManager } from "./lib/device-manager";
 
-export async function getAndroidDevices() {
-    await AndroidManager.getAllDevices();
+export async function getAndroidDevices(verbose = false) {
+    await AndroidManager.getAllDevices(verbose);
 }
 
 export async function getIOSDevices() {
