@@ -1,24 +1,24 @@
+import { Platform, DeviceType, Status } from "./lib/enums";
+import { Device, IDevice } from "./lib/device";
 import { AndroidManager, AndroidDevice } from "./lib/android-manager";
 import { IOSManager, IOSDevice } from "./lib/ios-manager";
-import { Device, IDevice } from "./lib/device";
 import { DeviceManager } from "./lib/device-manager";
-import { Platform, DeviceType, Status } from "./lib/enums";
 
+export { Platform, DeviceType, Status } from "./lib/enums";
+export { IDevice, Device } from "./lib/device";
 export { AndroidManager, AndroidDevice } from "./lib/android-manager";
 export { IOSManager, IOSDevice } from "./lib/ios-manager";
-export { IDevice, Device } from "./lib/device";
 export { DeviceManager } from "./lib/device-manager";
-export { Platform, DeviceType, Status } from "./lib/enums";
 
-export async function getAndroidDevices() {
-    await AndroidManager.getAllDevices();
+export async function getAndroidDevices(verbose = false) {
+    await AndroidManager.getAllDevices(verbose);
 }
 
 export async function getIOSDevices() {
     await IOSManager.getAllDevices();
 }
 
-export async function getAllDevices(platform: "android" | "ios") {
+export async function getAllDevices(platform: Platform) {
     await DeviceManager.getAllDevices(platform);
 }
 
@@ -56,10 +56,10 @@ export function killSimulator(simulator: IDevice) {
 /**
  * Still not implemented
  */
-export function restartDevice(device: IDevice) {
-    if (device.platform === Platform.ANDROID || device.type === DeviceType.DEVICE) {
-        //AndroidManager.restartDevice();
-    }else{
-        //IOSManager.restartDevice();
+export async function restartDevice(device: IDevice) {
+    if (device.platform === Platform.ANDROID) {
+        AndroidManager.restartDevice(device);
+    } else {
+        IOSManager.restartDevice(device);
     }
 }

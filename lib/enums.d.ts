@@ -1,15 +1,16 @@
-export declare class Platform {
-    static readonly ANDROID: string;
-    static readonly IOS: string;
+export declare enum Platform {
+    ANDROID = "android",
+    IOS = "ios",
 }
-export declare class DeviceType {
-    static readonly SIMULATOR: string;
-    static readonly EMULATOR: string;
-    static readonly DEVICE: string;
+export declare enum DeviceType {
+    SIMULATOR = "simulator",
+    EMULATOR = "emulator",
+    DEVICE = "device",
 }
-export declare class Status {
-    static SHUTDOWN: string;
-    static BOOTED: string;
-    static FREE: string;
-    static BUSY: string;
+export declare enum Status {
+    SHUTDOWN = "shutdown",
+    BOOTED = "booted",
+    BUSY = "busy",
+    UNAUTORIZED = "unautorized",
+    INVALID = "invalid",
 }

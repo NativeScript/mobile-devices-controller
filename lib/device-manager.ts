@@ -1,16 +1,16 @@
-import { AndroidManager } from "./android-manager";
-import { IOSManager } from "./ios-manager";
 import { Platform, DeviceType, Status } from "./enums";
 import { Device, IDevice } from "./device";
+import { AndroidManager } from "./android-manager";
+import { IOSManager } from "./ios-manager";
 
 export class DeviceManager {
 
-    public static async getAllDevices(platform: "android" | "ios", name?: string) {
+    public static async getAllDevices(platform: Platform, name?: string, verbose: boolean = false) {
         let devices;
         if (platform === Platform.ANDROID) {
-            devices = await AndroidManager.getAllDevices();
+            devices = await AndroidManager.getAllDevices(verbose);
         } else {
-            devices = await IOSManager.getAllDevices();
+            devices = await IOSManager.getAllDevices(verbose);
         }
 
         if (name) {
@@ -40,7 +40,7 @@ export class DeviceManager {
         }
     }
 
-    public static killAll(type: "simulator" | "emulator") {
+    public static killAll(type: DeviceType) {
         if (type === DeviceType.EMULATOR) {
             AndroidManager.killAll();
         } else {

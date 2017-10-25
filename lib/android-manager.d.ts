@@ -1,3 +1,4 @@
+import { DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
 export declare class AndroidManager {
     private static ANDROID_HOME;
@@ -7,27 +8,37 @@ export declare class AndroidManager {
     private static AVD_MANAGER;
     private static LIST_AVDS;
     private static _emulatorIds;
-    static getAllDevices(): Map<string, IDevice[]>;
-    static startEmulator(emulator: IDevice, options?: any): Promise<IDevice>;
+    static getAllDevices(verbose?: boolean): Promise<Map<string, IDevice[]>>;
     static getPhysicalDensity(token: string): number;
     static getPixelsOffset(token: string): number;
+    static startEmulator(emulator: IDevice, options?: string, emulatorStartLogPath?: any): Promise<IDevice>;
     /**
      * Implement kill process
      * @param emulator
      */
     static kill(emulator: IDevice): void;
-    /**
-     * Not compatible with windows
-     */
     static killAll(): void;
+    static restartDevice(device: IDevice): Promise<IDevice>;
+    static startAdb(): void;
+    static stopAdb(): void;
+    static killAdbProcess(): void;
+    isAppRunning(device: IDevice, appId: string): boolean;
+    static startApplication(device: IDevice, appId: string, activity?: any): void;
+    static stopApplication(device: IDevice, appId: string): void;
+    static pullFile(device: IDevice, remotePath: any, destinationFolder: any): void;
+    static pushFile(device: IDevice, localPath: any, remotePath: any): void;
+    private static startEmulatorProcess(emulator, options);
     private static waitUntilEmulatorBoot(deviceId, timeOut);
     private static checkIfEmulatorIsRunning(token);
+    private static parseEmulators(runningDevices, emulators?, verbose?);
+    private static checkTelnetReport(avdInfo);
+    private static parseRunningDevicesList(verbose);
+    private static parseRealDevices(runningDevices, devices?);
     static emulatorId(platformVersion: any): string;
-    private static startEmulatorProcess(emulator, options);
     private static loadEmulatorsIds();
-    private static parseEmulators();
-    private static parseAvdAsEmulator(args);
+    private static checkAndroid();
+    private static executeAdbCommand(device, command);
 }
 export declare class AndroidDevice extends Device {
-    constructor(name: string, apiLevel: any, type: "emulator" | "device", token?: string, status?: "free" | "busy" | "shutdown" | "booted", procPid?: number);
+    constructor(name: string, apiLevel: any, type: DeviceType, token?: string, status?: Status, procPid?: number);
 }

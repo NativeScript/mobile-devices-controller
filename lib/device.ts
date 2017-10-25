@@ -1,9 +1,11 @@
+import { Status, DeviceType, Platform } from "./enums";
+
 export interface IDevice {
   name: string,
   token: string,
-  type: string,
-  platform: string,
-  status?: string,
+  type: DeviceType,
+  platform: Platform,
+  status?: Status,
   startedAt?: number,
   busySince?: number,
   procPid?: number,
@@ -18,7 +20,7 @@ export class Device implements IDevice {
   private _info?: string;
   private _config?: any;
 
-  constructor(private _name: string, private _apiLevel: string, private _type: "emulator" | "simulator" | "device", private _platform: "android" | "ios", private _token: string, private _status: "free" | "busy" | "shutdown" | "booted", private _procPid?) {
+  constructor(private _name: string, private _apiLevel: string, private _type: DeviceType, private _platform: Platform, private _token: string, private _status: Status, private _procPid?) {
     this._startedAt = -1;
     this._busySince = -1;
   }
@@ -75,7 +77,7 @@ export class Device implements IDevice {
     return this._status;
   }
 
-  set status(status: "booted" | "free" | "busy" | "shutdown") {
+  set status(status: Status) {
     this._status = status;
   }
 
@@ -124,5 +126,19 @@ export class Device implements IDevice {
       procPid: this.procPid,
       apiLevel: this.apiLevel
     }
+  }
+
+  public toString() {
+    return "" +
+      "name " + this.name +
+      "; token " + this.token +
+      "; type " + this.type +
+      "; platform " + this.platform +
+      "; info " + this.info +
+      "; config " + this.config +
+      "; status " + this.status +
+      "; startedAt" + this.startedAt +
+      "; procPid" + this.procPid +
+      "; apiLevel" + this.apiLevel;
   }
 }

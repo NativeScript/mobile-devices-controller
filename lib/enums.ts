@@ -1,17 +1,18 @@
-export class Platform {
-    public static readonly ANDROID = "android";
-    public static readonly IOS = "ios";
+export enum Platform {
+    ANDROID = "android",
+    IOS = "ios"
 }
 
-export class DeviceType {
-    public static readonly SIMULATOR = "simulator";
-    public static readonly EMULATOR = "emulator";
-    public static readonly DEVICE = "device";
+export enum DeviceType {
+    SIMULATOR = "simulator",
+    EMULATOR = "emulator",
+    DEVICE = "device",
 }
 
-export class Status {
-    public static SHUTDOWN = "shutdown";
-    public static BOOTED = "booted";
-    public static FREE = "free";
-    public static BUSY = "busy";
+export enum Status {
+    SHUTDOWN = "shutdown",
+    BOOTED = "booted",
+    BUSY = "busy",
+    UNAUTORIZED = "unautorized",
+    INVALID = "invalid"
 }
