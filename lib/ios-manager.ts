@@ -143,7 +143,7 @@ export class IOSManager {
                     lineMatch[2],
                     lineMatch[1],
                     status,
-                    DeviceType.EMULATOR,
+                    DeviceType.SIMULATOR,
                     apiLevel
                 );
                 if (!devices.has(device.name)) {
