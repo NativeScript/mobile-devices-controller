@@ -42,7 +42,7 @@ export function isWin() {
 }
 
 export function killProcessByName(name) {
-    if (!isWin) {
+    if (!isWin()) {
         executeCommand("killall " + name);
     } else {
         childProcess.execSync('taskkill /IM ' + name + ' /T /F');
