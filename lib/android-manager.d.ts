@@ -37,6 +37,7 @@ export declare class AndroidManager {
     private static parseRealDevices(runningDevices, devices?);
     static emulatorId(platformVersion: any): string;
     private static loadEmulatorsIds();
+    private static sendKeyCommand;
     private static checkAndroid();
     private static executeAdbCommand(device, command);
 }

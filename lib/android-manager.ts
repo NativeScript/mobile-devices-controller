@@ -71,9 +71,9 @@ export class AndroidManager {
     public static unlock(token, password = undefined) {
         let result = "";
         if (password) {
-            result = executeCommand(`${AndroidManager.ADB} -s ${token} shell input keyevent 82 && adb shell input text ${password} && adb shell input keyevent 66`);
+            result = executeCommand(`${AndroidManager.sendKeyCommand(token, 82)} && ${AndroidManager.ADB} -s ${token} shell input text ${password} && ${AndroidManager.sendKeyCommand(token, 66)}`);
         } else {
-            result = executeCommand(`${AndroidManager.ADB} -s ${token} shell input keyevent 82 && adb shell input keyevent 66`);
+            result = executeCommand(`${AndroidManager.sendKeyCommand(token, 82)} && ${AndroidManager.sendKeyCommand(token, 66)}`);
         }
         if (!(result !== undefined && result !== "")) {
             console.error("We couldn't unclock the devie: ", result);
@@ -428,6 +428,10 @@ export class AndroidManager {
         AndroidManager._emulatorIds.set("8", "5572");
         AndroidManager._emulatorIds.set("8.", "5572");
         AndroidManager._emulatorIds.set("8.0", "5572");
+    }
+
+    private static sendKeyCommand = (token, key) => {
+        return `${AndroidManager.ADB} -s ${token} shell input keyevent ${key}`;
     }
 
     private static checkAndroid() {
