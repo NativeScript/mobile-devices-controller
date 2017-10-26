@@ -68,6 +68,13 @@ export class AndroidManager {
         return emulator;
     }
 
+    public static unlock(token) {
+        const result = executeCommand(`${AndroidManager.ADB} -s ${token} shell input keyevent 82 && adb shell input keyevent 66`);
+        if (!(result !== undefined && result !== "")) {
+            console.error("We couldn't unclock the devie: ", result);
+        }
+    }
+
     /**
      * Implement kill process
      * @param emulator 

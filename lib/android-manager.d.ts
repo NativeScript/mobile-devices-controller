@@ -12,6 +12,7 @@ export declare class AndroidManager {
     static getPhysicalDensity(token: string): number;
     static getPixelsOffset(token: string): number;
     static startEmulator(emulator: IDevice, options?: string, emulatorStartLogPath?: any): Promise<IDevice>;
+    static unlock(token: any): void;
     /**
      * Implement kill process
      * @param emulator
