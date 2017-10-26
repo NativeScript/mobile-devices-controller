@@ -11,7 +11,7 @@ export declare class AndroidManager {
     static getAllDevices(verbose?: boolean): Promise<Map<string, IDevice[]>>;
     static getPhysicalDensity(token: string): number;
     static getPixelsOffset(token: string): number;
-    static startEmulator(emulator: IDevice, options?: string, emulatorStartLogPath?: any): Promise<IDevice>;
+    static startEmulator(emulator: IDevice, options?: string, logPath?: any): Promise<IDevice>;
     static unlock(token: any, password?: any): void;
     /**
      * Implement kill process
@@ -42,5 +42,5 @@ export declare class AndroidManager {
     private static executeAdbCommand(device, command);
 }
 export declare class AndroidDevice extends Device {
-    constructor(name: string, apiLevel: any, type: DeviceType, token?: string, status?: Status, procPid?: number);
+    constructor(name: string, apiLevel: any, type: DeviceType, token?: string, status?: Status, pid?: number);
 }

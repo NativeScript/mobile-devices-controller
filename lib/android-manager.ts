@@ -43,19 +43,20 @@ export class AndroidManager {
         return Math.floor(OFFSET_DI_PIXELS * AndroidManager.getPhysicalDensity(token));
     }
 
-    public static async startEmulator(emulator: IDevice, options = "", emulatorStartLogPath?) {
+    public static async startEmulator(emulator: IDevice, options = "", logPath = undefined): Promise<IDevice> {
         if (!emulator.token) {
             emulator.token = AndroidManager.emulatorId(emulator.apiLevel) || "5554";
         }
 
-        if (emulatorStartLogPath) {
-            options = options + " > " + emulatorStartLogPath + " 2>&1";
+        if (logPath) {
+            options = options + " > " + logPath + " 2>&1";
         }
 
         emulator = await AndroidManager.startEmulatorProcess(emulator, options);
         const result = await AndroidManager.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || 180000) === true ? Status.BOOTED : Status.SHUTDOWN;
 
         if (result === Status.BOOTED) {
+            emulator.status = Status.BOOTED;
             emulator.startedAt = Date.now();
         }
 
@@ -65,6 +66,7 @@ export class AndroidManager {
             density: density,
             offsetPixels: offsetPixels,
         };
+
         return emulator;
     }
 
@@ -93,11 +95,11 @@ export class AndroidManager {
                 isAlive = false;
             }
 
-            if (emulator.procPid) {
+            if (emulator.pid) {
                 try {
-                    killPid(emulator.procPid);
+                    killPid(emulator.pid);
                     if (!isWin()) {
-                        killPid(emulator.procPid);
+                        killPid(emulator.pid);
                     }
                     isAlive = false;
                 } catch (error) {
@@ -106,7 +108,7 @@ export class AndroidManager {
 
             if (!isAlive) {
                 emulator.status = Status.SHUTDOWN;
-                emulator.procPid = undefined;
+                emulator.pid = undefined;
             }
         }
     }
@@ -231,7 +233,7 @@ export class AndroidManager {
         }
     }
 
-    private static async startEmulatorProcess(emulator, options) {
+    private static async startEmulatorProcess(emulator: IDevice, options) {
         const process = spawn
             (AndroidManager.EMULATOR,
             [" -avd ", emulator.name, "-port ", emulator.token, options || " -wipe-data"], {
@@ -239,7 +241,7 @@ export class AndroidManager {
                 detached: false
             });
 
-        emulator.procPid = process.pid;
+        emulator.pid = process.pid;
 
         return emulator;
     }
@@ -450,7 +452,7 @@ export class AndroidManager {
 }
 
 export class AndroidDevice extends Device {
-    constructor(name: string, apiLevel, type: DeviceType, token?: string, status?: Status, procPid?: number) {
-        super(name, apiLevel, type, Platform.ANDROID, token, status, procPid);
+    constructor(name: string, apiLevel, type: DeviceType, token?: string, status?: Status, pid?: number) {
+        super(name, apiLevel, type, Platform.ANDROID, token, status, pid);
     }
 }

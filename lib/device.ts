@@ -8,7 +8,7 @@ export interface IDevice {
   status?: Status,
   startedAt?: number,
   busySince?: number,
-  procPid?: number,
+  pid?: number,
   apiLevel?: string,
   info?: string,
   config?: any,
@@ -20,7 +20,13 @@ export class Device implements IDevice {
   private _info?: string;
   private _config?: any;
 
-  constructor(private _name: string, private _apiLevel: string, private _type: DeviceType, private _platform: Platform, private _token: string, private _status: Status, private _procPid?) {
+  constructor(private _name: string, 
+    private _apiLevel: string, 
+    private _type: DeviceType,
+    private _platform: Platform, 
+    private _token: string, 
+    private _status: Status, 
+    private _pid?) {
     this._startedAt = -1;
     this._busySince = -1;
   }
@@ -65,12 +71,12 @@ export class Device implements IDevice {
     this._platform = platform;
   }
 
-  set procPid(proc) {
-    this._procPid = proc;
+  set pid(pid) {
+    this._pid = pid;
   }
 
-  get procPid() {
-    return this._procPid;
+  get pid() {
+    return this._pid;
   }
 
   get status() {
@@ -123,7 +129,7 @@ export class Device implements IDevice {
       config: this.config,
       status: this.status,
       startedAt: this.startedAt,
-      procPid: this.procPid,
+      pid: this.pid,
       apiLevel: this.apiLevel
     }
   }
@@ -138,7 +144,7 @@ export class Device implements IDevice {
       "; config " + this.config +
       "; status " + this.status +
       "; startedAt" + this.startedAt +
-      "; procPid" + this.procPid +
+      "; pid" + this.pid +
       "; apiLevel" + this.apiLevel;
   }
 }

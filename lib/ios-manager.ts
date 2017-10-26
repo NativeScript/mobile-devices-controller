@@ -26,7 +26,7 @@ export class IOSManager {
         return devices;
     }
 
-    public static async startSimulator(simulator: IDevice) {
+    public static async startSimulator(simulator: IDevice): Promise<IDevice> {
         let udid = simulator.token;
         executeCommand(IOSManager.SIMCTL + " erase " + udid);
         const process = IOSManager.startSimulatorProcess(udid);
@@ -37,7 +37,7 @@ export class IOSManager {
             if (responce) {
                 simulator.type = DeviceType.SIMULATOR;
                 simulator.status = Status.BOOTED;
-                simulator.procPid = process.pid;
+                simulator.pid = process.pid;
                 simulator.startedAt = Date.now();
                 console.log(`Launched simulator with name: ${simulator.name}; udid: ${simulator.token}; status: ${simulator.status}`);
             }
@@ -52,7 +52,7 @@ export class IOSManager {
         if (device.type === DeviceType.SIMULATOR) {
             IOSManager.kill(device.token);
             device.status = Status.SHUTDOWN;
-            device.procPid = undefined;
+            device.pid = undefined;
             device.startedAt = -1;
             device.busySince = -1;
             await IOSManager.startSimulator(device);
@@ -255,7 +255,7 @@ export class IOSManager {
 }
 
 export class IOSDevice extends Device {
-    constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, procPid?: number) {
-        super(name, apiLevel, type, Platform.IOS, token, status, procPid);
+    constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, pid?: number) {
+        super(name, apiLevel, type, Platform.IOS, token, status, pid);
     }
 }

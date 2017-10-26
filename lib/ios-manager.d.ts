@@ -30,5 +30,5 @@ export declare class IOSManager {
     static getLogDir(token: any): string;
 }
 export declare class IOSDevice extends Device {
-    constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, procPid?: number);
+    constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, pid?: number);
 }
