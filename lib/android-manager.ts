@@ -68,8 +68,13 @@ export class AndroidManager {
         return emulator;
     }
 
-    public static unlock(token) {
-        const result = executeCommand(`${AndroidManager.ADB} -s ${token} shell input keyevent 82 && adb shell input keyevent 66`);
+    public static unlock(token, password = undefined) {
+        let result = "";
+        if (password) {
+            result = executeCommand(`${AndroidManager.ADB} -s ${token} shell input keyevent 82 && adb shell input text ${password} && adb shell input keyevent 66`);
+        } else {
+            result = executeCommand(`${AndroidManager.ADB} -s ${token} shell input keyevent 82 && adb shell input keyevent 66`);
+        }
         if (!(result !== undefined && result !== "")) {
             console.error("We couldn't unclock the devie: ", result);
         }
