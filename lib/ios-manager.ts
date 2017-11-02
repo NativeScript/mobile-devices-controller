@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "child_process";
+import { spawn } from "child_process";
 import { resolve } from "path";
 import { existsSync, readFileSync } from "fs";
 import { waitForOutput, executeCommand, tailFilelUntil } from "./utils";
