@@ -26,8 +26,8 @@ export declare class AndroidController {
     isAppRunning(device: IDevice, appId: string): boolean;
     static startApplication(device: IDevice, appId: string, activity?: any): void;
     static stopApplication(device: IDevice, appId: string): void;
-    static pullFile(device: IDevice, remotePath: any, destinationFolder: any): void;
-    static pushFile(device: IDevice, localPath: any, remotePath: any): void;
+    static pullFile(device: IDevice, remotePath: any, destinationFolder: any): any;
+    static pushFile(device: IDevice, localPath: any, remotePath: any): any;
     private static startEmulatorProcess(emulator, options);
     private static waitUntilEmulatorBoot(deviceId, timeOut);
     private static checkIfEmulatorIsRunning(token);

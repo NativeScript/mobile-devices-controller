@@ -176,7 +176,7 @@ export class AndroidController {
         if (sdcardFiles.includes("No such file or directory")) {
             const error = remoteBasePath + " does not exist.";
             console.log(error);
-            throw new Error(error);
+            return undefined;
         }
 
         if (!existsSync(destinationFolder)) {
@@ -191,10 +191,12 @@ export class AndroidController {
             const error = "Failed to transfer " + remotePath + " to " + destinationFolder;
             console.log(error);
             console.log("Error: " + output);
-            throw new Error(error);
+            return undefined;
         } else {
             console.log(remotePath + " transferred to " + destinationFolder);
         }
+
+        return destinationFolder;
     }
 
     public static pushFile(device: IDevice, localPath, remotePath) {
@@ -207,7 +209,7 @@ export class AndroidController {
         if (sdcardFiles.includes("No such file or directory")) {
             const error = remoteBasePath + " does not exist.";
             console.log(error);
-            throw new Error(error);
+            return undefined;
         }
 
         // Verify localPath
@@ -217,7 +219,7 @@ export class AndroidController {
         if (!existsSync(localFilePath)) {
             const error = localPath + " does not exist.";
             console.log(error);
-            throw new Error(error);
+            return undefined;
         }
 
         // Push files
@@ -227,10 +229,12 @@ export class AndroidController {
             const error = "Failed to transfer " + localPath + " to " + remotePath;
             console.log(error);
             console.log("Error: " + output);
-            throw new Error(error);
+            return undefined;
         } else {
             console.log(localPath + " transferred to " + remotePath);
         }
+
+        return localFilePath;
     }
 
     private static async startEmulatorProcess(emulator: IDevice, options) {
@@ -302,7 +306,7 @@ export class AndroidController {
                 emulator = new AndroidDevice(name, undefined, DeviceType.EMULATOR, undefined, Status.SHUTDOWN);
             }
             if (line.includes("Tag/ABI:")) {
-                const apiLevel =  /\d+((.|,)\d+)?/gi.exec(line.split("Tag/ABI:")[0].trim());
+                const apiLevel = /\d+((.|,)\d+)?/gi.exec(line.split("Tag/ABI:")[0].trim());
                 emulator.apiLevel = apiLevel[0];
             }
 
