@@ -133,18 +133,34 @@ export class Device implements IDevice {
       apiLevel: this.apiLevel
     }
   }
-
-  public toString() {
-    return "" +
-      "name " + this.name +
-      "; token " + this.token +
-      "; type " + this.type +
-      "; platform " + this.platform +
-      "; info " + this.info +
-      "; config " + this.config +
-      "; status " + this.status +
-      "; startedAt" + this.startedAt +
-      "; pid" + this.pid +
-      "; apiLevel" + this.apiLevel;
-  }
 }
+
+//   public toString() {
+//     return "" +
+//       "name " + this.name +
+//       "; token " + this.token +
+//       "; type " + this.type +
+//       "; platform " + this.platform +
+//       "; info " + this.info +
+//       "; config " + this.config +
+//       "; status " + this.status +
+//       "; startedAt" + this.startedAt +
+//       "; pid" + this.pid +
+//       "; apiLevel" + this.apiLevel;
+//   }
+// }
+
+// export function toString(device:IDevice) {
+//   return "" +
+//     "name " + this.name +
+//     "; token " + this.token +
+//     "; type " + this.type +
+//     "; platform " + this.platform +
+//     "; info " + this.info +
+//     "; config " + this.config +
+//     "; status " + this.status +
+//     "; startedAt" + this.startedAt +
+//     "; pid" + this.pid +
+//     "; apiLevel" + this.apiLevel;
+// }
+

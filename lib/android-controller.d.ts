@@ -1,6 +1,6 @@
 import { DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
-export declare class AndroidManager {
+export declare class AndroidController {
     private static ANDROID_HOME;
     private static EMULATOR;
     private static ADB;
@@ -8,7 +8,7 @@ export declare class AndroidManager {
     private static AVD_MANAGER;
     private static LIST_AVDS;
     private static _emulatorIds;
-    static getAllDevices(verbose?: boolean): Promise<Map<string, IDevice[]>>;
+    static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
     static getPhysicalDensity(token: string): number;
     static getPixelsOffset(token: string): number;
     static startEmulator(emulator: IDevice, options?: string, logPath?: any): Promise<IDevice>;

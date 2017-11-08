@@ -5,35 +5,35 @@ import { waitForOutput, executeCommand, tailFilelUntil } from "./utils";
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
 
-export class IOSManager {
+export class IOSController {
 
     private static XCRUN = "xcrun ";
-    private static SIMCTL = `${IOSManager.XCRUN} simctl`;
-    private static XCRUNLISTDEVICES_COMMAND = `${IOSManager.SIMCTL} list devices `;
-    private static BOOT_DEVICE_COMMAND = `${IOSManager.XCRUN} instruments -v -t 'Blank' -l 1 -w `;
-    private static GET_BOOTED_DEVICES_COMMAND = `${IOSManager.SIMCTL} list devices `;
+    private static SIMCTL = `${IOSController.XCRUN} simctl`;
+    private static XCRUNLISTDEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
+    private static BOOT_DEVICE_COMMAND = `${IOSController.XCRUN} instruments -v -t 'Blank' -l 1 -w `;
+    private static GET_BOOTED_DEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
     private static BOOTED = "Booted";
     private static SHUTDOWN = "Shutdown";
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
     private static IOS_DEVICE = "ios-device";
 
-    public static getAllDevices(verbose: boolean = false) {
-        const devices = IOSManager.parseDevices();
+    public static getAllDevices(verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
+        const devices = IOSController.parseDevices();
         if (verbose) {
             console.log("All devices: ", devices);
         }
 
-        return devices;
+        return Promise.resolve(devices);
     }
 
     public static async startSimulator(simulator: IDevice): Promise<IDevice> {
         let udid = simulator.token;
-        executeCommand(IOSManager.SIMCTL + " erase " + udid);
-        const process = IOSManager.startSimulatorProcess(udid);
+        executeCommand(IOSController.SIMCTL + " erase " + udid);
+        const process = IOSController.startSimulatorProcess(udid);
 
         let responce: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, 180000);
         if (responce === true) {
-            responce = IOSManager.checkIfSimulatorIsBooted(udid, 180000);
+            responce = IOSController.checkIfSimulatorIsBooted(udid, 180000);
             if (responce) {
                 simulator.type = DeviceType.SIMULATOR;
                 simulator.status = Status.BOOTED;
@@ -50,34 +50,34 @@ export class IOSManager {
 
     public static async restartDevice(device: IDevice) {
         if (device.type === DeviceType.SIMULATOR) {
-            IOSManager.kill(device.token);
+            IOSController.kill(device.token);
             device.status = Status.SHUTDOWN;
             device.pid = undefined;
             device.startedAt = -1;
             device.busySince = -1;
-            await IOSManager.startSimulator(device);
+            await IOSController.startSimulator(device);
         }
     }
 
     public static killAll() {
         const log = executeCommand("killall Simulator ");
-        executeCommand(IOSManager.OSASCRIPT_QUIT_SIMULATOR_COMMAND);
+        executeCommand(IOSController.OSASCRIPT_QUIT_SIMULATOR_COMMAND);
     }
 
     public static kill(udid: string) {
         console.log(`Killing simulator with udid ${udid}`);
-        executeCommand(IOSManager.SIMCTL + "  shutdown " + udid);
+        executeCommand(`${IOSController.SIMCTL} shutdown udid`);
 
         // Kill all the processes related with sim.id (for example WDA agents).
-        const killAllRelatedProcessesCommand = "ps aux | grep -ie " + udid + " | awk '{print $2}' | xargs kill -9";
+        const killAllRelatedProcessesCommand = `ps aux | grep -ie ${udid} | awk '{print $2}' | xargs kill -9`;
         executeCommand(killAllRelatedProcessesCommand);
     }
 
     public static getInstalledApps(token) {
         const apps = new Array();
-        const rowData = executeCommand("find " + IOSManager.getSimLocation(token) + "/data/Containers/Bundle/Application -type d -name *.app").split("\\r?\\n");
+        const rowData = executeCommand(`find ${IOSController.getSimLocation(token)} /data/Containers/Bundle/Application -type d -name *.app`).split("\\r?\\n");
         rowData.forEach(sim => {
-            const rowBundle = executeCommand("defaults read " + sim + "/Info.plist | grep CFBundleIdentifier");
+            const rowBundle = executeCommand(`defaults read " ${sim} /Info.plist | grep CFBundleIdentifier`);
             const appId = rowBundle.split("\"")[1];
             apps.push(appId);
         });
@@ -86,16 +86,16 @@ export class IOSManager {
     }
 
     public static installApp(token, fullAppName) {
-        executeCommand(IOSManager.SIMCTL + " install " + token, fullAppName);
+        executeCommand(`${IOSController.SIMCTL} install ${token}`, fullAppName);
     }
 
     public static uninstallApp(token, bundleId) {
-        executeCommand(IOSManager.SIMCTL + " uninstall " + token + " " + bundleId);
+        executeCommand(`${IOSController.SIMCTL} uninstall ${token} ${bundleId}`);
     }
 
     private static startSimulatorProcess(udid) {
         //xcrun instruments -v -t 'Blank' -l 100 -w
-        const simProcess = spawn(IOSManager.BOOT_DEVICE_COMMAND, [udid], {
+        const simProcess = spawn(IOSController.BOOT_DEVICE_COMMAND, [udid], {
             shell: true,
             detached: false
         });
@@ -106,13 +106,13 @@ export class IOSManager {
     }
 
     private static isRunning(token) {
-        const out = executeCommand(IOSManager.SIMCTL + " spawn " + token + " launchctl print system | grep com.apple.springboard.services ");
+        const out = executeCommand(`${IOSController.SIMCTL} spawn token launchctl print system | grep com.apple.springboard.services `);
         return out.includes("M   A   com.apple.springboard.services");
     }
 
-    public static parseDevices(stdout = undefined) {
+    public static parseDevices(stdout = undefined): Map<string, Array<IDevice>> {
         if (!stdout) {
-            stdout = executeCommand(IOSManager.XCRUNLISTDEVICES_COMMAND);
+            stdout = executeCommand(IOSController.XCRUNLISTDEVICES_COMMAND);
         }
 
         let deviceSectionRe = /-- iOS (.+) --(\n\s{4}.+)*/mg;
@@ -158,8 +158,13 @@ export class IOSManager {
         return devices;
     }
 
+    public static getSimLocation(token) {
+        const simRoot = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/");
+        return simRoot + token;
+    }
+
     public static filterDeviceBy(...args) {
-        const mappedDevices = IOSManager.parseDevices();
+        const mappedDevices = IOSController.parseDevices();
         const result = new Array<IDevice>();
         mappedDevices.forEach(devices => {
             devices.forEach(device => {
@@ -182,7 +187,7 @@ export class IOSManager {
 
     public async getScreenshot(dir, token) {
         let pathToScreenshotPng = resolve(dir, `screenshot-${token}.png`);
-        executeCommand(`${IOSManager.SIMCTL} io ${token} 'screenshot' ${pathToScreenshotPng}`);
+        executeCommand(`${IOSController.SIMCTL} io ${token} 'screenshot' ${pathToScreenshotPng}`);
         let screenshotImg = readFileSync(pathToScreenshotPng);
         //await fs.rimraf(pathToScreenshotPng);
         return screenshotImg.toString('base64');
@@ -197,12 +202,12 @@ export class IOSManager {
         let booted = false;
         while ((currentTime - startTime) < timeout && !booted) {
             currentTime = new Date().getTime();
-            const devices = IOSManager.filterDeviceBy(udid, Status.BOOTED);
-            booted = devices.length > 0 && IOSManager.isRunning(udid);
+            const devices = IOSController.filterDeviceBy(udid, Status.BOOTED);
+            booted = devices.length > 0 && IOSController.isRunning(udid);
         }
 
         if (!booted) {
-            let error = "Simulator with " + udid + " failed to boot";
+            let error = `Simulator with " ${udid} failed to boot`;
             console.log(error, true);
         } else {
             console.log("Simulator is booted!");
@@ -213,11 +218,11 @@ export class IOSManager {
 
     // Not testes to the end
     private static async waitForBootInSystemLog(simulator: IDevice, bootedIndicator, startupTimeout) {
-        return await IOSManager.tailLogsUntil(simulator.token, bootedIndicator, startupTimeout);
+        return await IOSController.tailLogsUntil(simulator.token, bootedIndicator, startupTimeout);
     }
 
     private static async tailLogsUntil(token, bootedIndicator, timeoutMs) {
-        let simLog = resolve(IOSManager.getLogDir(token), 'system.log');
+        let simLog = resolve(IOSController.getLogDir(token), 'system.log');
 
         // we need to make sure log file exists before we can tail it
         let exists = existsSync(simLog);
@@ -241,11 +246,6 @@ export class IOSManager {
         }
 
         return isBooted;
-    }
-
-    private static getSimLocation(token) {
-        const simRoot = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/");
-        return simRoot + token;
     }
 
     public static getLogDir(token) {

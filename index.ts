@@ -1,56 +1,56 @@
 import { Platform, DeviceType, Status } from "./lib/enums";
 import { Device, IDevice } from "./lib/device";
-import { AndroidManager, AndroidDevice } from "./lib/android-manager";
-import { IOSManager, IOSDevice } from "./lib/ios-manager";
-import { DeviceManager } from "./lib/device-manager";
+import { AndroidController, AndroidDevice } from "./lib/android-controller";
+import { IOSController, IOSDevice } from "./lib/ios-controller";
+import { DeviceController } from "./lib/device-controller";
 
 export { Platform, DeviceType, Status } from "./lib/enums";
 export { IDevice, Device } from "./lib/device";
-export { AndroidManager, AndroidDevice } from "./lib/android-manager";
-export { IOSManager, IOSDevice } from "./lib/ios-manager";
-export { DeviceManager } from "./lib/device-manager";
+export { AndroidController, AndroidDevice } from "./lib/android-controller";
+export { IOSController, IOSDevice } from "./lib/ios-controller";
+export { DeviceController } from "./lib/device-controller";
 
 export async function getAndroidDevices(verbose = false) {
-    await AndroidManager.getAllDevices(verbose);
+    await AndroidController.getAllDevices(verbose);
 }
 
 export async function getIOSDevices() {
-    await IOSManager.getAllDevices();
+    await IOSController.getAllDevices();
 }
 
-export async function getAllDevices(platform: Platform) {
-    await DeviceManager.getAllDevices(platform);
+export async function getDevices(platform: Platform) {
+    await DeviceController.getDivices({ platform: platform });
 }
 
 export async function startEmulator(emulator: IDevice, options?) {
-    await AndroidManager.startEmulator(emulator, options);
+    await AndroidController.startEmulator(emulator, options);
 }
 
 export async function startSimulator(simulator: IDevice, options?) {
-    await IOSManager.startSimulator(simulator);
+    await IOSController.startSimulator(simulator);
 }
 
 export async function startDevice(device: IDevice, options?) {
-    await DeviceManager.startDevice(device, options);
+    await DeviceController.startDevice(device, options);
 }
 
 /**
  * Still not impleneted
  */
 export function killAllEmulators() {
-    AndroidManager.killAll();
+    AndroidController.killAll();
 }
 
 export function killAllSimulators() {
-    IOSManager.killAll();
+    IOSController.killAll();
 }
 
 export function killEmulator(emulator: IDevice) {
-    AndroidManager.kill(emulator);
+    AndroidController.kill(emulator);
 }
 
 export function killSimulator(simulator: IDevice) {
-    IOSManager.kill(simulator.token);
+    IOSController.kill(simulator.token);
 }
 
 /**
@@ -58,8 +58,8 @@ export function killSimulator(simulator: IDevice) {
  */
 export async function restartDevice(device: IDevice) {
     if (device.platform === Platform.ANDROID) {
-        AndroidManager.restartDevice(device);
+        AndroidController.restartDevice(device);
     } else {
-        IOSManager.restartDevice(device);
+        IOSController.restartDevice(device);
     }
 }
