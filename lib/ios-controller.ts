@@ -106,7 +106,7 @@ export class IOSController {
     }
 
     private static isRunning(token) {
-        const out = executeCommand(`${IOSController.SIMCTL} spawn token launchctl print system | grep com.apple.springboard.services `);
+        const out = executeCommand(`${IOSController.SIMCTL} spawn ${token} launchctl print system | grep com.apple.springboard.services `);
         return out.includes("M   A   com.apple.springboard.services");
     }
 
@@ -159,8 +159,8 @@ export class IOSController {
     }
 
     public static getSimLocation(token) {
-        const simRoot = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/");
-        return simRoot + token;
+        const simRoot = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/",token);
+        return simRoot;
     }
 
     public static filterDeviceBy(...args) {
@@ -169,8 +169,9 @@ export class IOSController {
         mappedDevices.forEach(devices => {
             devices.forEach(device => {
                 let shouldAdd = true;
+                const deviceToString = (<Device>device).toString().toLocaleLowerCase();                
                 args.forEach(arg => {
-                    if (device.toString().includes(arg)) {
+                    if (deviceToString.includes(arg.toLocaleLowerCase())) {
                         shouldAdd = shouldAdd && true;
                     } else {
                         shouldAdd = false;

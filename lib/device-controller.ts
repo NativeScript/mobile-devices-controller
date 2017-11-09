@@ -52,7 +52,7 @@ export class DeviceController {
     }
 
     public static async startDevice(device: IDevice, options?) {
-        if (device.platform === Platform.ANDROID && device.type === DeviceType.EMULATOR) {
+        if (device.type === DeviceType.EMULATOR) {
             return await AndroidController.startEmulator(device, options);
         } else {
             return await IOSController.startSimulator(device);

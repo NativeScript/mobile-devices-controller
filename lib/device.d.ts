@@ -48,4 +48,5 @@ export declare class Device implements IDevice {
         pid: any;
         apiLevel: string;
     };
+    toString(): string;
 }
