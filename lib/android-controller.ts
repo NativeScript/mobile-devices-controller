@@ -180,7 +180,8 @@ export class AndroidController {
         }
 
         if (!existsSync(destinationFolder)) {
-            throw new Error(`The folder ${destinationFolder} doesn't exist!`);
+            console.log(`The folder ${destinationFolder} doesn't exist!`);
+            return undefined;
         }
 
         // Pull files
