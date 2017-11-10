@@ -4,7 +4,7 @@
   "description": "Manage simulators, emulators and devices",
   "main": "index.js",
   "scripts": {
-    "prepare": "tsc",
+    "postinstall": "tsc",
     "watch": "tsc -watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -24,7 +24,7 @@
   "homepage": "https://github.com/NativeScript/mobile-devices-controller#readme",
   "devDependencies": {
     "@types/node": "^8.0.31",
-    "typescript": "^2.5.3"
+    "typescript": "^2.6.1"
   },
   "dependencies": {}
 }
