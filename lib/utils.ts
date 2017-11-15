@@ -2,7 +2,7 @@ import * as childProcess from "child_process";
 import { readFileSync } from "fs";
 
 export function executeCommand(args, cwd = process.cwd()): string {
-    const commands = args.split(" ");
+    const commands = args.trim().split(" ");
     const baseCommand = commands.shift();
     const output = childProcess.spawnSync(baseCommand, commands, {
         shell: true,

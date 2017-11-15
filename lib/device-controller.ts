@@ -2,6 +2,7 @@ import { Platform, DeviceType, Status } from "./enums";
 import { Device, IDevice } from "./device";
 import { AndroidController } from "./android-controller";
 import { IOSController } from "./ios-controller";
+import { isWin } from "./utils";
 
 export class DeviceController {
 
@@ -32,21 +33,7 @@ export class DeviceController {
             delete searchQuery.name;
         }
 
-        const filteredDevices = devices.filter((device) => {
-            let shouldInclude = true;
-            if (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length <= 0) {
-                return true;
-            }
-            Object.getOwnPropertyNames(searchQuery).forEach((prop) => {
-                if (searchQuery[prop] && searchQuery[prop] === device[prop]) {
-                    shouldInclude = shouldInclude && true;
-                } else if (searchQuery[prop] && searchQuery[prop] !== device[prop]) {
-                    shouldInclude = shouldInclude && false;
-                }
-            });
-
-            return shouldInclude;
-        })
+        const filteredDevices = DeviceController.filter(devices, searchQuery);
 
         return filteredDevices;
     }
@@ -75,6 +62,28 @@ export class DeviceController {
         }
     }
 
+    public static filter(devices: Array<IDevice>, searchQuery) {
+        return devices.filter((device) => {
+            if (Object.getOwnPropertyNames(searchQuery).length === 0) {
+                return true;
+            }
+
+            let shouldInclude = true;
+            if (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0) {
+                return true;
+            }
+            Object.getOwnPropertyNames(searchQuery).forEach((prop) => {
+                if (searchQuery[prop] && searchQuery[prop] === device[prop]) {
+                    shouldInclude = shouldInclude && true;
+                } else if (searchQuery[prop] && searchQuery[prop] !== device[prop]) {
+                    shouldInclude = shouldInclude && false;
+                }
+            });
+
+            return shouldInclude;
+        })
+    }
+
     private static copyProperties(from: IDevice) {
         const to: IDevice = { platform: undefined, token: undefined, name: undefined, type: undefined }
         if (!from || from === null || from === {} || Object.getOwnPropertyNames(from).length <= 0) {
@@ -97,9 +106,9 @@ export class DeviceController {
 
     private static async getAllDevicesByPlatform(platform: Platform, verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
         let devices;
-        if (platform === Platform.ANDROID) {
+        if (platform.toLowerCase() === Platform.ANDROID) {
             devices = await AndroidController.getAllDevices(verbose);
-        } else {
+        } else if (!isWin() && platform.toLowerCase() === Platform.IOS) {
             devices = await IOSController.getAllDevices(verbose);
         }
 

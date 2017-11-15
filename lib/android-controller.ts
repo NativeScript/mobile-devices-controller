@@ -446,12 +446,16 @@ export class AndroidController {
     }
 
     private static checkAndroid() {
-        if (!existsSync(AndroidController.AVD_MANAGER)) {
-            AndroidController.LIST_AVDS = " android list avds ";
+        let fileExt = "";
+        if (isWin()) {
+            fileExt = ".bat";
+        }
+        if (!existsSync(AndroidController.AVD_MANAGER + fileExt)) {
+            AndroidController.LIST_AVDS = "android list avds ";
         }
 
-        if (!existsSync(AndroidController.EMULATOR)) {
-            AndroidController.EMULATOR = " emulator ";
+        if (!existsSync(AndroidController.EMULATOR + fileExt)) {
+            AndroidController.EMULATOR = "emulator ";
         }
     }
 
