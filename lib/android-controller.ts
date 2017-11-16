@@ -344,12 +344,12 @@ export class AndroidController {
                         avdInfo = executeCommand("tasklist /v /fi \"windowtitle eq Android*\"");
                     }
 
-                    for (let key of emulators.keys()) {
-                        if (avdInfo.includes(key)) {
-                            emulators.get(key)[0].status = Status.BOOTED;
-                            emulators.get(key)[0].token = dev.token;
+                    emulators.forEach((v, k, m) => {
+                        if (avdInfo.includes(k)) {
+                            v[0].status = Status.BOOTED;
+                            v[0].token = dev.token;
                         }
-                    }
+                    })
                 } catch (error) {
                     console.log(error);
                 }
