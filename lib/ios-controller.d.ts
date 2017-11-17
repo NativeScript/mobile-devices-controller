@@ -33,3 +33,11 @@ export declare class IOSController {
 export declare class IOSDevice extends Device {
     constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, pid?: number);
 }
+export declare class IOSDeviceScreenInfo {
+    deviceType: any;
+    width: any;
+    height: any;
+    ppi: any;
+    actionBarHeight: any;
+    constructor(deviceType: any, width: any, height: any, ppi: any, actionBarHeight: any);
+}
