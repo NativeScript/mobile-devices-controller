@@ -146,6 +146,10 @@ export class IOSController {
                     DeviceType.SIMULATOR,
                     apiLevel
                 );
+
+                // device.config = {
+                //     actionBarHeight:
+                // };
                 if (!devices.has(device.name)) {
                     devices.set(device.name, new Array<IDevice>());
                     devices.get(device.name).push(device);
@@ -159,7 +163,7 @@ export class IOSController {
     }
 
     public static getSimLocation(token) {
-        const simRoot = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/",token);
+        const simRoot = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/", token);
         return simRoot;
     }
 
@@ -169,7 +173,7 @@ export class IOSController {
         mappedDevices.forEach(devices => {
             devices.forEach(device => {
                 let shouldAdd = true;
-                const deviceToString = (<Device>device).toString().toLocaleLowerCase();                
+                const deviceToString = (<Device>device).toString().toLocaleLowerCase();
                 args.forEach(arg => {
                     if (deviceToString.includes(arg.toLocaleLowerCase())) {
                         shouldAdd = shouldAdd && true;
@@ -253,10 +257,49 @@ export class IOSController {
         let home = process.env.HOME;
         return resolve(home, 'Library', 'Logs', 'CoreSimulator', token);
     }
+
+
+    private loadDefaultActionBarSizes() {
+        const devices = new Map<string, IOSDeviceScreenInfo>();
+
+        devices.set("iPhone 5", new IOSDeviceScreenInfo("iPhone 5", 640, 1336, 326, 30));
+        devices.set("iPhone 5C", new IOSDeviceScreenInfo("iPhone 5C", 640, 1336, 326, 30));
+        devices.set("iPhone 5S", new IOSDeviceScreenInfo("iPhone 5S", 640, 1336, 326, 30));
+
+        devices.set("iPhone 6", new IOSDeviceScreenInfo("iPhone 6", 750, 1334, 326, 30));
+        devices.set("iPhone 6s", new IOSDeviceScreenInfo("iPhone 6s", 750, 1334, 326, 30));
+        devices.set("iPhone 7", new IOSDeviceScreenInfo("iPhone 7", 750, 1334, 326, 30));
+        devices.set("iPhone 8", new IOSDeviceScreenInfo("iPhone 8", 750, 1334, 326, 30));
+
+        // devices.set("6 Plus", new IOSDeviceScreenInfo("iPhone 6 Plus", 1242, 2208, 326));
+        // devices.set("6s Plus", new IOSDeviceScreenInfo("iPhone 6 Plus", 1242, 2208, 326));
+        // devices.set("7 Plus", new IOSDeviceScreenInfo("iPhone 7 Plus", 1242, 2208, 326));
+        // devices.set("8 Plus", new IOSDeviceScreenInfo("iPhone 8 Plus", 1242, 2208, 326));
+
+        // devices.set("X", new IOSDeviceScreenInfo("iPhone X", 11242, 2208, 401));
+
+        // devices.set("Mini 2", new IOSDeviceScreenInfo("Mini 2", 11242, 2208, 401));
+        // devices.set("Mini 3", new IOSDeviceScreenInfo("Mini 3", 11242, 2208, 401));
+        // devices.set("Mini 4", new IOSDeviceScreenInfo("Mini 4", 11242, 2208, 401));
+
+        // devices.set("iPad 3", new IOSDeviceScreenInfo("iPad 3", 1536, 2048, 264));
+        // devices.set("iPad 4", new IOSDeviceScreenInfo("iPad 4", 1536, 2048, 264));
+        // devices.set("iPad Air", new IOSDeviceScreenInfo("iPad Air", 1536, 2048, 264));
+        // devices.set("iPad Air 2", new IOSDeviceScreenInfo("iPad Air 2", 1536, 2048, 264));
+        // devices.set("9.7-inch Pro", new IOSDeviceScreenInfo("iPad Pro", 1536, 2048, 264));
+
+        // devices.set("12.9-inch iPad Pro", new IOSDeviceScreenInfo("12.9-inch iPad Pro", 1536, 2048, 264));
+    }
 }
 
 export class IOSDevice extends Device {
     constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, pid?: number) {
         super(name, apiLevel, type, Platform.IOS, token, status, pid);
+    }
+}
+
+export class IOSDeviceScreenInfo {
+    constructor(public deviceType, public width, public height, public ppi, public actionBarHeight) {
+
     }
 }

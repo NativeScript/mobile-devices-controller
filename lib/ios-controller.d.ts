@@ -28,6 +28,7 @@ export declare class IOSController {
     private static waitForBootInSystemLog(simulator, bootedIndicator, startupTimeout);
     private static tailLogsUntil(token, bootedIndicator, timeoutMs);
     static getLogDir(token: any): string;
+    private loadDefaultActionBarSizes();
 }
 export declare class IOSDevice extends Device {
     constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, pid?: number);
