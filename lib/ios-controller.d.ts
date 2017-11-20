@@ -10,6 +10,7 @@ export declare class IOSController {
     private static SHUTDOWN;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND;
     private static IOS_DEVICE;
+    private static deviceScreenInfos;
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
     static startSimulator(simulator: IDevice): Promise<IDevice>;
     static restartDevice(device: IDevice): Promise<void>;
@@ -28,7 +29,7 @@ export declare class IOSController {
     private static waitForBootInSystemLog(simulator, bootedIndicator, startupTimeout);
     private static tailLogsUntil(token, bootedIndicator, timeoutMs);
     static getLogDir(token: any): string;
-    private loadDefaultActionBarSizes();
+    private static loadIOSDeviceScreenInfo();
 }
 export declare class IOSDevice extends Device {
     constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, pid?: number);

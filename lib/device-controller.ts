@@ -64,14 +64,11 @@ export class DeviceController {
 
     public static filter(devices: Array<IDevice>, searchQuery) {
         return devices.filter((device) => {
-            if (Object.getOwnPropertyNames(searchQuery).length === 0) {
+            if (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0) {
                 return true;
             }
 
             let shouldInclude = true;
-            if (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0) {
-                return true;
-            }
             Object.getOwnPropertyNames(searchQuery).forEach((prop) => {
                 if (searchQuery[prop] && searchQuery[prop] === device[prop]) {
                     shouldInclude = shouldInclude && true;

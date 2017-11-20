@@ -16,8 +16,12 @@ export class IOSController {
     private static SHUTDOWN = "Shutdown";
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
     private static IOS_DEVICE = "ios-device";
+    private static deviceScreenInfos = new Map<string, IOSDeviceScreenInfo>();
 
     public static getAllDevices(verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
+        if (IOSController.deviceScreenInfos.size === 0) {
+            IOSController.loadIOSDeviceScreenInfo();
+        }
         const devices = IOSController.parseDevices();
         if (verbose) {
             console.log("All devices: ", devices);
@@ -147,6 +151,12 @@ export class IOSController {
                     apiLevel
                 );
 
+                IOSController.deviceScreenInfos.forEach((v, k, m) => {
+                    if (device.name.includes(k)) {
+                        device.config = { offsetPixels: v.actionBarHeight };
+                    }
+                });
+
                 // device.config = {
                 //     actionBarHeight:
                 // };
@@ -258,25 +268,26 @@ export class IOSController {
         return resolve(home, 'Library', 'Logs', 'CoreSimulator', token);
     }
 
-
-    private loadDefaultActionBarSizes() {
+    private static loadIOSDeviceScreenInfo() {
         const devices = new Map<string, IOSDeviceScreenInfo>();
 
-        devices.set("iPhone 5", new IOSDeviceScreenInfo("iPhone 5", 640, 1336, 326, 30));
-        devices.set("iPhone 5C", new IOSDeviceScreenInfo("iPhone 5C", 640, 1336, 326, 30));
-        devices.set("iPhone 5S", new IOSDeviceScreenInfo("iPhone 5S", 640, 1336, 326, 30));
+        // IOSController.deviceScreenInfos.set("iPhone 5", new IOSDeviceScreenInfo("iPhone 5", 640, 1336, 326, 30));
+        // IOSController.deviceScreenInfos.set("iPhone 5C", new IOSDeviceScreenInfo("iPhone 5C", 640, 1336, 326, 30));
+        // IOSController.deviceScreenInfos.set("iPhone 5S", new IOSDeviceScreenInfo("iPhone 5S", 640, 1336, 326, 30));
 
-        devices.set("iPhone 6", new IOSDeviceScreenInfo("iPhone 6", 750, 1334, 326, 30));
-        devices.set("iPhone 6s", new IOSDeviceScreenInfo("iPhone 6s", 750, 1334, 326, 30));
-        devices.set("iPhone 7", new IOSDeviceScreenInfo("iPhone 7", 750, 1334, 326, 30));
-        devices.set("iPhone 8", new IOSDeviceScreenInfo("iPhone 8", 750, 1334, 326, 30));
+        IOSController.deviceScreenInfos.set("iPhone 6", new IOSDeviceScreenInfo("iPhone 6", 750, 1334, 326, 33));
+        IOSController.deviceScreenInfos.set("iPhone 6s", new IOSDeviceScreenInfo("iPhone 6s", 750, 1334, 326, 33));
+        IOSController.deviceScreenInfos.set("iPhone 7", new IOSDeviceScreenInfo("iPhone 7", 750, 1334, 326, 33));
+        IOSController.deviceScreenInfos.set("iPhone 8", new IOSDeviceScreenInfo("iPhone 8", 750, 1334, 326, 33));
 
-        // devices.set("6 Plus", new IOSDeviceScreenInfo("iPhone 6 Plus", 1242, 2208, 326));
-        // devices.set("6s Plus", new IOSDeviceScreenInfo("iPhone 6 Plus", 1242, 2208, 326));
-        // devices.set("7 Plus", new IOSDeviceScreenInfo("iPhone 7 Plus", 1242, 2208, 326));
-        // devices.set("8 Plus", new IOSDeviceScreenInfo("iPhone 8 Plus", 1242, 2208, 326));
+        IOSController.deviceScreenInfos.set("6 Plus", new IOSDeviceScreenInfo("iPhone 6 Plus", 1242, 2208, 326, 50));
+        IOSController.deviceScreenInfos.set("6s Plus", new IOSDeviceScreenInfo("iPhone 6 Plus", 1242, 2208, 326, 50));
+        IOSController.deviceScreenInfos.set("7 Plus", new IOSDeviceScreenInfo("iPhone 7 Plus", 1242, 2208, 326, 50));
+        IOSController.deviceScreenInfos.set("8 Plus", new IOSDeviceScreenInfo("iPhone 8 Plus", 1242, 2208, 326, 50));
 
-        // devices.set("X", new IOSDeviceScreenInfo("iPhone X", 11242, 2208, 401));
+        IOSController.deviceScreenInfos.set("X", new IOSDeviceScreenInfo("iPhone X", 11242, 2208, 401, 87));
+
+        IOSController.deviceScreenInfos.set("iPad Air 2", new IOSDeviceScreenInfo("iPad Air 2", 1536, 2048, 264, 32));
 
         // devices.set("Mini 2", new IOSDeviceScreenInfo("Mini 2", 11242, 2208, 401));
         // devices.set("Mini 3", new IOSDeviceScreenInfo("Mini 3", 11242, 2208, 401));
@@ -285,7 +296,6 @@ export class IOSController {
         // devices.set("iPad 3", new IOSDeviceScreenInfo("iPad 3", 1536, 2048, 264));
         // devices.set("iPad 4", new IOSDeviceScreenInfo("iPad 4", 1536, 2048, 264));
         // devices.set("iPad Air", new IOSDeviceScreenInfo("iPad Air", 1536, 2048, 264));
-        // devices.set("iPad Air 2", new IOSDeviceScreenInfo("iPad Air 2", 1536, 2048, 264));
         // devices.set("9.7-inch Pro", new IOSDeviceScreenInfo("iPad Pro", 1536, 2048, 264));
 
         // devices.set("12.9-inch iPad Pro", new IOSDeviceScreenInfo("12.9-inch iPad Pro", 1536, 2048, 264));
