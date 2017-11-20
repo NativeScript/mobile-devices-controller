@@ -157,9 +157,6 @@ export class IOSController {
                     }
                 });
 
-                // device.config = {
-                //     actionBarHeight:
-                // };
                 if (!devices.has(device.name)) {
                     devices.set(device.name, new Array<IDevice>());
                     devices.get(device.name).push(device);
