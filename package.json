@@ -4,7 +4,6 @@
   "description": "Manage simulators, emulators and devices",
   "main": "index.js",
   "scripts": {
-    "postinstall": "tsc",
     "watch": "tsc -watch",
     "tsc": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
