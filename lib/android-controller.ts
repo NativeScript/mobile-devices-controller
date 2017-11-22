@@ -14,7 +14,7 @@ import {
 const OFFSET_DI_PIXELS = 16;
 
 export class AndroidController {
-    private static ANDROID_HOME = process.env["ANDROID_HOME"];
+    private static ANDROID_HOME = process.env["ANDROID_HOME"] || "";
     private static EMULATOR = resolve(AndroidController.ANDROID_HOME, "emulator", "emulator");
     private static ADB = resolve(AndroidController.ANDROID_HOME, "platform-tools", "adb");
     private static LIST_DEVICES_COMMAND = AndroidController.ADB + " devices -l";
