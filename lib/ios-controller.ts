@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 import { resolve } from "path";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, utimes, Stats } from "fs";
 import { waitForOutput, executeCommand, tailFilelUntil } from "./utils";
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
@@ -22,12 +22,13 @@ export class IOSController {
         if (IOSController.deviceScreenInfos.size === 0) {
             IOSController.loadIOSDeviceScreenInfo();
         }
-        const devices = IOSController.parseDevices();
+        const devices = IOSController.parseSimulators();
+        const allDevices = IOSController.parseRealDevices(devices);
         if (verbose) {
             console.log("All devices: ", devices);
         }
 
-        return Promise.resolve(devices);
+        return Promise.resolve(allDevices);
     }
 
     public static async startSimulator(simulator: IDevice): Promise<IDevice> {
@@ -114,7 +115,7 @@ export class IOSController {
         return out.includes("M   A   com.apple.springboard.services");
     }
 
-    public static parseDevices(stdout = undefined): Map<string, Array<IDevice>> {
+    public static parseSimulators(stdout = undefined): Map<string, Array<IDevice>> {
         if (!stdout) {
             stdout = executeCommand(IOSController.XCRUNLISTDEVICES_COMMAND);
         }
@@ -169,13 +170,42 @@ export class IOSController {
         return devices;
     }
 
+    public static parseRealDevices(devices = new Map<string, IDevice[]>()) {
+        const devicesUDID = executeCommand("idevice_id  --list").split('\n');
+        devicesUDID.forEach(udid => {
+            if (udid && udid !== "") {
+                const deviceInfo = executeCommand(`ideviceinfo -s -u ${udid}`).split('\n');
+                const device = new Device(undefined, undefined, DeviceType.DEVICE, Platform.IOS, udid, Status.BOOTED);
+                deviceInfo.forEach(info => {
+                    if (info && info.trim() !== "") {
+                        if (info.toLowerCase().includes('devicename')) {
+                            device.name = info.split(": ")[1].trim();
+                        }
+                        if (info.toLowerCase().includes('productversion')) {
+                            device.apiLevel = info.split(": ")[1].trim();
+                        }
+                    }
+                });
+                if (device.name) {
+                    if (devices.has(device.name)) {
+                        devices.get(device.name).push(device);
+                    } else {
+                        devices.set(device.name, [device]);
+                    }
+                }
+            }
+        });
+
+        return devices;
+    }
+
     public static getSimLocation(token) {
         const simRoot = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/", token);
         return simRoot;
     }
 
     public static filterDeviceBy(...args) {
-        const mappedDevices = IOSController.parseDevices();
+        const mappedDevices = IOSController.parseSimulators();
         const result = new Array<IDevice>();
         mappedDevices.forEach(devices => {
             devices.forEach(device => {

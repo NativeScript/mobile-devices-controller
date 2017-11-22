@@ -21,7 +21,8 @@ export declare class IOSController {
     static uninstallApp(token: any, bundleId: any): void;
     private static startSimulatorProcess(udid);
     private static isRunning(token);
-    static parseDevices(stdout?: any): Map<string, Array<IDevice>>;
+    static parseSimulators(stdout?: any): Map<string, Array<IDevice>>;
+    static parseRealDevices(devices?: Map<string, IDevice[]>): Map<string, IDevice[]>;
     static getSimLocation(token: any): string;
     static filterDeviceBy(...args: any[]): IDevice[];
     getScreenshot(dir: any, token: any): Promise<string>;
