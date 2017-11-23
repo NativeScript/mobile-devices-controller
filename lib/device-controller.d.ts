@@ -5,7 +5,7 @@ export declare class DeviceController {
      *
      * @param query should be like IDevice
      */
-    static getDivices(query: any): Promise<IDevice[]>;
+    static getDevices(query: any): Promise<IDevice[]>;
     static startDevice(device: IDevice, options?: any): Promise<IDevice>;
     static kill(device: IDevice): Promise<void>;
     static killAll(type: DeviceType): void;

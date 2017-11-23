@@ -19,7 +19,7 @@ export async function getIOSDevices() {
 }
 
 export async function getDevices(platform: Platform) {
-    await DeviceController.getDivices({ platform: platform });
+    await DeviceController.getDevices({ platform: platform });
 }
 
 export async function startEmulator(emulator: IDevice, options?) {

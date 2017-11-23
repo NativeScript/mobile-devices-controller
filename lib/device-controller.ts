@@ -10,7 +10,7 @@ export class DeviceController {
      * 
      * @param query should be like IDevice
      */
-    public static async getDivices(query: any) {
+    public static async getDevices(query: any) {
         const searchQuery = DeviceController.copyProperties(query);
         const devices = new Array<IDevice>();
         if (!searchQuery || !searchQuery.platform) {
@@ -39,7 +39,8 @@ export class DeviceController {
     }
 
     public static async startDevice(device: IDevice, options?) {
-        if (device.type === DeviceType.EMULATOR) {
+        const type = device.type || device['_type'];
+        if (type === DeviceType.EMULATOR) {
             return await AndroidController.startEmulator(device, options);
         } else {
             return await IOSController.startSimulator(device);
