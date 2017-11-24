@@ -1,7 +1,7 @@
 import { DeviceType } from "./enums";
 import { IDevice } from "./device";
 export declare class DeviceController {
-    static getDivices(query: any): Promise<void>;
+    static getDivices(query: any): Promise<IDevice[]>;
     /**
      *
      * @param query should be like IDevice
