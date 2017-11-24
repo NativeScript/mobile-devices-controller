@@ -6,6 +6,10 @@ import { isWin } from "./utils";
 
 export class DeviceController {
 
+    public static async getDivices(query: any) {
+        DeviceController.getDevices(query);
+    }
+
     /**
      * 
      * @param query should be like IDevice
