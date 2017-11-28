@@ -1,7 +1,12 @@
-import { spawn } from "child_process";
-import { resolve } from "path";
+import { spawn, execFile } from "child_process";
+import { resolve, dirname } from "path";
 import { existsSync, readFileSync, utimes, Stats } from "fs";
-import { waitForOutput, executeCommand, tailFilelUntil } from "./utils";
+import {
+    waitForOutput,
+    executeCommand,
+    tailFilelUntil,
+    fileExists
+} from "./utils";
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
 
@@ -91,11 +96,18 @@ export class IOSController {
     }
 
     public static installApp(token, fullAppName) {
-        executeCommand(`${IOSController.SIMCTL} install ${token}`, fullAppName);
+        executeCommand(`${IOSController.SIMCTL} install ${token} ${fullAppName}`);
     }
 
-    public static uninstallApp(token, bundleId) {
-        executeCommand(`${IOSController.SIMCTL} uninstall ${token} ${bundleId}`);
+    public static uninstallApp(device: IDevice, fullAppName) {
+        const bundleId = IOSController.getIOSPackageId(device, fullAppName);
+        executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
+    }
+
+    public static startApplication(device: IDevice, appName) {
+        const bundleId = IOSController.getIOSPackageId(device, appName);
+        IOSController.installApp(device.token, appName);
+        executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`)
     }
 
     private static startSimulatorProcess(udid) {
@@ -257,6 +269,40 @@ export class IOSController {
 
         return booted;
     }
+
+    private static getIOSPackageId(device: IDevice, fullAppName) {
+        let result = "";
+        const plistPath = IOSController.getPlistPath(device, fullAppName);
+
+        if (fileExists(plistPath)) {
+            const command = "/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' " + plistPath;
+            result = executeCommand(command);
+        } else {
+            console.error("File " + plistPath + " does not exist.");
+        }
+
+        return result;
+    }
+
+    /**
+     * Get path of Info.plist of iOS app under test.
+     * Info.plist holds information for app under test.
+     *
+     * @return path to Info.plist
+     */
+    private static getPlistPath(device: IDevice, fullAppName) {
+        let plistPath = null;
+        if (device.type === DeviceType.SIMULATOR) {
+            plistPath = resolve(fullAppName, "Info.plist");
+        } else if (device.type === DeviceType.DEVICE) {
+            executeCommand("unzip -o " + fullAppName + " -d " + dirname(fullAppName));
+            const appName = executeCommand("ls " + resolve(fullAppName, "Payload")).trim();
+            plistPath = resolve(fullAppName, "Payload", appName, "Info.plist");
+        }
+
+        return plistPath;
+    }
+
 
     // Not testes to the end
     private static async waitForBootInSystemLog(simulator: IDevice, bootedIndicator, startupTimeout) {

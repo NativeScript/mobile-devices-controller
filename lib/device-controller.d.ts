@@ -8,6 +8,7 @@ export declare class DeviceController {
      */
     static getDevices(query: any): Promise<IDevice[]>;
     static startDevice(device: IDevice, options?: any): Promise<IDevice>;
+    static runApp(device: IDevice, appFullPath: any): void;
     static kill(device: IDevice): Promise<void>;
     static killAll(type: DeviceType): void;
     static filter(devices: Array<IDevice>, searchQuery: any): IDevice[];

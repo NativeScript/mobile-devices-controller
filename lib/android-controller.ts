@@ -8,7 +8,8 @@ import {
     executeCommand,
     isWin,
     killProcessByName,
-    killPid
+    killPid,
+    searchFiles
 } from "./utils";
 
 const OFFSET_DI_PIXELS = 16;
@@ -151,25 +152,67 @@ export class AndroidController {
         }
     }
 
-    public static startApplication(device: IDevice, appId: string, activity?) {
-        console.log("Start " + appId + " with command:");
+    public static startApplication(device: IDevice, fullAppName: string) {
+        const appId = AndroidController.installApp(device, fullAppName);
         let command = "shell monkey -p " + appId + " 1";
-        if (activity) {
-            command = "shell am start -a android.intent.action.MAIN -n " + appId + "/" + activity;
+        AndroidController.executeAdbCommand(device, command);
+    }
+
+    public static getInstalledApps(device) {
+        const list = AndroidController.executeAdbCommand(device, `shell pm list packages -3`).split("\n");
+        return list;
+    }
+
+    public static isAppInstalled(device: IDevice, packageId) {
+        let isAppInstalled = AndroidController.getInstalledApps(device).filter((pack) => pack.includes(packageId)).length > 0;
+        return isAppInstalled
+    }
+
+    public static installApp(device: IDevice, testAppName) {
+        const packageId = AndroidController.getPackageId(testAppName);
+        let isAppInstalled = AndroidController.isAppInstalled(device, packageId);
+        if (isAppInstalled) {
+            console.log("Uninstall a previous version " + packageId + " app.");
+            AndroidController.uninstallApp(device, packageId);
         }
 
-        console.log(command);
-        AndroidController.executeAdbCommand(device, command);
+        const output = AndroidController.executeAdbCommand(device, ` install -r ${testAppName}`);
+        console.info(output);
+
+        isAppInstalled = AndroidController.isAppInstalled(device, packageId);
+        if (!isAppInstalled) {
+            const errorMsg = `Failed to install ${testAppName} !`;
+            console.error(errorMsg);
+            throw new Error(errorMsg);
+        }
+
+        return packageId;
     }
 
-    public static stopApplication(device: IDevice, appId: string) {
-        console.log("Stop " + appId);
-        const command = "shell am force-stop " + appId;
-        AndroidController.executeAdbCommand(device, command);
+    public static uninstallApp(device, appId) {
+        // Check if app is installed is removed on purpose!
+        AndroidController.stopApp(device, appId);
+        if (!appId.includes("appium")) {
+            const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId}`);
+            if (uninstallResult.includes("Success")) {
+                console.info(appId + " successfully uninstalled.");
+            } else {
+                console.error("Failed to uninstall " + appId + ". Error: " + uninstallResult);
+            }
+        } else {
+            console.info("Skip uninstall: " + appId);
+        }
     }
 
+    public static stopApp(device: IDevice, appId) {
+        AndroidController.executeAdbCommand(device, `shell am force-stop ${appId}`);
+    }
+
+    public static getPackageId(appFullName) {
+        return AndroidController.runAaptCommand(appFullName, "package:");
+    }
+    
     public static pullFile(device: IDevice, remotePath, destinationFolder) {
-
         // Verify remotePath
         const remoteBasePath = remotePath.substring(0, remotePath.lastIndexOf("/"));
         const sdcardFiles = AndroidController.executeAdbCommand(device, " shell ls -la " + remoteBasePath);
@@ -236,6 +279,44 @@ export class AndroidController {
         }
 
         return localFilePath;
+    }
+
+    private static getAaptPath() {
+        let aaptPath = "";
+        let aaptExecutableName = "aapt";
+        if (isWin()) {
+            aaptExecutableName += ".exe";
+        }
+
+        const androidHome = resolve(AndroidController.ANDROID_HOME, "build-tools");
+        const searchedFiles = searchFiles(androidHome, aaptExecutableName);
+        aaptPath = searchedFiles[searchedFiles.length - 1];
+
+        return aaptPath;
+    }
+
+    private static runAaptCommand(appFullName, grep) {
+        let value = "";
+        let command = AndroidController.getAaptPath() + " dump badging " + appFullName;
+
+        //If os windows use findstr or use grep for all other
+        if (isWin()) {
+            command = command + " | findstr " + grep;
+        } else {
+            command = command + " | grep " + grep;
+        }
+
+        const result = executeCommand(command);
+
+        // Parse result
+        if (result.includes(grep)) {
+            value = result.substring(result.indexOf("'") + 1);
+            value = value.substring(0, value.indexOf("'"));
+        } else {
+            value = null;
+        }
+
+        return value;
     }
 
     private static async startEmulatorProcess(emulator: IDevice, options) {
@@ -463,7 +544,12 @@ export class AndroidController {
     }
 
     private static executeAdbCommand(device: IDevice, command: string) {
-        return executeCommand(AndroidController.ADB + " -s " + device.token + " " + command);
+        const prefix = AndroidController.gettokenPrefix(device.type);
+        return executeCommand(`${AndroidController.ADB} -s ${prefix}${device.token} ${command}`);
+    }
+
+    private static gettokenPrefix(type: DeviceType) {
+        return type === DeviceType.DEVICE ? "" : "emulator-";
     }
 }
 

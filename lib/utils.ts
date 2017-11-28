@@ -1,5 +1,12 @@
 import * as childProcess from "child_process";
-import { readFileSync } from "fs";
+import {
+    readFileSync,
+    readdirSync,
+    existsSync,
+    statSync
+} from "fs";
+
+import  { resolve } from "path";
 
 export function executeCommand(args, cwd = process.cwd()): string {
     const commands = args.trim().split(" ");
@@ -71,4 +78,89 @@ export function tailFilelUntil(file, condition, index = 0) {
         result: result,
         index: index,
     };
+}
+
+export function fileExists(p) {
+    try {
+        if (existsSync(p)) {
+            return true;
+        }
+
+        return false;
+    } catch (e) {
+        if (e.code == 'ENOENT') {
+            console.log("File does not exist. " + p);
+            return false;
+        }
+
+        console.log("Exception fs.statSync (" + p + "): " + e);
+        throw e;
+    }
+}
+
+export function searchFiles(folder: string, words: string, recursive: boolean = true, files: Array<string> = new Array()) {
+    const rootFiles = getFiles(folder);
+    const regex = createRegexPattern(words);
+    rootFiles.filter(f => {
+        const fileFullName = resolve(folder, f);
+        regex.lastIndex = 0;
+        let m = regex.test(f);
+        if (m) {
+            files.push(fileFullName);
+        } else if (isDirectory(fileFullName) && recursive) {
+            searchFiles(fileFullName, words, recursive, files);
+        }
+    });
+
+    return files;
+}
+
+export function isDirectory(fullName: string) {
+    try {
+        if (statSync(fullName).isDirectory()) {
+            return true;
+        }
+    } catch (e) {
+        console.log(e.message);
+        return false;
+    }
+
+    return false;
+}
+
+
+export function getFiles(folder: string) {
+    let files: Array<string> = new Array();
+    readdirSync(resolve(folder)).forEach(file => {
+        files.push(file);
+    });
+
+    return files;
+}
+
+/// ^nativ\w*(.+).gz$ native*.gz
+/// \w*nativ\w*(.+)\.gz$ is like *native*.gz
+/// \w*nativ\w*(.+)\.gz\w*(.+)$ is like *native*.gz*
+export function createRegexPattern(text: string) {
+    let finalRex = "";
+    text.split(",").forEach(word => {
+        word = word.trim();
+        let searchRegex = word;
+        if (word !== "" && word !== " ") {
+            searchRegex = searchRegex.replace(".", "\\.");
+            searchRegex = searchRegex.replace("*", "\\w*(.+)?");
+            if (!word.startsWith("*")) {
+                searchRegex = "^" + searchRegex;
+            }
+            if (!word.endsWith("*")) {
+                searchRegex += "$";
+            }
+            if (!finalRex.includes(searchRegex)) {
+                finalRex += searchRegex + "|";
+            }
+        }
+    });
+    finalRex = finalRex.substring(0, finalRex.length - 1);
+    const regex = new RegExp(finalRex, "gi");
+    return regex;
 }

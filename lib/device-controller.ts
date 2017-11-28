@@ -51,6 +51,14 @@ export class DeviceController {
         }
     }
 
+    public static runApp(device: IDevice, appFullPath) {
+        if (device.platform === Platform.IOS) {
+            IOSController.startApplication(device, appFullPath)
+        } else {
+            AndroidController.startApplication(device, appFullPath);
+        }
+    }
+
     public static async kill(device: IDevice) {
         if (device.type === DeviceType.EMULATOR) {
             await AndroidController.kill(device);

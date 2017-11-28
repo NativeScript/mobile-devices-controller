@@ -7,3 +7,8 @@ export declare function tailFilelUntil(file: any, condition: any, index?: number
     result: boolean;
     index: number;
 };
+export declare function fileExists(p: any): boolean;
+export declare function searchFiles(folder: string, words: string, recursive?: boolean, files?: Array<string>): string[];
+export declare function isDirectory(fullName: string): boolean;
+export declare function getFiles(folder: string): string[];
+export declare function createRegexPattern(text: string): RegExp;
