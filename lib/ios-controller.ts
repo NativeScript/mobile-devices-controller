@@ -199,7 +199,10 @@ export class IOSController {
 
                 IOSController.devicesScreenInfo.forEach((v, k, m) => {
                     if (device.name.includes(k)) {
-                        device.config = { offsetPixels: v.actionBarHeight };
+                        device.config = {
+                            density: v.density,
+                            offsetPixels: v.actionBarHeight
+                        };
                     }
                 });
 
