@@ -10,7 +10,7 @@ export declare class IOSController {
     private static SHUTDOWN;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND;
     private static IOS_DEVICE;
-    private static deviceScreenInfos;
+    private static devicesScreenInfo;
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
     static startSimulator(simulator: IDevice): Promise<IDevice>;
     static restartDevice(device: IDevice): Promise<void>;
@@ -39,7 +39,7 @@ export declare class IOSController {
     private static waitForBootInSystemLog(simulator, bootedIndicator, startupTimeout);
     private static tailLogsUntil(token, bootedIndicator, timeoutMs);
     static getLogDir(token: any): string;
-    private static loadIOSDeviceScreenInfo();
+    private static loadIOSDevicesScreenInfo();
 }
 export declare class IOSDevice extends Device {
     constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, pid?: number);
@@ -48,7 +48,7 @@ export declare class IOSDeviceScreenInfo {
     deviceType: any;
     width: any;
     height: any;
-    ppi: any;
+    density: any;
     actionBarHeight: any;
-    constructor(deviceType: any, width: any, height: any, ppi: any, actionBarHeight: any);
+    constructor(deviceType: any, width: any, height: any, density: any, actionBarHeight: any);
 }
