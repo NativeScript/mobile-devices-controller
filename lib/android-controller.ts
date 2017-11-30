@@ -155,7 +155,7 @@ export class AndroidController {
     public static startApplication(device: IDevice, fullAppName: string) {
         const appId = AndroidController.installApp(device, fullAppName);
         let command = "shell monkey -p " + appId + " 1";
-        AndroidController.executeAdbCommand(device, command);
+        Promise.resolve(AndroidController.executeAdbCommand(device, command));
     }
 
     public static getInstalledApps(device) {

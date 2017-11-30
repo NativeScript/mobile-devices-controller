@@ -51,11 +51,11 @@ export class DeviceController {
         }
     }
 
-    public static runApp(device: IDevice, appFullPath) {
+    public static async runApp(device: IDevice, appFullPath): Promise<void> {
         if (device.platform === Platform.IOS) {
-            IOSController.startApplication(device, appFullPath)
+            await IOSController.startApplication(device, appFullPath)
         } else {
-            AndroidController.startApplication(device, appFullPath);
+            await AndroidController.startApplication(device, appFullPath);
         }
     }
 

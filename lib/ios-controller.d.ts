@@ -16,10 +16,10 @@ export declare class IOSController {
     static restartDevice(device: IDevice): Promise<void>;
     static killAll(): void;
     static kill(udid: string): void;
-    static getInstalledApps(token: any): any[];
-    static installApp(token: any, fullAppName: any): void;
+    static getInstalledApps(device: IDevice): any[];
+    static installApp(device: IDevice, fullAppName: any): void;
     static uninstallApp(device: IDevice, fullAppName: any): void;
-    static startApplication(device: IDevice, appName: any): void;
+    static startApplication(device: IDevice, fullAppName: any): Promise<void>;
     private static startSimulatorProcess(udid);
     private static isRunning(token);
     static parseSimulators(stdout?: any): Map<string, Array<IDevice>>;

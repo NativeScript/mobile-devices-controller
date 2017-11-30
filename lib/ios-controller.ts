@@ -1,11 +1,12 @@
-import { spawn, execFile } from "child_process";
-import { resolve, dirname } from "path";
+import { spawn } from "child_process";
+import { resolve, dirname, basename, sep } from "path";
 import { existsSync, readFileSync, utimes, Stats } from "fs";
 import {
     waitForOutput,
     executeCommand,
     tailFilelUntil,
-    fileExists
+    fileExists,
+    attachToProcess
 } from "./utils";
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
@@ -83,31 +84,65 @@ export class IOSController {
         executeCommand(killAllRelatedProcessesCommand);
     }
 
-    public static getInstalledApps(token) {
+    public static getInstalledApps(device: IDevice) {
         const apps = new Array();
-        const rowData = executeCommand(`find ${IOSController.getSimLocation(token)} /data/Containers/Bundle/Application -type d -name *.app`).split("\\r?\\n");
-        rowData.forEach(sim => {
-            const rowBundle = executeCommand(`defaults read " ${sim} /Info.plist | grep CFBundleIdentifier`);
-            const appId = rowBundle.split("\"")[1];
-            apps.push(appId);
-        });
+        if (device.type === DeviceType.DEVICE) {
+            const rowData = executeCommand(`ideviceinstaller -u ${device.token} -l`).replace("package:", "").split("\n");
+            rowData.forEach(data => {
+                if (data.includes(".") && data.includes("-")) {
+                    const appId = data.replace(" ", "").split("-")[0];
+                    apps.push(appId);
+                }
+            })
+        } else {
+            const rowData = executeCommand(`find ${IOSController.getSimLocation(device.token)} /data/Containers/Bundle/Application -type d -name *.app`).split("\n");
+            rowData.forEach(data => {
+                const rowBundle = executeCommand(`defaults read " ${data} /Info.plist | grep CFBundleIdentifier`);
+                const appId = rowBundle.split("\"")[1];
+                apps.push(appId);
+            });
+        }
 
         return apps;
     }
 
-    public static installApp(token, fullAppName) {
-        executeCommand(`${IOSController.SIMCTL} install ${token} ${fullAppName}`);
+    public static installApp(device: IDevice, fullAppName) {
+        if (device.type === DeviceType.DEVICE) {
+            const result = executeCommand(`ideviceinstaller -u ${device.token} -i ${fullAppName}`);
+            if (result.includes("Complete")) {
+                console.info(fullAppName + " successfully installed.");
+            } else {
+                console.error(`Failed to install ${fullAppName}!`, result);
+            }
+        } else {
+            executeCommand(`${IOSController.SIMCTL} install ${device.token} ${fullAppName}`);
+        }
     }
 
     public static uninstallApp(device: IDevice, fullAppName) {
         const bundleId = IOSController.getIOSPackageId(device, fullAppName);
-        executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
+        if (device.type === DeviceType.DEVICE) {
+            const uninstallResult = executeCommand(`ideviceinstaller --udid ${device.token} --uninstall ${bundleId}`);
+            if (!uninstallResult.includes("Complete")) {
+                console.error(`Failed to uninstall ${uninstallResult} with ideviceinstaller tool.`, uninstallResult);
+                throw new Error(`Failed to uninstall ${fullAppName} from ${device.token}`);
+            }
+            console.info(`${bundleId} successfully uninstalled.`);
+        } else {
+            executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
+        }
     }
 
-    public static startApplication(device: IDevice, appName) {
-        const bundleId = IOSController.getIOSPackageId(device, appName);
-        IOSController.installApp(device.token, appName);
-        executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`)
+    public static async startApplication(device: IDevice, fullAppName) {
+        const bundleId = IOSController.getIOSPackageId(device, fullAppName);
+        IOSController.uninstallApp(device, fullAppName);
+        IOSController.installApp(device, fullAppName);
+        if (device.type === DeviceType.DEVICE) {
+            const pr = spawn("idevicedebug", ["run", bundleId], { stdio: 'pipe', shell: true });
+            await attachToProcess(pr, /\w/ig, 100000);
+        } else {
+            Promise.resolve(executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`));
+        }
     }
 
     private static startSimulatorProcess(udid) {
@@ -116,8 +151,6 @@ export class IOSController {
             shell: true,
             detached: false
         });
-
-        executeCommand
 
         return simProcess;
     }
@@ -281,7 +314,7 @@ export class IOSController {
             console.error("File " + plistPath + " does not exist.");
         }
 
-        return result;
+        return result.trim();
     }
 
     /**
@@ -295,9 +328,11 @@ export class IOSController {
         if (device.type === DeviceType.SIMULATOR) {
             plistPath = resolve(fullAppName, "Info.plist");
         } else if (device.type === DeviceType.DEVICE) {
-            executeCommand("unzip -o " + fullAppName + " -d " + dirname(fullAppName));
-            const appName = executeCommand("ls " + resolve(fullAppName, "Payload")).trim();
-            plistPath = resolve(fullAppName, "Payload", appName, "Info.plist");
+            const appFullName = dirname(fullAppName) + sep + basename(fullAppName).replace(".ipa", "");
+            const command = `unzip -o ${fullAppName} -d ${appFullName}`;
+            executeCommand(command);
+            const appName = executeCommand("ls " + resolve(appFullName, "Payload")).trim();
+            plistPath = resolve(appFullName, "Payload", appName, "Info.plist");
         }
 
         return plistPath;

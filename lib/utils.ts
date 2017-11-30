@@ -6,14 +6,15 @@ import {
     statSync
 } from "fs";
 
-import  { resolve } from "path";
+import { resolve } from "path";
+import { createInterface } from "readline";
 
 export function executeCommand(args, cwd = process.cwd()): string {
     const commands = args.trim().split(" ");
     const baseCommand = commands.shift();
     const output = childProcess.spawnSync(baseCommand, commands, {
-        shell: true,
         cwd: cwd,
+        shell: true,
         encoding: "UTF8"
     });
 
@@ -163,4 +164,31 @@ export function createRegexPattern(text: string) {
     finalRex = finalRex.substring(0, finalRex.length - 1);
     const regex = new RegExp(finalRex, "gi");
     return regex;
+}
+
+export async function attachToProcess(processToWatchLog, matcher, timeOut) {
+    return new Promise((resolve, reject) => {
+        waitForResult(processToWatchLog, matcher, timeOut).then((result) => {
+            processToWatchLog.kill("SIGINT");
+            resolve();
+        });
+    });
+}
+
+export async function waitForResult(childProcess, matcher, timeout) {
+    let log = "";
+    const reader = createInterface({ input: childProcess.stdout });
+    return new Promise<string>((resolve, reject) => {
+        const abortWatch = setTimeout(function () {
+            childProcess.kill();
+        }, timeout);
+        reader.on("line", line => {
+            console.log(line.toString());
+            log += line.toString();
+            if (matcher.test(line)) {
+                clearTimeout(abortWatch);
+                resolve(log);
+            }
+        });
+    });
 }
