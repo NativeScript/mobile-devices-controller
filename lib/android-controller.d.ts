@@ -9,8 +9,8 @@ export declare class AndroidController {
     private static LIST_AVDS;
     private static _emulatorIds;
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
-    static getPhysicalDensity(token: string): number;
-    static getPixelsOffset(token: string): number;
+    static getPhysicalDensity(device: IDevice): number;
+    static getPixelsOffset(device: IDevice): number;
     static startEmulator(emulator: IDevice, options?: string, logPath?: any): Promise<IDevice>;
     static unlock(token: any, password?: any): void;
     /**
@@ -30,9 +30,11 @@ export declare class AndroidController {
     static installApp(device: IDevice, testAppName: any): string;
     static uninstallApp(device: any, appId: any): void;
     static stopApp(device: IDevice, appId: any): void;
+    static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
+    static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<void>;
     static getPackageId(appFullName: any): string;
-    static pullFile(device: IDevice, remotePath: any, destinationFolder: any): any;
-    static pushFile(device: IDevice, localPath: any, remotePath: any): any;
+    static pullFile(device: IDevice, remotePath: any, destinationFile: any): any;
+    static pushFile(device: IDevice, fileName: any, deviceParh: any): any;
     private static getAaptPath();
     private static runAaptCommand(appFullName, grep);
     private static startEmulatorProcess(emulator, options);

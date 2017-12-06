@@ -275,12 +275,32 @@ export class IOSController {
         return result;
     }
 
-    public async getScreenshot(dir, token) {
-        let pathToScreenshotPng = resolve(dir, `screenshot-${token}.png`);
-        executeCommand(`${IOSController.SIMCTL} io ${token} 'screenshot' ${pathToScreenshotPng}`);
-        let screenshotImg = readFileSync(pathToScreenshotPng);
-        //await fs.rimraf(pathToScreenshotPng);
-        return screenshotImg.toString('base64');
+    public static async getScreenshot(device: IDevice, dir, fileName) {
+        const pathToScreenshotPng = resolve(dir, `${fileName}.png`);
+        if (device.type === DeviceType.DEVICE) {
+            executeCommand(`idevicescreenshot -u ${device.token} ${pathToScreenshotPng}`);
+        } else {
+            executeCommand(`${IOSController.SIMCTL} io ${device.token} screenshot ${pathToScreenshotPng}`);
+        }
+
+        return pathToScreenshotPng;
+    }
+
+    public static async recordVideo(device: IDevice, dir, fileName, callback: () => Promise<any>): Promise<any> {
+        if (device.type === DeviceType.DEVICE) {
+            return Promise.resolve("");
+        }
+        return new Promise(async (res, reject) => {
+            const pathToVideo = resolve(dir, `${fileName}.mp4`);
+            const videoRecoringProcess = spawn(IOSController.SIMCTL, ['io', device.token, 'recordVideo', pathToVideo]);
+            callback().then((result) => {
+                videoRecoringProcess.kill("SIGINT");
+                console.log(result);
+                res(pathToVideo);
+            }).catch((error) => {
+                reject(error);
+            });
+        });
     }
 
     // Should find a better way

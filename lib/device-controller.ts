@@ -94,6 +94,22 @@ export class DeviceController {
         })
     }
 
+    public static async getScreenshot(device: IDevice, dir, fileName) {
+        if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
+            return AndroidController.getScreenshot(device, dir, fileName);
+        } else {
+            return IOSController.getScreenshot(device, dir, fileName);
+        }
+    }
+
+    public static async recordVideo(device: IDevice, dir, fileName, callback: () => Promise<any>): Promise<any> {
+        if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
+            return AndroidController.recordVideo(device, dir, fileName, callback);
+        } else {
+            return IOSController.recordVideo(device, dir, fileName, callback);
+        }
+    }
+
     private static copyProperties(from: IDevice) {
         const to: IDevice = { platform: undefined, token: undefined, name: undefined, type: undefined }
         if (!from || from === null || from === {} || Object.getOwnPropertyNames(from).length <= 0) {

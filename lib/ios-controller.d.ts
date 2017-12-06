@@ -26,7 +26,8 @@ export declare class IOSController {
     static parseRealDevices(devices?: Map<string, IDevice[]>): Map<string, IDevice[]>;
     static getSimLocation(token: any): string;
     static filterDeviceBy(...args: any[]): IDevice[];
-    getScreenshot(dir: any, token: any): Promise<string>;
+    static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
+    static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<any>;
     private static checkIfSimulatorIsBooted(udid, timeout);
     private static getIOSPackageId(device, fullAppName);
     /**

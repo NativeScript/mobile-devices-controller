@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from "child_process";
-import { resolve, delimiter, sep } from "path";
-import { existsSync } from "fs";
+import { resolve, delimiter, sep, dirname } from "path";
+import { existsSync, copyFile, copyFileSync } from "fs";
 import { Platform, DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
 import {
@@ -36,12 +36,12 @@ export class AndroidController {
         return devices;
     }
 
-    public static getPhysicalDensity(token: string) {
-        return parseInt(executeCommand(AndroidController.ADB + " -s emulator-" + token + " shell wm density").split(":")[1]) * 0.01;
+    public static getPhysicalDensity(device: IDevice) {
+        return parseInt(AndroidController.executeAdbCommand(device, "shell wm density").split(":")[1]) * 0.01;
     }
 
-    public static getPixelsOffset(token: string) {
-        return Math.floor(OFFSET_DI_PIXELS * AndroidController.getPhysicalDensity(token));
+    public static getPixelsOffset(device: IDevice) {
+        return Math.floor(OFFSET_DI_PIXELS * AndroidController.getPhysicalDensity(device));
     }
 
     public static async startEmulator(emulator: IDevice, options = "", logPath = undefined): Promise<IDevice> {
@@ -61,8 +61,8 @@ export class AndroidController {
             emulator.startedAt = Date.now();
         }
 
-        const density = AndroidController.getPhysicalDensity(emulator.token);
-        const offsetPixels = AndroidController.getPixelsOffset(emulator.token);
+        const density = AndroidController.getPhysicalDensity(emulator);
+        const offsetPixels = AndroidController.getPixelsOffset(emulator);
         emulator.config = {
             density: density,
             offsetPixels: offsetPixels,
@@ -90,9 +90,8 @@ export class AndroidController {
     public static kill(emulator: IDevice) {
         let isAlive: boolean = true;
         if (emulator.type === DeviceType.EMULATOR) {
-
             if (emulator.token) {
-                executeCommand(AndroidController.ADB + " -s " + DeviceType.EMULATOR + "-" + emulator.token + " emu kill");
+                AndroidController.executeAdbCommand(emulator, " emu kill");
                 isAlive = false;
             }
 
@@ -208,11 +207,39 @@ export class AndroidController {
         AndroidController.executeAdbCommand(device, `shell am force-stop ${appId}`);
     }
 
+    public static async getScreenshot(device: IDevice, dir, fileName) {
+        fileName = fileName.endsWith(".pne") ? fileName : `${fileName}.png`;
+        const pathToScreenshotPng = `/sdcard/${fileName}`;
+        AndroidController.executeAdbCommand(device, `shell screencap ${pathToScreenshotPng}`);
+        const fullFileName = resolve(dir, fileName);
+        AndroidController.pullFile(device, pathToScreenshotPng, fullFileName);
+        return fullFileName;
+    }
+
+    public static async recordVideo(device: IDevice, dir, fileName, callback: () => Promise<any>) {
+        new Promise(async (res, reject) => {
+            const videoFileName = `${fileName}.mp4`;
+            const pathToVideo = resolve(dir, res);
+            const devicePath = `/sdcard/${videoFileName}`;
+            const prefix = AndroidController.gettokenPrefix(device.type);
+            const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', prefix + device.token, 'screenrecord', devicePath]);
+            callback().then((result) => {
+                videoRecoringProcess.kill("SIGINT");
+                AndroidController.pullFile(device, devicePath, pathToVideo);
+                console.log(result);
+                res(pathToVideo);
+            }).catch((error) => {
+                reject(error);
+            });
+        });
+    }
+
     public static getPackageId(appFullName) {
         return AndroidController.runAaptCommand(appFullName, "package:");
     }
-    
-    public static pullFile(device: IDevice, remotePath, destinationFolder) {
+
+    public static pullFile(device: IDevice, remotePath, destinationFile) {
+        const destinationFolder = dirname(destinationFile);
         // Verify remotePath
         const remoteBasePath = remotePath.substring(0, remotePath.lastIndexOf("/"));
         const sdcardFiles = AndroidController.executeAdbCommand(device, " shell ls -la " + remoteBasePath);
@@ -228,7 +255,7 @@ export class AndroidController {
         }
 
         // Pull files
-        const output = AndroidController.executeAdbCommand(device, "pull " + remotePath + " " + destinationFolder);
+        const output = AndroidController.executeAdbCommand(device, "pull " + remotePath + " " + destinationFile);
         console.log(output);
         const o = output.toLowerCase();
         if ((o.includes("error")) || (o.includes("failed")) || (o.includes("does not exist"))) {
@@ -237,18 +264,18 @@ export class AndroidController {
             console.log("Error: " + output);
             return undefined;
         } else {
-            console.log(remotePath + " transferred to " + destinationFolder);
+            console.log(remotePath + " transferred to " + destinationFile);
         }
 
-        return destinationFolder;
+        return destinationFile;
     }
 
-    public static pushFile(device: IDevice, localPath, remotePath) {
+    public static pushFile(device: IDevice, fileName, deviceParh) {
 
         let output = AndroidController.executeAdbCommand(device, "shell mount -o rw,remount -t rootfs /");
 
         // Verify remotePath
-        const remoteBasePath = remotePath.substring(0, remotePath.lastIndexOf("/"));
+        const remoteBasePath = deviceParh.substring(0, deviceParh.lastIndexOf("/"));
         const sdcardFiles = AndroidController.executeAdbCommand(device, "shell ls -la " + remoteBasePath);
         if (sdcardFiles.includes("No such file or directory")) {
             const error = remoteBasePath + " does not exist.";
@@ -257,28 +284,25 @@ export class AndroidController {
         }
 
         // Verify localPath
-        localPath = localPath.replace("/", sep);
-        localPath = localPath.replace("\\", sep);
-        const localFilePath = localPath;
-        if (!existsSync(localFilePath)) {
-            const error = localPath + " does not exist.";
+        fileName = fileName.replace("/", sep).replace("\\", sep);
+        if (!existsSync(fileName)) {
+            const error = fileName + " does not exist.";
             console.log(error);
             return undefined;
         }
 
         // Push files
-        output = AndroidController.executeAdbCommand(device, "push " + localFilePath + " " + remotePath);
+        output = AndroidController.executeAdbCommand(device, "push " + fileName + " " + deviceParh);
         console.log(output);
         if ((output.toLowerCase().includes("error")) || (output.toLowerCase().includes("failed"))) {
-            const error = "Failed to transfer " + localPath + " to " + remotePath;
-            console.log(error);
-            console.log("Error: " + output);
+            console.log("Failed to transfer " + fileName + " to " + deviceParh);
+            console.log("Error: ", output);
             return undefined;
         } else {
-            console.log(localPath + " transferred to " + remotePath);
+            console.log(fileName + " transferred to " + deviceParh);
         }
 
-        return localFilePath;
+        return fileName;
     }
 
     private static getAaptPath() {
