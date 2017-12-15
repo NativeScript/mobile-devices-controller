@@ -545,6 +545,8 @@ export class AndroidController {
         AndroidController._emulatorIds.set("8.", "5572");
         AndroidController._emulatorIds.set("8.0", "5572");
         AndroidController._emulatorIds.set("26", "5572");
+        AndroidController._emulatorIds.set("27", "5574");
+        AndroidController._emulatorIds.set("8.1", "5574");
     }
 
     private static sendKeyCommand = (token, key) => {
