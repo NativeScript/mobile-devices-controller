@@ -351,6 +351,12 @@ export class AndroidController {
                 detached: false
             });
 
+        process.stdout.on("data", (data) => {
+            console.log(data.toString());
+        });
+        process.stdout.on("error", (error) => {
+            console.log(error.toString());
+        });
         emulator.pid = process.pid;
 
         return emulator;
