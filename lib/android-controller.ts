@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from "child_process";
 import { resolve, delimiter, sep, dirname } from "path";
-import { existsSync, copyFile, copyFileSync } from "fs";
+import { existsSync } from "fs";
 import { Platform, DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
 import {
@@ -219,7 +219,7 @@ export class AndroidController {
     public static async recordVideo(device: IDevice, dir, fileName, callback: () => Promise<any>) {
         new Promise(async (res, reject) => {
             const videoFileName = `${fileName}.mp4`;
-            const pathToVideo = resolve(dir, res);
+            const pathToVideo = resolve(dir, fileName);
             const devicePath = `/sdcard/${videoFileName}`;
             const prefix = AndroidController.gettokenPrefix(device.type);
             const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', prefix + device.token, 'screenrecord', devicePath]);
