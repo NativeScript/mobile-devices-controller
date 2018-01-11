@@ -25,10 +25,8 @@ export class AndroidController {
 
     public static async getAllDevices(verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
         AndroidController.checkAndroid();
+        // this should be always first.
         const runningDevices = AndroidController.parseRunningDevicesList(verbose);
-        if (AndroidController._emulatorIds.size === 0) {
-            AndroidController.loadEmulatorsIds();
-        }
         const devices: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>();
         await AndroidController.parseEmulators(runningDevices, devices);
         await AndroidController.parseRealDevices(runningDevices, devices);
@@ -422,10 +420,6 @@ export class AndroidController {
                 emulator.apiLevel = apiLevel[0];
             }
 
-            if (emulator && !emulator.token && AndroidController._emulatorIds.has(emulator.apiLevel)) {
-                emulator.token = AndroidController._emulatorIds.get(emulator.apiLevel)
-            }
-
             if (emulator && emulator.name && emulator.apiLevel) {
                 if (!emulators.has(emulator.name)) {
                     emulators.set(emulator.name, new Array<IDevice>());
@@ -434,6 +428,7 @@ export class AndroidController {
             }
         });
 
+        const busyTokens = new Array();
         runningDevices.forEach(async (dev) => {
             if (dev.type === DeviceType.EMULATOR) {
                 try {
@@ -459,12 +454,27 @@ export class AndroidController {
                         if (avdInfo.includes(k)) {
                             v[0].status = Status.BOOTED;
                             v[0].token = dev.token;
+                            busyTokens.push(dev.token);
                         }
                     })
                 } catch (error) {
                     console.log(error);
                 }
             }
+        });
+
+        if (busyTokens.length === 0) {
+            busyTokens.push(5544);
+        }
+        emulators.forEach((devices, key, map) => {
+            devices.forEach(device => {
+                if (!device.token) {
+                    const lastToken = Math.max(...busyTokens)
+                    const token = lastToken % 2 === 0 ? lastToken + 2 : lastToken + 1;
+                    device.token = token.toString();
+                    busyTokens.push(token);
+                }
+            });
         });
 
         if (verbose) {
@@ -533,27 +543,27 @@ export class AndroidController {
         return AndroidController._emulatorIds.get(platformVersion.toString());
     }
 
-    private static loadEmulatorsIds() {
-        AndroidController._emulatorIds.set("4.2", "5554");
-        AndroidController._emulatorIds.set("4.3", "5556");
-        AndroidController._emulatorIds.set("4.4", "5558");
-        AndroidController._emulatorIds.set("5.0", "5560");
-        AndroidController._emulatorIds.set("5.1", "5562");
-        AndroidController._emulatorIds.set("6", "5564");
-        AndroidController._emulatorIds.set("6.", "5564");
-        AndroidController._emulatorIds.set("6.0", "5564");
-        AndroidController._emulatorIds.set("7", "5566");
-        AndroidController._emulatorIds.set("7.", "5566");
-        AndroidController._emulatorIds.set("7.0", "5566");
-        AndroidController._emulatorIds.set("7.1", "5568");
-        AndroidController._emulatorIds.set("7.1.1", "5570");
-        AndroidController._emulatorIds.set("8", "5572");
-        AndroidController._emulatorIds.set("8.", "5572");
-        AndroidController._emulatorIds.set("8.0", "5572");
-        AndroidController._emulatorIds.set("26", "5572");
-        AndroidController._emulatorIds.set("27", "5574");
-        AndroidController._emulatorIds.set("8.1", "5574");
-    }
+    // private static loadEmulatorsIds() {
+    //     AndroidController._emulatorIds.set("4.2", "5554");
+    //     AndroidController._emulatorIds.set("4.3", "5556");
+    //     AndroidController._emulatorIds.set("4.4", "5558");
+    //     AndroidController._emulatorIds.set("5.0", "5560");
+    //     AndroidController._emulatorIds.set("5.1", "5562");
+    //     AndroidController._emulatorIds.set("6", "5564");
+    //     AndroidController._emulatorIds.set("6.", "5564");
+    //     AndroidController._emulatorIds.set("6.0", "5564");
+    //     AndroidController._emulatorIds.set("7", "5566");
+    //     AndroidController._emulatorIds.set("7.", "5566");
+    //     AndroidController._emulatorIds.set("7.0", "5566");
+    //     AndroidController._emulatorIds.set("7.1", "5568");
+    //     AndroidController._emulatorIds.set("7.1.1", "5570");
+    //     AndroidController._emulatorIds.set("8", "5572");
+    //     AndroidController._emulatorIds.set("8.", "5572");
+    //     AndroidController._emulatorIds.set("8.0", "5572");
+    //     AndroidController._emulatorIds.set("26", "5572");
+    //     AndroidController._emulatorIds.set("27", "5574");
+    //     AndroidController._emulatorIds.set("8.1", "5574");
+    // }
 
     private static sendKeyCommand = (token, key) => {
         return `${AndroidController.ADB} -s ${token} shell input keyevent ${key}`;

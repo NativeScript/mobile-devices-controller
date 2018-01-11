@@ -45,7 +45,6 @@ export declare class AndroidController {
     private static parseRunningDevicesList(verbose);
     private static parseRealDevices(runningDevices, devices?);
     static emulatorId(platformVersion: any): string;
-    private static loadEmulatorsIds();
     private static sendKeyCommand;
     private static checkAndroid();
     private static executeAdbCommand(device, command);
