@@ -3,7 +3,7 @@ import { Device, IDevice } from "./device";
 import { AndroidController } from "./android-controller";
 import { IOSController } from "./ios-controller";
 import { isWin } from "./utils";
-
+import { ChildProcess } from "child_process";
 export class DeviceController {
 
     public static async getDivices(query: any) {
@@ -107,6 +107,14 @@ export class DeviceController {
             return AndroidController.recordVideo(device, dir, fileName, callback);
         } else {
             return IOSController.recordVideo(device, dir, fileName, callback);
+        }
+    }
+
+    public static startRecordingVideo(device: IDevice, dir, fileName) {
+        if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
+            return AndroidController.startRecordingVideo(device, dir, fileName);
+        } else {
+            return IOSController.startRecordingVideo(device, dir, fileName);
         }
     }
 

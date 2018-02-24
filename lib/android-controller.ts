@@ -215,12 +215,8 @@ export class AndroidController {
     }
 
     public static async recordVideo(device: IDevice, dir, fileName, callback: () => Promise<any>) {
+        const { pathToVideo, devicePath , videoRecoringProcess} = AndroidController.startRecordingVideo(device, dir, fileName); 
         new Promise(async (res, reject) => {
-            const videoFileName = `${fileName}.mp4`;
-            const pathToVideo = resolve(dir, fileName);
-            const devicePath = `/sdcard/${videoFileName}`;
-            const prefix = AndroidController.gettokenPrefix(device.type);
-            const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', prefix + device.token, 'screenrecord', devicePath]);
             callback().then((result) => {
                 videoRecoringProcess.kill("SIGINT");
                 AndroidController.pullFile(device, devicePath, pathToVideo);
@@ -230,6 +226,16 @@ export class AndroidController {
                 reject(error);
             });
         });
+    }
+
+    public static startRecordingVideo(device: IDevice, dir, fileName) {
+        const videoFileName = `${fileName}.mp4`;
+        const pathToVideo = resolve(dir, fileName);
+        const devicePath = `/sdcard/${videoFileName}`;
+        const prefix = AndroidController.gettokenPrefix(device.type);
+        const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', prefix + device.token, 'screenrecord', devicePath]);
+
+        return { pathToVideo: pathToVideo, devicePath: devicePath, videoRecoringProcess: videoRecoringProcess };
     }
 
     public static getPackageId(appFullName) {

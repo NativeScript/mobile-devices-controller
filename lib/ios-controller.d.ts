@@ -1,3 +1,5 @@
+/// <reference types="node" />
+import { ChildProcess } from "child_process";
 import { IDevice, Device } from "./device";
 import { DeviceType, Status } from "./enums";
 export declare class IOSController {
@@ -28,6 +30,10 @@ export declare class IOSController {
     static filterDeviceBy(...args: any[]): IDevice[];
     static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<any>;
+    static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
+        pathToVideo: string;
+        videoRecoringProcess: ChildProcess;
+    };
     private static checkIfSimulatorIsBooted(udid, timeout);
     private static getIOSPackageId(device, fullAppName);
     /**

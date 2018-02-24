@@ -1,5 +1,7 @@
+/// <reference types="node" />
 import { DeviceType } from "./enums";
 import { IDevice } from "./device";
+import { ChildProcess } from "child_process";
 export declare class DeviceController {
     static getDivices(query: any): Promise<IDevice[]>;
     /**
@@ -14,6 +16,10 @@ export declare class DeviceController {
     static filter(devices: Array<IDevice>, searchQuery: any): IDevice[];
     static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<any>;
+    static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
+        pathToVideo: string;
+        videoRecoringProcess: ChildProcess;
+    };
     private static copyProperties(from);
     private static getAllDevicesByPlatform(platform, verbose?);
     private static getDevicesByPlatformAndName(platform, name?, verbose?);

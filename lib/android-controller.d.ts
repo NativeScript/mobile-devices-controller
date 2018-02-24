@@ -1,3 +1,5 @@
+/// <reference types="node" />
+import { ChildProcess } from "child_process";
 import { DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
 export declare class AndroidController {
@@ -32,6 +34,11 @@ export declare class AndroidController {
     static stopApp(device: IDevice, appId: any): void;
     static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<void>;
+    static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
+        pathToVideo: string;
+        devicePath: string;
+        videoRecoringProcess: ChildProcess;
+    };
     static getPackageId(appFullName: any): string;
     static pullFile(device: IDevice, remotePath: any, destinationFile: any): any;
     static pushFile(device: IDevice, fileName: any, deviceParh: any): any;

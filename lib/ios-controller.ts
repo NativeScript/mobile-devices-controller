@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn, ChildProcess } from "child_process";
 import { resolve, dirname, basename, sep } from "path";
 import { existsSync, readFileSync, utimes, Stats } from "fs";
 import {
@@ -287,20 +287,37 @@ export class IOSController {
     }
 
     public static async recordVideo(device: IDevice, dir, fileName, callback: () => Promise<any>): Promise<any> {
-        if (device.type === DeviceType.DEVICE) {
-            return Promise.resolve("");
-        }
+        const { pathToVideo, videoRecoringProcess } = IOSController.startRecordingVideo(device, dir, fileName);
+
         return new Promise(async (res, reject) => {
-            const pathToVideo = resolve(dir, `${fileName}.mp4`);
-            const videoRecoringProcess = spawn(IOSController.SIMCTL, ['io', device.token, 'recordVideo', pathToVideo]);
             callback().then((result) => {
                 videoRecoringProcess.kill("SIGINT");
                 console.log(result);
                 res(pathToVideo);
             }).catch((error) => {
+                if (videoRecoringProcess) {
+                    videoRecoringProcess.kill("SIGINT");
+                }
+                console.log('', error);
                 reject(error);
             });
         });
+    }
+
+    public static startRecordingVideo(device: IDevice, dir, fileName) {
+        if (device.type === DeviceType.DEVICE) {
+            return;
+        }
+
+        const pathToVideo = resolve(dir, `${fileName}.mp4`).replace(" ", "\ ");
+        console.log(`${IOSController.XCRUN} simctl io ${device.token} recordVideo ${pathToVideo}`);
+        const videoRecoringProcess = spawn(`xcrun`, ['simctl ', 'io', device.token, 'recordVideo', `'${pathToVideo}'`], {
+            cwd: process.cwd(),
+            shell: true,
+            stdio: 'inherit'
+        });
+
+        return { pathToVideo: pathToVideo, videoRecoringProcess: videoRecoringProcess };
     }
 
     // Should find a better way
