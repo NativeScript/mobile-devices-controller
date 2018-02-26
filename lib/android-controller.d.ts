@@ -3,6 +3,7 @@ import { ChildProcess } from "child_process";
 import { DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
 export declare class AndroidController {
+    private static DEFAULT_BOOT_TIME;
     private static ANDROID_HOME;
     private static EMULATOR;
     private static ADB;
@@ -14,6 +15,7 @@ export declare class AndroidController {
     static getPhysicalDensity(device: IDevice): number;
     static getPixelsOffset(device: IDevice): number;
     static startEmulator(emulator: IDevice, options?: string, logPath?: any): Promise<IDevice>;
+    static reboot(emulator: IDevice): void;
     static unlock(token: any, password?: any): void;
     /**
      * Implement kill process
@@ -45,7 +47,7 @@ export declare class AndroidController {
     private static getAaptPath();
     private static runAaptCommand(appFullName, grep);
     private static startEmulatorProcess(emulator, options);
-    private static waitUntilEmulatorBoot(deviceId, timeOut);
+    private static waitUntilEmulatorBoot(deviceId, timeOutInMiliseconds);
     private static checkIfEmulatorIsRunning(token);
     private static parseEmulators(runningDevices, emulators?, verbose?);
     private static checkTelnetReport(avdInfo);

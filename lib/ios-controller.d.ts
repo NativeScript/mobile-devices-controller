@@ -13,6 +13,8 @@ export declare class IOSController {
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND;
     private static IOS_DEVICE;
     private static devicesScreenInfo;
+    private static DEVICE_BOOT_TIME;
+    private static WAIT_DEVICE_TO_RESPONCE;
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
     static startSimulator(simulator: IDevice): Promise<IDevice>;
     static restartDevice(device: IDevice): Promise<void>;
