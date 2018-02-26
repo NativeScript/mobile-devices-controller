@@ -15,6 +15,7 @@ import {
 const OFFSET_DI_PIXELS = 16;
 
 export class AndroidController {
+    private static DEFAULT_BOOT_TIME = 180000;
     private static ANDROID_HOME = process.env["ANDROID_HOME"] || "";
     private static EMULATOR = resolve(AndroidController.ANDROID_HOME, "emulator", "emulator");
     private static ADB = resolve(AndroidController.ANDROID_HOME, "platform-tools", "adb");
@@ -52,7 +53,7 @@ export class AndroidController {
         }
 
         emulator = await AndroidController.startEmulatorProcess(emulator, options);
-        const result = await AndroidController.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || 180000) === true ? Status.BOOTED : Status.SHUTDOWN;
+        const result = await AndroidController.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
 
         if (result === Status.BOOTED) {
             emulator.status = Status.BOOTED;
@@ -67,6 +68,11 @@ export class AndroidController {
         };
 
         return emulator;
+    }
+
+    public static reboot(emulator: IDevice) {
+        AndroidController.executeAdbCommand(emulator, 'reboot bootloader');
+        AndroidController.waitUntilEmulatorBoot(emulator, AndroidController.DEFAULT_BOOT_TIME);
     }
 
     public static unlock(token, password = undefined) {
@@ -215,7 +221,7 @@ export class AndroidController {
     }
 
     public static async recordVideo(device: IDevice, dir, fileName, callback: () => Promise<any>) {
-        const { pathToVideo, devicePath , videoRecoringProcess} = AndroidController.startRecordingVideo(device, dir, fileName); 
+        const { pathToVideo, devicePath, videoRecoringProcess } = AndroidController.startRecordingVideo(device, dir, fileName);
         new Promise(async (res, reject) => {
             callback().then((result) => {
                 videoRecoringProcess.kill("SIGINT");
@@ -366,20 +372,20 @@ export class AndroidController {
         return emulator;
     }
 
-    private static waitUntilEmulatorBoot(deviceId, timeOut: number): boolean {
+    private static waitUntilEmulatorBoot(deviceId, timeOutInMiliseconds: number): boolean {
         const startTime = new Date().getTime();
         let currentTime = new Date().getTime();
         let found = false;
 
         console.log("Booting emulator ...");
 
-        while ((currentTime - startTime) < timeOut * 1000 && !found) {
+        while ((currentTime - startTime) < timeOutInMiliseconds && !found) {
             currentTime = new Date().getTime();
             found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + deviceId);
         }
 
         if (!found) {
-            let error = deviceId + " failed to boot in " + timeOut + " seconds.";
+            let error = deviceId + " failed to boot in " + timeOutInMiliseconds + " seconds.";
             console.log(error, true);
         } else {
             console.log("Emilator is booted!");
@@ -548,28 +554,6 @@ export class AndroidController {
     public static emulatorId(platformVersion) {
         return AndroidController._emulatorIds.get(platformVersion.toString());
     }
-
-    // private static loadEmulatorsIds() {
-    //     AndroidController._emulatorIds.set("4.2", "5554");
-    //     AndroidController._emulatorIds.set("4.3", "5556");
-    //     AndroidController._emulatorIds.set("4.4", "5558");
-    //     AndroidController._emulatorIds.set("5.0", "5560");
-    //     AndroidController._emulatorIds.set("5.1", "5562");
-    //     AndroidController._emulatorIds.set("6", "5564");
-    //     AndroidController._emulatorIds.set("6.", "5564");
-    //     AndroidController._emulatorIds.set("6.0", "5564");
-    //     AndroidController._emulatorIds.set("7", "5566");
-    //     AndroidController._emulatorIds.set("7.", "5566");
-    //     AndroidController._emulatorIds.set("7.0", "5566");
-    //     AndroidController._emulatorIds.set("7.1", "5568");
-    //     AndroidController._emulatorIds.set("7.1.1", "5570");
-    //     AndroidController._emulatorIds.set("8", "5572");
-    //     AndroidController._emulatorIds.set("8.", "5572");
-    //     AndroidController._emulatorIds.set("8.0", "5572");
-    //     AndroidController._emulatorIds.set("26", "5572");
-    //     AndroidController._emulatorIds.set("27", "5574");
-    //     AndroidController._emulatorIds.set("8.1", "5574");
-    // }
 
     private static sendKeyCommand = (token, key) => {
         return `${AndroidController.ADB} -s ${token} shell input keyevent ${key}`;

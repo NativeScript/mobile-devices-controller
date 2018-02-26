@@ -23,6 +23,8 @@ export class IOSController {
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
     private static IOS_DEVICE = "ios-device";
     private static devicesScreenInfo = new Map<string, IOSDeviceScreenInfo>();
+    private static DEVICE_BOOT_TIME = 180000;
+    private static WAIT_DEVICE_TO_RESPONCE = 180000;
 
     public static getAllDevices(verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
         if (IOSController.devicesScreenInfo.size === 0) {
@@ -42,9 +44,9 @@ export class IOSController {
         executeCommand(IOSController.SIMCTL + " erase " + udid);
         const process = IOSController.startSimulatorProcess(udid);
 
-        let responce: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, 180000);
+        let responce: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
         if (responce === true) {
-            responce = IOSController.checkIfSimulatorIsBooted(udid, 180000);
+            responce = IOSController.checkIfSimulatorIsBooted(udid, IOSController.WAIT_DEVICE_TO_RESPONCE);
             if (responce) {
                 simulator.type = DeviceType.SIMULATOR;
                 simulator.status = Status.BOOTED;
