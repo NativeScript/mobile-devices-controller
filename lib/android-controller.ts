@@ -590,14 +590,13 @@ export class AndroidController {
     }
 
     public static setDontKeepActivities(value: boolean, device: IDevice) {
-        let status: 0 | 1;
-        value ? status = 1 : status = 0;
-
+        const status = value ? 0 : 1;
         const prefix = AndroidController.gettokenPrefix(device.type);
-        executeCommand(AndroidController.ADB + ` -s ${prefix}${device.token} shell service call activity 43 i32 ${status}`);
+        const command = `${AndroidController.ADB} -s ${prefix}${device.token} shell service call activity 43 i32 ${status}`;
 
+        executeCommand(command);
         if (this.getAlwaysFinishActivitiesGlobalSettingsValue(device) !== value) {
-            throw new Error(`Failed to set \"Don't keep activities\" to ${value}!`);
+            throw new Error(`Failed to set "Don't keep activities" to ${value}!`);
         }
     }
 }
