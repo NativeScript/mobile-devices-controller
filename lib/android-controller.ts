@@ -586,7 +586,9 @@ export class AndroidController {
 
     private static getAlwaysFinishActivitiesGlobalSettingsValue(device: IDevice): boolean {
         const prefix = AndroidController.gettokenPrefix(device.type);
-        return executeCommand(AndroidController.ADB + " -s " + `${prefix}${device.token}` + " shell settings get global always_finish_activities").trim() === "1";
+        const command = `${AndroidController.ADB} -s ${prefix}${device.token} shell settings get global always_finish_activities`;
+        const result = executeCommand(command).trim() === "1";
+        return result;
     }
 
     public static setDontKeepActivities(value: boolean, device: IDevice) {
