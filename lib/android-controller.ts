@@ -236,7 +236,7 @@ export class AndroidController {
 
     public static startRecordingVideo(device: IDevice, dir, fileName) {
         const videoFileName = `${fileName}.mp4`;
-        const pathToVideo = resolve(dir, fileName);
+        const pathToVideo = resolve(dir, videoFileName);
         const devicePath = `/sdcard/${videoFileName}`;
         const prefix = AndroidController.gettokenPrefix(device.type);
         const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', `${prefix}${device.token}`, 'shell', 'screenrecord', `${devicePath}`]);
