@@ -72,7 +72,7 @@ export class AndroidController {
 
     public static reboot(emulator: IDevice) {
         AndroidController.executeAdbCommand(emulator, 'reboot bootloader');
-        AndroidController.waitUntilEmulatorBoot(emulator, AndroidController.DEFAULT_BOOT_TIME);
+        AndroidController.waitUntilEmulatorBoot(emulator.token, AndroidController.DEFAULT_BOOT_TIME);
     }
 
     public static unlock(token, password = undefined) {
@@ -238,7 +238,7 @@ export class AndroidController {
         const videoFileName = `${fileName}.mp4`;
         const pathToVideo = resolve(dir, videoFileName);
         const devicePath = `/sdcard/${videoFileName}`;
-        const prefix = AndroidController.gettokenPrefix(device.type);
+        const prefix = AndroidController.getTokenPrefix(device);
         const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', `${prefix}${device.token}`, 'shell', 'screenrecord', `${devicePath}`]);
 
         return { pathToVideo: pathToVideo, devicePath: devicePath, videoRecoringProcess: videoRecoringProcess };
@@ -576,12 +576,15 @@ export class AndroidController {
     }
 
     private static executeAdbCommand(device: IDevice, command: string) {
-        const prefix = AndroidController.gettokenPrefix(device.type);
+        const prefix = AndroidController.getTokenPrefix(device);
         return executeCommand(`${AndroidController.ADB} -s ${prefix}${device.token} ${command}`);
     }
 
-    private static gettokenPrefix(type: DeviceType) {
-        return type === DeviceType.DEVICE ? "" : "emulator-";
+    private static getTokenPrefix(device: IDevice) {
+        if (device.type === DeviceType.EMULATOR && !device.token.startsWith("emulator")) {
+            return "emulator-";
+        }
+        return "";
     }
 }
 
