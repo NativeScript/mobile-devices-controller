@@ -583,6 +583,23 @@ export class AndroidController {
     private static gettokenPrefix(type: DeviceType) {
         return type === DeviceType.DEVICE ? "" : "emulator-";
     }
+
+    private static getAlwaysFinishActivitiesGlobalSettingsValue(device: IDevice): boolean {
+        const prefix = AndroidController.gettokenPrefix(device.type);
+        return executeCommand(AndroidController.ADB + " -s " + `${prefix}${device.token}` + " shell settings get global always_finish_activities").trim() === "1";
+    }
+
+    public static setDontKeepActivities(value: boolean, device: IDevice) {
+        let status: 0 | 1;
+        value ? status = 1 : status = 0;
+
+        const prefix = AndroidController.gettokenPrefix(device.type);
+        executeCommand(AndroidController.ADB + ` -s ${prefix}${device.token} shell service call activity 43 i32 ${status}`);
+
+        if (this.getAlwaysFinishActivitiesGlobalSettingsValue(device) !== value) {
+            throw new Error(`Failed to set \"Don't keep activities\" to ${value}!`);
+        }
+    }
 }
 
 export class AndroidDevice extends Device {
