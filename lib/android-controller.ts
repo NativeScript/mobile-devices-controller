@@ -36,7 +36,7 @@ export class AndroidController {
     }
 
     public static getPhysicalDensity(device: IDevice) {
-        return parseInt(AndroidController.executeAdbCommand(device, "shell wm density").split(":")[1]) * 0.01;
+        return parseInt(AndroidController.executeAdbShellCommand(device, "wm density").split(":")[1]) * 0.01;
     }
 
     public static getPixelsOffset(device: IDevice) {
@@ -147,7 +147,7 @@ export class AndroidController {
     }
 
     public isAppRunning(device: IDevice, appId: string) {
-        const result = AndroidController.executeAdbCommand(device, "shell ps");
+        const result = AndroidController.executeAdbShellCommand(device, "ps");
         if (result.includes(appId)) {
             return true;
         } else {
@@ -157,12 +157,12 @@ export class AndroidController {
 
     public static startApplication(device: IDevice, fullAppName: string) {
         const appId = AndroidController.installApp(device, fullAppName);
-        let command = "shell monkey -p " + appId + " 1";
-        Promise.resolve(AndroidController.executeAdbCommand(device, command));
+        const commandToExecute = "monkey -p " + appId + " 1";
+        Promise.resolve(AndroidController.executeAdbShellCommand(device, commandToExecute));
     }
 
     public static getInstalledApps(device) {
-        const list = AndroidController.executeAdbCommand(device, `shell pm list packages -3`).split("\n");
+        const list = AndroidController.executeAdbShellCommand(device, `pm list packages -3`).split("\n");
         return list;
     }
 
@@ -208,13 +208,13 @@ export class AndroidController {
     }
 
     public static stopApp(device: IDevice, appId) {
-        AndroidController.executeAdbCommand(device, `shell am force-stop ${appId}`);
+        AndroidController.executeAdbShellCommand(device, `am force-stop ${appId}`);
     }
 
     public static async getScreenshot(device: IDevice, dir, fileName) {
         fileName = fileName.endsWith(".pne") ? fileName : `${fileName}.png`;
         const pathToScreenshotPng = `/sdcard/${fileName}`;
-        AndroidController.executeAdbCommand(device, `shell screencap ${pathToScreenshotPng}`);
+        AndroidController.executeAdbShellCommand(device, `screencap ${pathToScreenshotPng}`);
         const fullFileName = resolve(dir, fileName);
         AndroidController.pullFile(device, pathToScreenshotPng, fullFileName);
         return fullFileName;
@@ -240,7 +240,6 @@ export class AndroidController {
         const devicePath = `/sdcard/${videoFileName}`;
         const prefix = AndroidController.getTokenPrefix(device);
         const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', `${prefix}${device.token}`, 'shell', 'screenrecord', `${devicePath}`]);
-
         return { pathToVideo: pathToVideo, devicePath: devicePath, videoRecoringProcess: videoRecoringProcess };
     }
 
@@ -252,7 +251,7 @@ export class AndroidController {
         const destinationFolder = dirname(destinationFile);
         // Verify remotePath
         const remoteBasePath = remotePath.substring(0, remotePath.lastIndexOf("/"));
-        const sdcardFiles = AndroidController.executeAdbCommand(device, " shell ls -la " + remoteBasePath);
+        const sdcardFiles = AndroidController.executeAdbShellCommand(device, "ls -la " + remoteBasePath);
         if (sdcardFiles.includes("No such file or directory")) {
             const error = remoteBasePath + " does not exist.";
             console.log(error);
@@ -282,11 +281,11 @@ export class AndroidController {
 
     public static pushFile(device: IDevice, fileName, deviceParh) {
 
-        let output = AndroidController.executeAdbCommand(device, "shell mount -o rw,remount -t rootfs /");
+        let output = AndroidController.executeAdbShellCommand(device, "mount -o rw,remount -t rootfs /");
 
         // Verify remotePath
         const remoteBasePath = deviceParh.substring(0, deviceParh.lastIndexOf("/"));
-        const sdcardFiles = AndroidController.executeAdbCommand(device, "shell ls -la " + remoteBasePath);
+        const sdcardFiles = AndroidController.executeAdbShellCommand(device, "ls -la " + remoteBasePath);
         if (sdcardFiles.includes("No such file or directory")) {
             const error = remoteBasePath + " does not exist.";
             console.log(error);
@@ -577,14 +576,35 @@ export class AndroidController {
 
     private static executeAdbCommand(device: IDevice, command: string) {
         const prefix = AndroidController.getTokenPrefix(device);
-        return executeCommand(`${AndroidController.ADB} -s ${prefix}${device.token} ${command}`);
+        const commandToExecute = `${AndroidController.ADB} -s ${prefix}${device.token} ${command}`;
+        const result = executeCommand(commandToExecute);
+        return result;
+    }
+
+    private static executeAdbShellCommand(device: IDevice, command: string) {
+        const commandToExecute = `shell ${command}`;
+        const result = AndroidController.executeAdbCommand(device, commandToExecute);
+        return result;
     }
 
     private static getTokenPrefix(device: IDevice) {
-        if (device.type === DeviceType.EMULATOR && !device.token.startsWith("emulator")) {
-            return "emulator-";
+        const result = device.type === DeviceType.EMULATOR && !device.token.startsWith("emulator") ? "emulator-" : "";
+        return result;
+    }
+
+    private static getAlwaysFinishActivitiesGlobalSettingValue(device: IDevice): boolean {
+        const commandToExecute = `settings get global always_finish_activities`;
+        const result = AndroidController.executeAdbShellCommand(device, commandToExecute).trim() === "1";
+        return result;
+    }
+
+    public static setDontKeepActivities(value: boolean, device: IDevice) {
+        const status = value ? 1 : 0;
+        const commandToExecute = `service call activity 43 i32 ${status}`;
+        AndroidController.executeAdbShellCommand(device, commandToExecute);
+        if (AndroidController.getAlwaysFinishActivitiesGlobalSettingValue(device) !== value) {
+            throw new Error(`Failed to set "Don't keep activities" to ${value}!`);
         }
-        return "";
     }
 }
 
