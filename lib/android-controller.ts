@@ -588,10 +588,8 @@ export class AndroidController {
     }
 
     private static getTokenPrefix(device: IDevice) {
-        if (device.type === DeviceType.EMULATOR && !device.token.startsWith("emulator")) {
-           return "emulator-";
-        }
-        return "";
+        const result = device.type === DeviceType.EMULATOR && !device.token.startsWith("emulator") ? "emulator-" : "";
+        return result;
     }
 
     private static getAlwaysFinishActivitiesGlobalSettingValue(device: IDevice): boolean {
