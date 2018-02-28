@@ -58,7 +58,7 @@ export declare class AndroidController {
     private static checkAndroid();
     private static executeAdbCommand(device, command);
     private static executeAdbShellCommand(device, command);
-    private static getTokenPrefix(type);
+    private static getTokenPrefix(device);
     private static getAlwaysFinishActivitiesGlobalSettingValue(device);
     static setDontKeepActivities(value: boolean, device: IDevice): void;
 }
