@@ -1,30 +1,30 @@
 {
   "name": "mobile-devices-controller",
-  "version": "2.0.9",
-  "description": "Manage simulators, emulators and devices",
+  "version": "2.1.1",
   "main": "index.js",
-  "scripts": {
-    "watch": "tsc -watch",
-    "tsc": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/NativeScript/mobile-devices-controller.git"
-  },
+  "description": "Manage devices, emulators and simulators.",
   "keywords": [
-    "simulator",
-    "emulator"
+    "device",
+    "emulator",
+    "simulator"
   ],
-  "author": "SvetoslavTsenov",
+  "author": "Svetoslav Tsenov",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/NativeScript/mobile-devices-controller/issues"
   },
   "homepage": "https://github.com/NativeScript/mobile-devices-controller#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NativeScript/mobile-devices-controller.git"
+  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^8.0.31",
     "typescript": "^2.6.1"
   },
-  "dependencies": {}
+  "scripts": {
+    "prepare": "tsc",
+    "watch": "tsc -watch"
+  }
 }
