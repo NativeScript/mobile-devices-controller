@@ -18,21 +18,13 @@ export class DeviceController {
         const searchQuery = DeviceController.copyProperties(query);
         const devices = new Array<IDevice>();
         if (!searchQuery || !searchQuery.platform) {
-            (await DeviceController.mapDevicesToArray(Platform.ANDROID)).forEach((d) => {
-                devices.push(d)
-            });
-            (await DeviceController.mapDevicesToArray(Platform.IOS)).forEach((d) => {
-                devices.push(d)
-            });
+            await DeviceController.mapDevicesToArray(Platform.ANDROID, devices);
+            await DeviceController.mapDevicesToArray(Platform.IOS, devices);
         } else if (searchQuery && searchQuery.platform && !searchQuery.name) {
-            (await DeviceController.mapDevicesToArray(searchQuery.platform)).forEach((d) => {
-                devices.push(d)
-            });
+            await DeviceController.mapDevicesToArray(searchQuery.platform, devices);
             delete searchQuery.platform;
         } else if (searchQuery && searchQuery.platform && searchQuery.name) {
-            (await DeviceController.getDevicesByPlatformAndName(searchQuery.platform, searchQuery.name)).forEach((d) => {
-                devices.push(d);
-            });
+            await DeviceController.getDevicesByPlatformAndName(searchQuery.platform, searchQuery.name);
             delete searchQuery.platform;
             delete searchQuery.name;
         }
@@ -91,7 +83,7 @@ export class DeviceController {
             });
 
             return shouldInclude;
-        })
+        });
     }
 
     public static async getScreenshot(device: IDevice, dir, fileName) {
@@ -167,8 +159,7 @@ export class DeviceController {
         }
     }
 
-    private static async mapDevicesToArray(platform) {
-        const devices: Array<IDevice> = new Array();
+    private static async mapDevicesToArray(platform, devices) {
         const allDevices = await DeviceController.getAllDevicesByPlatform(platform);
         allDevices.forEach((v, k, map) => {
             v.forEach(d => {

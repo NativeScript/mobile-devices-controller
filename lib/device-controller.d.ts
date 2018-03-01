@@ -23,5 +23,5 @@ export declare class DeviceController {
     private static copyProperties(from);
     private static getAllDevicesByPlatform(platform, verbose?);
     private static getDevicesByPlatformAndName(platform, name?, verbose?);
-    private static mapDevicesToArray(platform);
+    private static mapDevicesToArray(platform, devices);
 }
