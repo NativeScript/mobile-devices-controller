@@ -43,6 +43,15 @@ export class AndroidController {
         return Math.floor(OFFSET_DI_PIXELS * AndroidController.getPhysicalDensity(device));
     }
 
+    public static setEmulatorConfig(device: IDevice) {
+        const density = AndroidController.getPhysicalDensity(device);
+        const offsetPixels = AndroidController.getPixelsOffset(device);
+        device.config = {
+            density: density,
+            offsetPixels: offsetPixels,
+        };
+    }
+
     public static async startEmulator(emulator: IDevice, options = "", logPath = undefined): Promise<IDevice> {
         if (!emulator.token) {
             emulator.token = AndroidController.emulatorId(emulator.apiLevel) || "5554";
@@ -60,13 +69,7 @@ export class AndroidController {
             emulator.startedAt = Date.now();
         }
 
-        const density = AndroidController.getPhysicalDensity(emulator);
-        const offsetPixels = AndroidController.getPixelsOffset(emulator);
-        emulator.config = {
-            density: density,
-            offsetPixels: offsetPixels,
-        };
-
+        AndroidController.setEmulatorConfig(emulator);
         return emulator;
     }
 
@@ -466,6 +469,7 @@ export class AndroidController {
                             v[0].status = Status.BOOTED;
                             v[0].token = dev.token;
                             busyTokens.push(dev.token);
+                            AndroidController.setEmulatorConfig(v[0]);
                         }
                     })
                 } catch (error) {

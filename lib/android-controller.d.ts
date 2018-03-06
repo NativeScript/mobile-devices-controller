@@ -14,6 +14,7 @@ export declare class AndroidController {
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
     static getPhysicalDensity(device: IDevice): number;
     static getPixelsOffset(device: IDevice): number;
+    static setEmulatorConfig(device: IDevice): void;
     static startEmulator(emulator: IDevice, options?: string, logPath?: any): Promise<IDevice>;
     static reboot(emulator: IDevice): void;
     static unlock(token: any, password?: any): void;
