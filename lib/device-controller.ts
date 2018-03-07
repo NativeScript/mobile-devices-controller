@@ -131,7 +131,7 @@ export class DeviceController {
     }
 
     private static async getAllDevicesByPlatform(platform: Platform, verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
-        let devices;
+        let devices = new Map<string, IDevice[]>();
         if (platform.toLowerCase() === Platform.ANDROID) {
             devices = await AndroidController.getAllDevices(verbose);
         } else if (isMac() && platform.toLowerCase() === Platform.IOS) {
