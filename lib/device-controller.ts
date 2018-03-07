@@ -2,7 +2,7 @@ import { Platform, DeviceType, Status } from "./enums";
 import { Device, IDevice } from "./device";
 import { AndroidController } from "./android-controller";
 import { IOSController } from "./ios-controller";
-import { isWin } from "./utils";
+import { isMac } from "./utils";
 import { ChildProcess } from "child_process";
 export class DeviceController {
 
@@ -134,7 +134,7 @@ export class DeviceController {
         let devices;
         if (platform.toLowerCase() === Platform.ANDROID) {
             devices = await AndroidController.getAllDevices(verbose);
-        } else if (!isWin() && platform.toLowerCase() === Platform.IOS) {
+        } else if (isMac() && platform.toLowerCase() === Platform.IOS) {
             devices = await IOSController.getAllDevices(verbose);
         }
 
