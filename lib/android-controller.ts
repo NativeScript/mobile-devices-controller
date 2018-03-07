@@ -598,7 +598,7 @@ export class AndroidController {
 
     private static getAlwaysFinishActivitiesGlobalSettingValue(device: IDevice): boolean {
         const commandToExecute = `settings get global always_finish_activities`;
-        const result = AndroidController.executeAdbShellCommand(device, commandToExecute).trim() === "1";
+        const result = AndroidController.executeAdbShellCommand(device, commandToExecute).trim().slice(-1) === "1";
         return result;
     }
 
