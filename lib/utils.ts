@@ -49,6 +49,10 @@ export function isWin() {
     return /^win/.test(process.platform);
 }
 
+export function isMac() {
+    return /^darwin/.test(process.platform);
+}
+
 export function killProcessByName(name) {
     if (!isWin()) {
         executeCommand("killall " + name);
