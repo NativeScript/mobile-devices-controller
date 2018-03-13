@@ -158,7 +158,7 @@ export class AndroidController {
         }
     }
 
-    public static checkForApplicationNotRespondingDialog(device: IDevice) {
+    public static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice) {
         return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'").includes('Application Not Responding');
     }
 

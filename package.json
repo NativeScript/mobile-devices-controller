@@ -1,6 +1,6 @@
 {
   "name": "mobile-devices-controller",
-  "version": "2.1.8",
+  "version": "2.1.9",
   "main": "index.js",
   "description": "Manage devices, emulators and simulators.",
   "keywords": [
@@ -21,7 +21,7 @@
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^8.0.31",
-    "typescript": "^2.6.1"
+    "typescript": "^2.7.2"
   },
   "scripts": {
     "prepare": "tsc",
