@@ -149,13 +149,17 @@ export class AndroidController {
         killProcessByName("adb.exe");
     }
 
-    public isAppRunning(device: IDevice, appId: string) {
+    public static isAppRunning(device: IDevice, appId: string) {
         const result = AndroidController.executeAdbShellCommand(device, "ps");
         if (result.includes(appId)) {
             return true;
         } else {
             return false;
         }
+    }
+
+    public static checkForApplicationNotRespondingDialog(device: IDevice) {
+        return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'").includes('Application Not Responding');
     }
 
     public static startApplication(device: IDevice, fullAppName: string) {
