@@ -170,3 +170,17 @@ export class DeviceController {
         return devices;
     }
 }
+
+process.once('exit', () => {
+    AndroidController.runningProcesses.forEach(proc => {
+        try {
+            process.kill(proc);
+        } catch (error) { }
+    });
+
+    IOSController.runningProcesses.forEach(proc => {
+        try {
+            process.kill(proc);
+        } catch (error) { }
+    });
+});

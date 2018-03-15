@@ -26,6 +26,8 @@ export class IOSController {
     private static DEVICE_BOOT_TIME = 180000;
     private static WAIT_DEVICE_TO_RESPONCE = 180000;
 
+    public static runningProcesses = new Array();
+
     public static getAllDevices(verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
         if (IOSController.devicesScreenInfo.size === 0) {
             IOSController.loadIOSDevicesScreenInfo();
@@ -39,6 +41,14 @@ export class IOSController {
         return Promise.resolve(allDevices);
     }
 
+    public static getSimulatorPidByToken(token: string): number {
+        const simulatorPidAsString = executeCommand(`ps ax | grep ${token} | grep -v grep`);
+        const regex = new RegExp(/^\d+/, "gi");
+        const pid = regex.test(simulatorPidAsString) ? parseInt(regex.exec(simulatorPidAsString)[0]) : null;
+
+        return pid;
+    }
+
     public static async startSimulator(simulator: IDevice): Promise<IDevice> {
         let udid = simulator.token;
         executeCommand(IOSController.SIMCTL + " erase " + udid);
@@ -48,9 +58,10 @@ export class IOSController {
         if (responce === true) {
             responce = IOSController.checkIfSimulatorIsBooted(udid, IOSController.WAIT_DEVICE_TO_RESPONCE);
             if (responce) {
+
                 simulator.type = DeviceType.SIMULATOR;
                 simulator.status = Status.BOOTED;
-                simulator.pid = process.pid;
+                simulator.pid = IOSController.getSimulatorPidByToken(simulator.token);
                 simulator.startedAt = Date.now();
                 console.log(`Launched simulator with name: ${simulator.name}; udid: ${simulator.token}; status: ${simulator.status}`);
             }
@@ -318,6 +329,9 @@ export class IOSController {
             shell: true,
             stdio: 'inherit'
         });
+        if (videoRecoringProcess) {
+            IOSController.runningProcesses.push(videoRecoringProcess.pid);
+        }
 
         return { pathToVideo: pathToVideo, videoRecoringProcess: videoRecoringProcess };
     }

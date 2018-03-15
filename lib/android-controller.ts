@@ -24,6 +24,8 @@ export class AndroidController {
     private static LIST_AVDS = AndroidController.AVD_MANAGER + " list avd";
     private static _emulatorIds: Map<string, string> = new Map();
 
+    public static runningProcesses = new Array();
+
     public static async getAllDevices(verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
         AndroidController.checkAndroid();
         // this should be always first.
@@ -62,6 +64,7 @@ export class AndroidController {
         }
 
         emulator = await AndroidController.startEmulatorProcess(emulator, options);
+
         const result = await AndroidController.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
 
         if (result === Status.BOOTED) {
@@ -159,7 +162,7 @@ export class AndroidController {
     }
 
     public static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice) {
-        return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'").includes('Application Not Responding');
+        return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'").toLowerCase().includes('application not responding');
     }
 
     public static startApplication(device: IDevice, fullAppName: string) {
@@ -247,6 +250,10 @@ export class AndroidController {
         const devicePath = `/sdcard/${videoFileName}`;
         const prefix = AndroidController.getTokenPrefix(device);
         const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', `${prefix}${device.token}`, 'shell', 'screenrecord', `${devicePath}`]);
+        if (videoRecoringProcess) {
+            AndroidController.runningProcesses.push(videoRecoringProcess.pid);
+        }
+
         return { pathToVideo: pathToVideo, devicePath: devicePath, videoRecoringProcess: videoRecoringProcess };
     }
 

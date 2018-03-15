@@ -15,7 +15,9 @@ export declare class IOSController {
     private static devicesScreenInfo;
     private static DEVICE_BOOT_TIME;
     private static WAIT_DEVICE_TO_RESPONCE;
+    static runningProcesses: any[];
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
+    static getSimulatorPidByToken(token: string): number;
     static startSimulator(simulator: IDevice): Promise<IDevice>;
     static restartDevice(device: IDevice): Promise<void>;
     static killAll(): void;
