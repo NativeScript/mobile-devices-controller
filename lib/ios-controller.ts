@@ -41,13 +41,17 @@ export class IOSController {
         return Promise.resolve(allDevices);
     }
 
-    public static getSimulatorPidByToken(token: string): number {
+    static getSimulatorPidByToken(token: string) {
         const simulatorPidAsString = executeCommand(`ps ax | grep ${token} | grep -v grep`);
         const regex = new RegExp(/^\d+/, "gi");
-        if (simulatorPidAsString && regex.exec(simulatorPidAsString).length > 0) {
-            return parseInt(regex.exec(simulatorPidAsString)[0]);
+        const regexMatch = regex.exec(simulatorPidAsString);
+        if (regexMatch !== null && regexMatch.length > 0 && regexMatch[0]) {
+            try {
+                return parseInt(regex.exec(simulatorPidAsString)[0]);
+            } catch (error) {
+                console.error("Could't parse simulator pid", error);
+            }
         }
-
         return undefined;
     }
 
