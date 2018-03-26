@@ -112,7 +112,7 @@ export class DeviceController {
 
     private static copyProperties(from: IDevice) {
         const to: IDevice = { platform: undefined, token: undefined, name: undefined, type: undefined }
-        if (!!from || Object.getOwnPropertyNames(from).length <= 0) {
+        if (!from || Object.getOwnPropertyNames(from).length <= 0) {
             return undefined;
         }
 
