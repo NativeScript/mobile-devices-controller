@@ -96,7 +96,7 @@ export class IOSController {
 
     public static kill(udid: string) {
         console.log(`Killing simulator with udid ${udid}`);
-        executeCommand(`${IOSController.SIMCTL} shutdown udid`);
+        executeCommand(`${IOSController.SIMCTL} shutdown ${udid}`);
 
         // Kill all the processes related with sim.id (for example WDA agents).
         const killAllRelatedProcessesCommand = `ps aux | grep -ie ${udid} | awk '{print $2}' | xargs kill -9`;
