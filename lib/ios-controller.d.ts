@@ -39,7 +39,7 @@ export declare class IOSController {
         videoRecoringProcess: ChildProcess;
     };
     private static checkIfSimulatorIsBooted(udid, timeout);
-    private static getIOSPackageId(device, fullAppName);
+    static getIOSPackageId(device: IDevice, fullAppName: any): string;
     /**
      * Get path of Info.plist of iOS app under test.
      * Info.plist holds information for app under test.
