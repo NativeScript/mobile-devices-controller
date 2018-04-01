@@ -365,7 +365,7 @@ export class IOSController {
         return booted;
     }
 
-    private static getIOSPackageId(device: IDevice, fullAppName) {
+    public static getIOSPackageId(device: IDevice, fullAppName) {
         let result = "";
         const plistPath = IOSController.getPlistPath(device, fullAppName);
 
