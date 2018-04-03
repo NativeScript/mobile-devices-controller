@@ -139,7 +139,7 @@ export class IOSController {
     }
 
     public static uninstallApp(device: IDevice, fullAppName) {
-        const bundleId = IOSController.getIOSPackageId(device, fullAppName);
+        const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
         if (device.type === DeviceType.DEVICE) {
             const uninstallResult = executeCommand(`ideviceinstaller --udid ${device.token} --uninstall ${bundleId}`);
             if (!uninstallResult.includes("Complete")) {
@@ -153,7 +153,7 @@ export class IOSController {
     }
 
     public static async startApplication(device: IDevice, fullAppName) {
-        const bundleId = IOSController.getIOSPackageId(device, fullAppName);
+        const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
         IOSController.uninstallApp(device, fullAppName);
         IOSController.installApp(device, fullAppName);
         if (device.type === DeviceType.DEVICE) {
@@ -365,9 +365,9 @@ export class IOSController {
         return booted;
     }
 
-    public static getIOSPackageId(device: IDevice, fullAppName) {
+    public static getIOSPackageId(deviceType: DeviceType, fullAppName) {
         let result = "";
-        const plistPath = IOSController.getPlistPath(device, fullAppName);
+        const plistPath = IOSController.getPlistPath(deviceType, fullAppName);
 
         if (fileExists(plistPath)) {
             const command = "/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' " + plistPath;
@@ -385,11 +385,11 @@ export class IOSController {
      *
      * @return path to Info.plist
      */
-    private static getPlistPath(device: IDevice, fullAppName) {
+    private static getPlistPath(deviceType: DeviceType, fullAppName) {
         let plistPath = null;
-        if (device.type === DeviceType.SIMULATOR) {
+        if (deviceType === DeviceType.SIMULATOR) {
             plistPath = resolve(fullAppName, "Info.plist");
-        } else if (device.type === DeviceType.DEVICE) {
+        } else if (deviceType === DeviceType.DEVICE) {
             const appFullName = dirname(fullAppName) + sep + basename(fullAppName).replace(".ipa", "");
             const command = `unzip -o ${fullAppName} -d ${appFullName}`;
             executeCommand(command);

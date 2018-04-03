@@ -258,7 +258,11 @@ export class AndroidController {
     }
 
     public static getPackageId(appFullName) {
-        return AndroidController.runAaptCommand(appFullName, "package:");
+        return AndroidController.runAaptCommand(appFullName, "package");
+    }
+
+    public static getLaunchableActivity(appFullName) {
+        return AndroidController.runAaptCommand(appFullName, "launchable-activity");
     }
 
     public static pullFile(device: IDevice, remotePath, destinationFile) {
@@ -343,27 +347,19 @@ export class AndroidController {
     }
 
     private static runAaptCommand(appFullName, grep) {
-        let value = "";
         let command = AndroidController.getAaptPath() + " dump badging " + appFullName;
 
-        //If os windows use findstr or use grep for all other
-        if (isWin()) {
-            command = command + " | findstr " + grep;
-        } else {
-            command = command + " | grep " + grep;
+        let result = "";
+        try {
+            const commandResult = executeCommand(command);
+            result = (new RegExp(`${grep}` + ":\\s+name='\(\w+\|\.+\)'", `i`)).exec(commandResult)[1];
+            result = /(\w+.)+\w/ig.exec((new RegExp(`${grep}` + ":\\s+name='\(\w+\|\.+\)'", `i`)).exec(commandResult)[1])[0];
+            result = (new RegExp(`${grep}` + ":\\s+name='\(\(\w+.\)+\)'", `ig`)).exec(commandResult)[1];
+        } catch (error) {
+
         }
 
-        const result = executeCommand(command);
-
-        // Parse result
-        if (result.includes(grep)) {
-            value = result.substring(result.indexOf("'") + 1);
-            value = value.substring(0, value.indexOf("'"));
-        } else {
-            value = null;
-        }
-
-        return value;
+        return result;
     }
 
     private static async startEmulatorProcess(emulator: IDevice, options) {
@@ -535,16 +531,19 @@ export class AndroidController {
                 if (line.includes(DeviceType.EMULATOR.toString().toLowerCase())) {
                     const token = line.split("   ")[0].replace(/\D+/ig, '');
                     devices.push(new AndroidDevice(undefined, undefined, DeviceType.EMULATOR, token, Status.BOOTED));
+
                 } else if (line.includes("unauthorized") || line.includes("usb")) {
                     const token = line.split("   ")[0].trim();
                     let name = undefined;
                     let status: Status = Status.SHUTDOWN;
+                    let apiLevel = "";
                     if (!line.includes("unauthorized")) {
                         name = line.split("model:")[1].trim().split(" ")[0].trim();
                         status = Status.BOOTED;
+                        apiLevel = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop ro.build.version.release`).trim();
                     }
 
-                    devices.push(new AndroidDevice(name, undefined, DeviceType.DEVICE, token, status));
+                    devices.push(new AndroidDevice(name, apiLevel, DeviceType.DEVICE, token, status));
                 }
             }
         });

@@ -39,14 +39,14 @@ export declare class IOSController {
         videoRecoringProcess: ChildProcess;
     };
     private static checkIfSimulatorIsBooted(udid, timeout);
-    static getIOSPackageId(device: IDevice, fullAppName: any): string;
+    static getIOSPackageId(deviceType: DeviceType, fullAppName: any): string;
     /**
      * Get path of Info.plist of iOS app under test.
      * Info.plist holds information for app under test.
      *
      * @return path to Info.plist
      */
-    private static getPlistPath(device, fullAppName);
+    private static getPlistPath(deviceType, fullAppName);
     private static waitForBootInSystemLog(simulator, bootedIndicator, startupTimeout);
     private static tailLogsUntil(token, bootedIndicator, timeoutMs);
     static getLogDir(token: any): string;

@@ -45,6 +45,7 @@ export declare class AndroidController {
         videoRecoringProcess: ChildProcess;
     };
     static getPackageId(appFullName: any): string;
+    static getLaunchableActivity(appFullName: any): string;
     static pullFile(device: IDevice, remotePath: any, destinationFile: any): any;
     static pushFile(device: IDevice, fileName: any, deviceParh: any): any;
     private static getAaptPath();
