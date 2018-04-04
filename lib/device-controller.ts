@@ -24,7 +24,11 @@ export class DeviceController {
             await DeviceController.mapDevicesToArray(searchQuery.platform, devices);
             delete searchQuery.platform;
         } else if (searchQuery && searchQuery.platform && searchQuery.name) {
-            await DeviceController.getDevicesByPlatformAndName(searchQuery.platform, searchQuery.name);
+            (await DeviceController.getDevicesByPlatformAndName(searchQuery.platform, searchQuery.name)).forEach(d => {
+                if (!devices.some(currentDevice => currentDevice.token === d.token)) {
+                    devices.push(d);
+                }
+            });
             delete searchQuery.platform;
             delete searchQuery.name;
         }
