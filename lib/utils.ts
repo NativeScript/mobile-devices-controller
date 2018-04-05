@@ -196,3 +196,13 @@ export async function waitForResult(childProcess, matcher, timeout) {
         });
     });
 }
+
+
+export const wait = miliseconds => {
+    const startTime = Date.now();
+    console.log(`Waiting ${miliseconds}`);
+    
+    while (Date.now() - startTime <= miliseconds) { }
+
+    return true;
+}

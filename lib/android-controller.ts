@@ -165,9 +165,15 @@ export class AndroidController {
         return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'").toLowerCase().includes('application not responding');
     }
 
-    public static startApplication(device: IDevice, fullAppName: string) {
-        const appId = AndroidController.installApp(device, fullAppName);
-        const commandToExecute = "monkey -p " + appId + " 1";
+    public static refreshApplication(device, appFullName) {
+        const packageId = AndroidController.getPackageId(appFullName);
+        AndroidController.uninstallApp(device, packageId);
+        AndroidController.installApp(device, appFullName);
+        AndroidController.startApplication(device, packageId);
+    }
+
+    public static startApplication(device: IDevice, packageId: string) {
+        const commandToExecute = "monkey -p " + packageId + " 1";
         Promise.resolve(AndroidController.executeAdbShellCommand(device, commandToExecute));
     }
 

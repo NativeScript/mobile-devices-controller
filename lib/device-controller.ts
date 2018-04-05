@@ -47,11 +47,21 @@ export class DeviceController {
         }
     }
 
-    public static async runApp(device: IDevice, appFullPath): Promise<void> {
+    public static async refreshApplication(device: IDevice, appFullPath): Promise<void> {
         if (device.platform === Platform.IOS) {
-            await IOSController.startApplication(device, appFullPath)
+            await IOSController.refreshApplication(device, appFullPath)
         } else {
-            await AndroidController.startApplication(device, appFullPath);
+            await AndroidController.refreshApplication(device, appFullPath);
+        }
+    }
+
+    public static async uninstallApp(device: IDevice, appFullPath): Promise<void> {
+        if (device.platform === Platform.IOS) {
+            const bundleId = IOSController.getIOSPackageId(device.type, appFullPath);
+            await IOSController.uninstallApp(device, appFullPath, bundleId)
+        } else {
+            const packageId = AndroidController.getPackageId(appFullPath);
+            await AndroidController.uninstallApp(device, packageId);
         }
     }
 

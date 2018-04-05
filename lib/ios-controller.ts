@@ -6,10 +6,12 @@ import {
     executeCommand,
     tailFilelUntil,
     fileExists,
-    attachToProcess
+    attachToProcess,
+    wait
 } from "./utils";
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
+import { IOSDeviceLib } from "ios-device-lib";
 
 export class IOSController {
 
@@ -125,40 +127,110 @@ export class IOSController {
         return apps;
     }
 
-    public static installApp(device: IDevice, fullAppName) {
+    public static async installApp(device: IDevice, fullAppName) {
         if (device.type === DeviceType.DEVICE) {
-            const result = executeCommand(`ideviceinstaller -u ${device.token} -i ${fullAppName}`);
-            if (result.includes("Complete")) {
-                console.info(fullAppName + " successfully installed.");
-            } else {
-                console.error(`Failed to install ${fullAppName}!`, result);
+            const dl = new IOSDeviceLib(d => {
+                console.log("Device FOUND!", device);
+            }, device => {
+                console.log("Device LOST!", device);
+            });
+
+            const installProcess = await dl.install(fullAppName, [device.token])[0];
+            if (!installProcess.response.includes("Successfully installed application")) {
+                console.error(installProcess.response);
             }
         } else {
             executeCommand(`${IOSController.SIMCTL} install ${device.token} ${fullAppName}`);
         }
     }
 
-    public static uninstallApp(device: IDevice, fullAppName) {
-        const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
+    public static async uninstallApp(device: IDevice, fullAppName: string, bundleId: string = undefined) {
+        bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
         if (device.type === DeviceType.DEVICE) {
-            const uninstallResult = executeCommand(`ideviceinstaller --udid ${device.token} --uninstall ${bundleId}`);
-            if (!uninstallResult.includes("Complete")) {
-                console.error(`Failed to uninstall ${uninstallResult} with ideviceinstaller tool.`, uninstallResult);
-                throw new Error(`Failed to uninstall ${fullAppName} from ${device.token}`);
+            const dl = new IOSDeviceLib(d => {
+                console.log("Device found!", d);
+
+            }, device => {
+                console.log("Device LOST!", device);
+            });
+
+            const iDeviceAppData = [{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }];
+            wait(1000);
+            const apps = await Promise.all(dl.apps([device.token]));
+            if (apps.some(app => app.response.some(r => r.CFBundleIdentifier.includes(bundleId)))) {
+                const stopProcess = (await Promise.all(dl.stop(iDeviceAppData)))[0];
+                if (!stopProcess.response.includes("Successfully stopped application")) {
+                    console.error(stopProcess.response);
+                }
+
+                const uninstallProcess = await dl.uninstall(bundleId, [device.token])[0];
+                if (!uninstallProcess.response.includes("Successfully uninstalled application")) {
+                    console.error(uninstallProcess.response);
+                }
             }
-            console.info(`${bundleId} successfully uninstalled.`);
+
+            const result = executeCommand(`ideviceinstaller -u ${device.token} -i ${fullAppName}`);
         } else {
             executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
         }
     }
 
+    public static async refreshApplication(device: IDevice, fullAppName) {
+        const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
+        if (device.type === DeviceType.DEVICE) {
+            const dl = new IOSDeviceLib(d => {
+                console.log("Device found!", device);
+            }, device => {
+                console.log("Device LOST!", device);
+            });
+
+            wait(1000);
+            const apps = await Promise.all(dl.apps([device.token]));
+
+            console.log("KOR1", apps);
+
+            const iDeviceAppData = [{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }];
+            if (apps.some(app => app.response.some(r => r.CFBundleIdentifier.includes(bundleId)))) {
+                const stopProcess = (await Promise.all(dl.stop(iDeviceAppData)))[0];
+                if (!stopProcess.response.includes("Successfully stopped application")) {
+                    console.error(stopProcess.response);
+                }
+
+                const uninstallProcess = await dl.uninstall(bundleId, [device.token])[0];
+                if (!uninstallProcess.response.includes("Successfully uninstalled application")) {
+                    console.error(uninstallProcess.response);
+                }
+            }
+
+            const installProcess = await dl.install(fullAppName, [device.token])[0];
+            if (!installProcess.response.includes("Successfully installed application")) {
+                console.error(installProcess.response);
+            }
+
+            const startProcess = await dl.start(iDeviceAppData)[0];
+            if (!startProcess.response.includes("Successfully started application")) {
+                throw new Error(`Failed to start application ${bundleId}`);
+            }
+        } else {
+            Promise.resolve(executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`));
+        }
+    }
+
     public static async startApplication(device: IDevice, fullAppName) {
         const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
-        IOSController.uninstallApp(device, fullAppName);
-        IOSController.installApp(device, fullAppName);
         if (device.type === DeviceType.DEVICE) {
-            const pr = spawn("idevicedebug", ["run", bundleId], { stdio: 'pipe', shell: true });
-            await attachToProcess(pr, /\w/ig, 100000);
+            const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
+            if (device.type === DeviceType.DEVICE) {
+                const dl = new IOSDeviceLib(d => {
+                }, device => {
+                    console.log("Device LOST!", device);
+                });
+
+                const startProcess = await dl.start([{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }])[0];
+                if (!startProcess.response.includes("Successfully started application")) {
+                    throw new Error(`Failed to start application ${bundleId}`);
+                }
+            }
         } else {
             Promise.resolve(executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`));
         }

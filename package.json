@@ -18,7 +18,9 @@
     "type": "git",
     "url": "git+https://github.com/NativeScript/mobile-devices-controller.git"
   },
-  "dependencies": {},
+  "dependencies": {
+    "ios-device-lib": "^0.4.10"
+  },
   "devDependencies": {
     "@types/node": "^8.0.31",
     "typescript": "^2.7.2"

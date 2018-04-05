@@ -31,7 +31,8 @@ export declare class AndroidController {
     static killAdbProcess(): void;
     static isAppRunning(device: IDevice, appId: string): boolean;
     static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice): boolean;
-    static startApplication(device: IDevice, fullAppName: string): void;
+    static refreshApplication(device: any, appFullName: any): void;
+    static startApplication(device: IDevice, packageId: string): void;
     static getInstalledApps(device: any): string[];
     static isAppInstalled(device: IDevice, packageId: any): boolean;
     static installApp(device: IDevice, testAppName: any): string;
