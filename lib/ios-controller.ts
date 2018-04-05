@@ -28,6 +28,19 @@ export class IOSController {
     private static DEVICE_BOOT_TIME = 180000;
     private static WAIT_DEVICE_TO_RESPONCE = 180000;
 
+    private static _dl: IOSDeviceLib.IOSDeviceLib;
+    static get dl() {
+        if (!IOSController._dl) {
+            this._dl = new IOSDeviceLib(d => {
+                console.log("Device found!", d);
+            }, device => {
+                console.log("Device LOST!");
+            });
+            wait(3000);
+        }
+        return IOSController._dl;
+    }
+
     public static runningProcesses = new Array();
 
     public static getAllDevices(verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
@@ -110,9 +123,9 @@ export class IOSController {
         if (device.type === DeviceType.DEVICE) {
             const rowData = executeCommand(`ideviceinstaller -u ${device.token} -l`).replace("package:", "").split("\n");
             rowData.forEach(data => {
-                if (data.includes(".") && data.includes("-")) {
-                    const appId = data.replace(" ", "").split("-")[0];
-                    apps.push(appId);
+                const appBundle = /(\w+\.)+\w+/ig.exec(data);
+                if (appBundle && appBundle.length > 0 && appBundle[0].includes(".")) {
+                    apps.push(appBundle[0]);
                 }
             })
         } else {
@@ -129,13 +142,7 @@ export class IOSController {
 
     public static async installApp(device: IDevice, fullAppName) {
         if (device.type === DeviceType.DEVICE) {
-            const dl = new IOSDeviceLib(d => {
-                console.log("Device FOUND!", device);
-            }, device => {
-                console.log("Device LOST!", device);
-            });
-
-            const installProcess = await dl.install(fullAppName, [device.token])[0];
+            const installProcess = await IOSController.dl.install(fullAppName, [device.token])[0];
             if (!installProcess.response.includes("Successfully installed application")) {
                 console.error(installProcess.response);
             }
@@ -147,29 +154,17 @@ export class IOSController {
     public static async uninstallApp(device: IDevice, fullAppName: string, bundleId: string = undefined) {
         bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
         if (device.type === DeviceType.DEVICE) {
-            const dl = new IOSDeviceLib(d => {
-                console.log("Device found!", d);
-
-            }, device => {
-                console.log("Device LOST!", device);
-            });
-
-            const iDeviceAppData = [{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }];
-            wait(1000);
-            const apps = await Promise.all(dl.apps([device.token]));
-            if (apps.some(app => app.response.some(r => r.CFBundleIdentifier.includes(bundleId)))) {
-                const stopProcess = (await Promise.all(dl.stop(iDeviceAppData)))[0];
-                if (!stopProcess.response.includes("Successfully stopped application")) {
-                    console.error(stopProcess.response);
+            try {
+                const apps = IOSController.getInstalledApps(device);
+                if (apps.some(app => app === bundleId)) {
+                    const appInfo = { "ddi": undefined, "appId": bundleId, "deviceId": device.token }
+                    await IOSController.dl.stop([appInfo]);
                 }
-
-                const uninstallProcess = await dl.uninstall(bundleId, [device.token])[0];
-                if (!uninstallProcess.response.includes("Successfully uninstalled application")) {
-                    console.error(uninstallProcess.response);
-                }
+            } catch (error) {
+                console.dir(error);
             }
-
-            const result = executeCommand(`ideviceinstaller -u ${device.token} -i ${fullAppName}`);
+            const result = executeCommand(`ideviceinstaller -u ${device.token} -U ${bundleId}`);
+            console.log("", result);
         } else {
             executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
         }
@@ -178,39 +173,15 @@ export class IOSController {
     public static async refreshApplication(device: IDevice, fullAppName) {
         const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
         if (device.type === DeviceType.DEVICE) {
-            const dl = new IOSDeviceLib(d => {
-                console.log("Device found!", device);
-            }, device => {
-                console.log("Device LOST!", device);
-            });
+            const apps = await Promise.all(IOSController.dl.apps([device.token]));
+            IOSController.uninstallApp(device, fullAppName, bundleId);
 
-            wait(1000);
-            const apps = await Promise.all(dl.apps([device.token]));
-
-            console.log("KOR1", apps);
-
-            const iDeviceAppData = [{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }];
-            if (apps.some(app => app.response.some(r => r.CFBundleIdentifier.includes(bundleId)))) {
-                const stopProcess = (await Promise.all(dl.stop(iDeviceAppData)))[0];
-                if (!stopProcess.response.includes("Successfully stopped application")) {
-                    console.error(stopProcess.response);
-                }
-
-                const uninstallProcess = await dl.uninstall(bundleId, [device.token])[0];
-                if (!uninstallProcess.response.includes("Successfully uninstalled application")) {
-                    console.error(uninstallProcess.response);
-                }
-            }
-
-            const installProcess = await dl.install(fullAppName, [device.token])[0];
+            const installProcess = await IOSController.dl.install(fullAppName, [device.token])[0];
             if (!installProcess.response.includes("Successfully installed application")) {
                 console.error(installProcess.response);
             }
-
-            const startProcess = await dl.start(iDeviceAppData)[0];
-            if (!startProcess.response.includes("Successfully started application")) {
-                throw new Error(`Failed to start application ${bundleId}`);
-            }
+            wait(3000);
+            IOSController.startApplication(device, fullAppName);
         } else {
             Promise.resolve(executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`));
         }
@@ -219,17 +190,9 @@ export class IOSController {
     public static async startApplication(device: IDevice, fullAppName) {
         const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
         if (device.type === DeviceType.DEVICE) {
-            const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
-            if (device.type === DeviceType.DEVICE) {
-                const dl = new IOSDeviceLib(d => {
-                }, device => {
-                    console.log("Device LOST!", device);
-                });
-
-                const startProcess = await dl.start([{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }])[0];
-                if (!startProcess.response.includes("Successfully started application")) {
-                    throw new Error(`Failed to start application ${bundleId}`);
-                }
+            const startProcess = await IOSController.dl.start([{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }])[0];
+            if (!startProcess.response.includes("Successfully started application")) {
+                throw new Error(`Failed to start application ${bundleId}`);
             }
         } else {
             Promise.resolve(executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`));
