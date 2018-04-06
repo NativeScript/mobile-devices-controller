@@ -172,23 +172,13 @@ export class IOSController {
 
     public static async refreshApplication(device: IDevice, fullAppName) {
         const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
-        if (device.type === DeviceType.DEVICE) {
-            const apps = await Promise.all(IOSController.dl.apps([device.token]));
-            IOSController.uninstallApp(device, fullAppName, bundleId);
-
-            const installProcess = await IOSController.dl.install(fullAppName, [device.token])[0];
-            if (!installProcess.response.includes("Successfully installed application")) {
-                console.error(installProcess.response);
-            }
-            wait(3000);
-            IOSController.startApplication(device, fullAppName);
-        } else {
-            Promise.resolve(executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`));
-        }
+        IOSController.uninstallApp(device, fullAppName, bundleId);
+        IOSController.installApp(device, fullAppName);
+        IOSController.startApplication(device, fullAppName, bundleId);
     }
 
-    public static async startApplication(device: IDevice, fullAppName) {
-        const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
+    public static async startApplication(device: IDevice, fullAppName, bundleId: string = undefined) {
+        bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
         if (device.type === DeviceType.DEVICE) {
             const startProcess = await IOSController.dl.start([{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }])[0];
             if (!startProcess.response.includes("Successfully started application")) {
