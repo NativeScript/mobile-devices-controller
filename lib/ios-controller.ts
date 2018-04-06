@@ -147,7 +147,8 @@ export class IOSController {
                 console.error(installProcess.response);
             }
         } else {
-            executeCommand(`${IOSController.SIMCTL} install ${device.token} ${fullAppName}`);
+            const result = executeCommand(`${IOSController.SIMCTL} install ${device.token} ${fullAppName}`);
+            console.dir(result);
         }
     }
 
@@ -164,9 +165,10 @@ export class IOSController {
                 console.dir(error);
             }
             const result = executeCommand(`ideviceinstaller -u ${device.token} -U ${bundleId}`);
-            console.log("", result);
+            console.dir(result);
         } else {
-            executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
+            const result = executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
+            console.dir(result);
         }
     }
 
@@ -185,7 +187,9 @@ export class IOSController {
                 throw new Error(`Failed to start application ${bundleId}`);
             }
         } else {
-            Promise.resolve(executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`));
+            const result = executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`);
+            console.dir(result);
+            Promise.resolve(result);
         }
     }
 
