@@ -28,7 +28,7 @@ export declare class IOSController {
     static installApp(device: IDevice, fullAppName: any): Promise<void>;
     static uninstallApp(device: IDevice, fullAppName: string, bundleId?: string): Promise<void>;
     static refreshApplication(device: IDevice, fullAppName: any): Promise<void>;
-    static startApplication(device: IDevice, fullAppName: any): Promise<void>;
+    static startApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
     private static startSimulatorProcess(udid);
     private static isRunning(token);
     static parseSimulators(stdout?: any): Map<string, Array<IDevice>>;
