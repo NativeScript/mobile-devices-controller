@@ -445,7 +445,7 @@ export class AndroidController {
             if (line.includes("Tag/ABI:")) {
                 //const apiLevel = /\d+((.|,)\d+)?/gi.exec(line.split("Tag/ABI:")[0].trim());
                 const apiLevel = line.substring(line.lastIndexOf("on:") + 3 ,line.lastIndexOf("Tag/ABI:")).replace(/android|api/ig,"").replace(/\(\w.+\)/,"").trim();
-                emulator.apiLevel = apiLevel[0];
+                emulator.apiLevel = apiLevel;
             }
 
             if (emulator && emulator.name && emulator.apiLevel) {
