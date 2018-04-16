@@ -202,3 +202,21 @@ export const wait = miliseconds => {
     while (Date.now() - startTime <= miliseconds) { }
     return true;
 }
+
+export const getRegexResultsAsArray = (regex, str) => {
+    let m;
+    const result = [];
+    while ((m = regex.exec(str)) !== null) {
+        if (m.index === regex.lastIndex) {
+            regex.lastIndex++;
+        }
+
+        m.forEach(element => {
+            if (result.indexOf(element) < 0) {
+                result.push(element);
+            }
+        });
+    }
+
+    return result;
+}

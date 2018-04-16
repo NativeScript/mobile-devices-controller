@@ -16,3 +16,4 @@ export declare function createRegexPattern(text: string): RegExp;
 export declare function attachToProcess(processToWatchLog: any, matcher: any, timeOut: any): Promise<{}>;
 export declare function waitForResult(childProcess: any, matcher: any, timeout: any): Promise<string>;
 export declare const wait: (miliseconds: any) => boolean;
+export declare const getRegexResultsAsArray: (regex: any, str: any) => any[];
