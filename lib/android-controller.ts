@@ -162,7 +162,11 @@ export class AndroidController {
     }
 
     public static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice) {
-        return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'").toLowerCase().includes('application not responding');
+        if (this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'").toLowerCase().includes('application not responding')) {
+            console.log("Not responding dialog shown!");
+            return true;
+        }
+        return false
     }
 
     public static refreshApplication(device, appFullName) {
@@ -444,7 +448,7 @@ export class AndroidController {
             }
             if (line.includes("Tag/ABI:")) {
                 //const apiLevel = /\d+((.|,)\d+)?/gi.exec(line.split("Tag/ABI:")[0].trim());
-                const apiLevel = line.substring(line.lastIndexOf("on:") + 3 ,line.lastIndexOf("Tag/ABI:")).replace(/android|api/ig,"").replace(/\(\w.+\)/,"").trim();
+                const apiLevel = line.substring(line.lastIndexOf("on:") + 3, line.lastIndexOf("Tag/ABI:")).replace(/android|api/ig, "").replace(/\(\w.+\)/, "").trim();
                 emulator.apiLevel = apiLevel;
             }
 

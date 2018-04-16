@@ -2,7 +2,7 @@ import { Platform, DeviceType, Status } from "./enums";
 import { Device, IDevice } from "./device";
 import { AndroidController } from "./android-controller";
 import { IOSController } from "./ios-controller";
-import { isMac } from "./utils";
+import { isMac, wait } from "./utils";
 import { ChildProcess } from "child_process";
 export class DeviceController {
 
@@ -71,6 +71,8 @@ export class DeviceController {
         } else {
             await IOSController.kill(device.token);
         }
+
+        wait(2000);
     }
 
     public static killAll(type: DeviceType) {
