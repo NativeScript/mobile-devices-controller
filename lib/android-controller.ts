@@ -221,17 +221,12 @@ export class AndroidController {
     }
 
     public static uninstallApp(device, appId) {
-        // Check if app is installed is removed on purpose!
         AndroidController.stopApp(device, appId);
-        if (!appId.includes("appium")) {
-            const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId}`);
-            if (uninstallResult.includes("Success")) {
-                console.info(appId + " successfully uninstalled.");
-            } else {
-                console.error("Failed to uninstall " + appId + ". Error: " + uninstallResult);
-            }
+        const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId}`);
+        if (uninstallResult.includes("Success")) {
+            console.info(appId + " successfully uninstalled.");
         } else {
-            console.info("Skip uninstall: " + appId);
+            console.error("Failed to uninstall " + appId + ". Error: " + uninstallResult);
         }
     }
 
