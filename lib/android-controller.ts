@@ -120,6 +120,14 @@ export class AndroidController {
                 emulator.status = Status.SHUTDOWN;
                 emulator.pid = undefined;
             }
+
+            console.log(`Waiting for ${emulator} to stop!`);
+            const startTime = Date.now();
+            while (executeCommand(AndroidController.LIST_DEVICES_COMMAND).includes(emulator.token)
+                && Date.now() - startTime >= 5000) {
+            }
+
+            console.log(`Device: ${emulator} is successfully killed!`);
         }
     }
 

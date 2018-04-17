@@ -1,6 +1,6 @@
 {
   "name": "mobile-devices-controller",
-  "version": "2.3.2",
+  "version": "2.3.4",
   "main": "index.js",
   "description": "Manage devices, emulators and simulators.",
   "keywords": [
