@@ -166,25 +166,20 @@ export class IOSController {
                 console.dir(error);
             }
             const result = executeCommand(`ideviceinstaller -u ${device.token} -U ${bundleId}`);
-            console.dir(result);
         } else {
             try {
                 const filters = getRegexResultsAsArray(/(\w+)/ig, bundleId);
                 const filter = filters[filters.length - 1];
                 const appProcess = executeCommand(`ps aux | grep ${filter} | grep CoreSimulator`);
-                console.dir(appProcess);
                 if (appProcess) {
                     const processes = getRegexResultsAsArray(/(\d+)/ig, appProcess);
-                    console.dir(processes);
                     if (processes && processes.length > 0) {
                         const result = executeCommand(`kill ${processes[0]}`);
-                        console.dir(result);
                     }
                 }
             } catch (error) { }
 
             const result = executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
-            console.dir(result);
         }
     }
 
