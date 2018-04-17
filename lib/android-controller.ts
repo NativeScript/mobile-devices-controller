@@ -221,13 +221,24 @@ export class AndroidController {
     }
 
     public static uninstallApp(device, appId) {
-        AndroidController.stopApp(device, appId);
-        const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId}`);
-        if (uninstallResult.includes("Success")) {
-            console.info(appId + " successfully uninstalled.");
+        let apps = AndroidController.getInstalledApps(device);
+        if (apps.some(a => a === appId)) {
+            AndroidController.stopApp(device, appId);
+            const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId}`);
+            if (uninstallResult.includes("Success")) {
+                console.info(appId + " successfully uninstalled.");
+            } else {
+                console.error("Failed to uninstall " + appId + ". Error: " + uninstallResult);
+            }
         } else {
-            console.error("Failed to uninstall " + appId + ". Error: " + uninstallResult);
+            console.log(`Installed applications: `, apps);
+            console.log(`Application: ${appId} is not installed! Will skip not try to uninstall it!`);
         }
+
+        if (AndroidController.getInstalledApps(device).some(app => app === appId)) {
+            console.error("We couldn't uninstall application!");
+        }
+
     }
 
     public static stopApp(device: IDevice, appId) {
