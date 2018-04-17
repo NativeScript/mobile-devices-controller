@@ -232,13 +232,12 @@ export class AndroidController {
             }
         } else {
             console.log(`Installed applications: `, apps);
-            console.log(`Application: ${appId} is not installed! Will skip not try to uninstall it!`);
+            console.log(`Application: ${appId} is not installed!`);
         }
 
         if (AndroidController.getInstalledApps(device).some(app => app === appId)) {
             console.error("We couldn't uninstall application!");
         }
-
     }
 
     public static stopApp(device: IDevice, appId) {
