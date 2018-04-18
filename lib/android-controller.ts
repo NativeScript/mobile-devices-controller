@@ -388,7 +388,7 @@ export class AndroidController {
     private static async startEmulatorProcess(emulator: IDevice, options) {
         const process = spawn
             (AndroidController.EMULATOR,
-            [" -avd ", emulator.name, "-port ", emulator.token, options || " -wipe-data"], {
+            [" -avd ", emulator.name, "-port ", emulator.token, "-no-snapshot", "-no-audio", options || " -wipe-data"], {
                 shell: true,
                 detached: false
             });
