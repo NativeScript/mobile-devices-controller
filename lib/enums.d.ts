@@ -10,6 +10,7 @@ export declare enum DeviceType {
 export declare enum Status {
     SHUTDOWN = "shutdown",
     BOOTED = "booted",
+    OFFLINE = "offline",
     BUSY = "busy",
     UNAUTORIZED = "unautorized",
     INVALID = "invalid",

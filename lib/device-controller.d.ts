@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { DeviceType } from "./enums";
+import { Platform, DeviceType } from "./enums";
 import { IDevice } from "./device";
 import { ChildProcess } from "child_process";
 export declare class DeviceController {
@@ -14,6 +14,7 @@ export declare class DeviceController {
     static uninstallApp(device: IDevice, appFullPath: any): Promise<void>;
     static kill(device: IDevice): Promise<void>;
     static killAll(type: DeviceType): void;
+    static refreshDeviceStatus(token: string, platform?: Platform, verbose?: boolean): Promise<any>;
     static filter(devices: Array<IDevice>, searchQuery: any): IDevice[];
     static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<any>;

@@ -54,9 +54,10 @@ export declare class AndroidController {
     private static startEmulatorProcess(emulator, options);
     private static waitUntilEmulatorBoot(deviceId, timeOutInMiliseconds);
     private static checkIfEmulatorIsRunning(token);
+    static refreshDeviceStatus(token: string, verbose?: boolean): Promise<Status>;
     private static parseEmulators(runningDevices, emulators?, verbose?);
     private static checkTelnetReport(avdInfo);
-    private static parseRunningDevicesList(verbose);
+    static parseRunningDevicesList(verbose: any): AndroidDevice[];
     private static parseRealDevices(runningDevices, devices?);
     static emulatorId(platformVersion: any): string;
     private static sendKeyCommand;

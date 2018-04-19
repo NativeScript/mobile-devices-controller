@@ -443,6 +443,12 @@ export class AndroidController {
         return isBooted;
     }
 
+    public static async refreshDeviceStatus(token: string, verbose = false) {
+        const emulators = AndroidController.parseRunningDevicesList(verbose);
+        const emulator = emulators.filter(e => e.token === token)[0];
+        return emulator != null ? emulator.status : Status.SHUTDOWN;
+    }
+
     private static async parseEmulators(runningDevices: Array<AndroidDevice>, emulators: Map<string, Array<IDevice>> = new Map<string, Array<Device>>(), verbose = false) {
         let availableDevices = false;
         const info = executeCommand(AndroidController.LIST_AVDS);
@@ -543,7 +549,7 @@ export class AndroidController {
         return avdInfo !== "" && avdInfo.toLowerCase().includes("ok") && avdInfo.toLowerCase().includes("connected to localhost");
     }
 
-    private static parseRunningDevicesList(verbose) {
+    public static parseRunningDevicesList(verbose) {
         // examples
         // List of devices attached
         // ce0217125d20e41304     unauthorized usb:337641472X
@@ -559,23 +565,31 @@ export class AndroidController {
         const devices: Array<AndroidDevice> = new Array();
 
         runningDevices.forEach(line => {
+            const parseEmulatorToken = line => {
+                return line.split("   ")[0].replace(/\D+/ig, '');
+            }
             if (line.trim().includes("device")) {
                 if (line.includes(DeviceType.EMULATOR.toString().toLowerCase())) {
-                    const token = line.split("   ")[0].replace(/\D+/ig, '');
+                    const token = parseEmulatorToken(line);
                     devices.push(new AndroidDevice(undefined, undefined, DeviceType.EMULATOR, token, Status.BOOTED));
+                }
 
-                } else if (line.includes("unauthorized") || line.includes("usb")) {
+                if (line.includes(Status.OFFLINE.toString().toLowerCase())) {
+                    const token = parseEmulatorToken(line);
+                    devices.push(new AndroidDevice(undefined, undefined, DeviceType.EMULATOR, token, Status.OFFLINE));
+                }
+
+                if (line.includes("usb")) {
                     const token = line.split("   ")[0].trim();
-                    let name = undefined;
-                    let status: Status = Status.SHUTDOWN;
-                    let apiLevel = "";
-                    if (!line.includes("unauthorized")) {
-                        name = line.split("model:")[1].trim().split(" ")[0].trim();
-                        status = Status.BOOTED;
-                        apiLevel = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop ro.build.version.release`).trim();
-                    }
-
+                    const status: Status = Status.BOOTED;
+                    const name = line.split("model:")[1].trim().split(" ")[0].trim();
+                    const apiLevel = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop ro.build.version.release`).trim();
                     devices.push(new AndroidDevice(name, apiLevel, DeviceType.DEVICE, token, status));
+                }
+
+                if (line.includes("unauthorized")) {
+                    const status: Status = Status.UNAUTORIZED;
+                    devices.push(new AndroidDevice(Status.UNAUTORIZED, Status.UNAUTORIZED, DeviceType.DEVICE, "", Status.UNAUTORIZED));
                 }
             }
         });

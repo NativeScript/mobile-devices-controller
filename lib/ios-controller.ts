@@ -276,7 +276,7 @@ export class IOSController {
 
         return devices;
     }
-
+    
     public static parseRealDevices(devices = new Map<string, IDevice[]>()) {
         const devicesUDID = executeCommand("idevice_id  --list").split('\n');
         devicesUDID.forEach(udid => {

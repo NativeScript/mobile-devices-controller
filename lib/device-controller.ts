@@ -83,6 +83,26 @@ export class DeviceController {
         }
     }
 
+    public static async refreshDeviceStatus(token: string, platform: Platform = undefined, verbose = false) {
+        if (platform === Platform.ANDROID) {
+            const emulators = AndroidController.parseRunningDevicesList(verbose);
+            const emulator = emulators.filter(e => e.token === token)[0];
+            return emulator != null ? emulator.status : Status.SHUTDOWN;
+        }
+
+        if (platform === Platform.IOS) {
+            const simulators = await DeviceController.mapDevicesToArray(Platform.IOS, new Array<Device>());
+            const simulator = simulators.filter(e => e.token === token)[0];
+            return simulator != null ? simulator.status : Status.SHUTDOWN;
+        }
+
+        if (token) {
+            const devices = await DeviceController.getDevices({});
+            const device = devices.filter(e => e.token === token)[0];
+            return device != null ? device.status : Status.SHUTDOWN;
+        }
+    }
+
     public static filter(devices: Array<IDevice>, searchQuery) {
         return devices.filter((device) => {
             if (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0) {
