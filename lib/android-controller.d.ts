@@ -23,7 +23,7 @@ export declare class AndroidController {
      * Implement kill process
      * @param emulator
      */
-    static kill(emulator: IDevice): void;
+    static kill(emulator: IDevice): IDevice;
     static killAll(): void;
     static restartDevice(device: IDevice): Promise<IDevice>;
     static startAdb(): void;

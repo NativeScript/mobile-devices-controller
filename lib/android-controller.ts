@@ -80,7 +80,7 @@ export class AndroidController {
         AndroidController.executeAdbCommand(emulator, 'reboot bootloader');
         const result = AndroidController.waitUntilEmulatorBoot(emulator.token, AndroidController.DEFAULT_BOOT_TIME);
         if (!result) {
-            await AndroidController.kill(emulator);
+            emulator = await AndroidController.kill(emulator);
             emulator = await AndroidController.startEmulator(emulator);
         }
 
@@ -135,6 +135,8 @@ export class AndroidController {
 
             console.log(`Device: ${emulator} is successfully killed!`);
         }
+
+        return emulator;
     }
 
     public static killAll() {
@@ -201,7 +203,7 @@ export class AndroidController {
     }
 
     public static isAppInstalled(device: IDevice, packageId) {
-        let isAppInstalled = AndroidController.getInstalledApps(device).filter((pack) => pack.includes(packageId)).length > 0;
+        let isAppInstalled = AndroidController.getInstalledApps(device).some((pack) => pack.includes(packageId));
         return isAppInstalled
     }
 
@@ -227,8 +229,8 @@ export class AndroidController {
     }
 
     public static uninstallApp(device, appId) {
-        let apps = AndroidController.getInstalledApps(device);
-        if (apps.some(a => a === appId)) {
+        const isAppInstalled = AndroidController.isAppInstalled(device, appId);
+        if (isAppInstalled) {
             AndroidController.stopApp(device, appId);
             const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId}`);
             if (uninstallResult.includes("Success")) {
@@ -237,7 +239,7 @@ export class AndroidController {
                 console.error("Failed to uninstall " + appId + ". Error: " + uninstallResult);
             }
         } else {
-            console.log(`Installed applications: `, apps);
+            console.log(`Installed applications: `, appId);
             console.log(`Application: ${appId} is not installed!`);
         }
 
