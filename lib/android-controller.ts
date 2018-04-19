@@ -76,9 +76,15 @@ export class AndroidController {
         return emulator;
     }
 
-    public static reboot(emulator: IDevice) {
+    public static async reboot(emulator: IDevice) {
         AndroidController.executeAdbCommand(emulator, 'reboot bootloader');
-        AndroidController.waitUntilEmulatorBoot(emulator.token, AndroidController.DEFAULT_BOOT_TIME);
+        const result = AndroidController.waitUntilEmulatorBoot(emulator.token, AndroidController.DEFAULT_BOOT_TIME);
+        if (!result) {
+            await AndroidController.kill(emulator);
+            emulator = await AndroidController.startEmulator(emulator);
+        }
+
+        return emulator;
     }
 
     public static unlock(token, password = undefined) {

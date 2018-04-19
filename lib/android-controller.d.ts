@@ -17,7 +17,7 @@ export declare class AndroidController {
     static getPixelsOffset(device: IDevice): number;
     static setEmulatorConfig(device: IDevice): void;
     static startEmulator(emulator: IDevice, options?: string, logPath?: any): Promise<IDevice>;
-    static reboot(emulator: IDevice): void;
+    static reboot(emulator: IDevice): Promise<IDevice>;
     static unlock(token: any, password?: any): void;
     /**
      * Implement kill process
