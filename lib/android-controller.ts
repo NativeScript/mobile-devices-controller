@@ -77,6 +77,10 @@ export class AndroidController {
     }
 
     public static async reboot(emulator: IDevice) {
+        // adb shell pm clear com.google.android.apps.nexuslauncher
+        try {
+            AndroidController.executeAdbCommand(emulator, 'adb shell pm clear com.google.android.apps.nexuslauncher');
+        } catch{ }
         AndroidController.executeAdbCommand(emulator, 'reboot bootloader');
         const result = AndroidController.waitUntilEmulatorBoot(emulator.token, AndroidController.DEFAULT_BOOT_TIME);
         if (!result) {
@@ -178,7 +182,9 @@ export class AndroidController {
     }
 
     public static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice) {
-        if (this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'").toLowerCase().includes('application not responding')) {
+        if (this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'")
+            .toLowerCase()
+            .includes('application not responding')) {
             console.log("Not responding dialog shown!");
             return true;
         }
