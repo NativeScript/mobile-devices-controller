@@ -165,20 +165,12 @@ export class IOSController {
             } catch (error) {
                 console.dir(error);
             }
+
+            wait(1000);
             const result = executeCommand(`ideviceinstaller -u ${device.token} -U ${bundleId}`);
         } else {
-            try {
-                const filters = getRegexResultsAsArray(/(\w+)/ig, bundleId);
-                const filter = filters[filters.length - 1];
-                const appProcess = executeCommand(`ps aux | grep ${filter} | grep CoreSimulator`);
-                if (appProcess) {
-                    const processes = getRegexResultsAsArray(/(\d+)/ig, appProcess);
-                    if (processes && processes.length > 0) {
-                        const result = executeCommand(`kill ${processes[0]}`);
-                    }
-                }
-            } catch (error) { }
-
+            executeCommand(`${IOSController.XCRUN} ${device.token} terminate ${bundleId}`);
+            wait(1000);
             const result = executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
         }
     }
@@ -276,7 +268,7 @@ export class IOSController {
 
         return devices;
     }
-    
+
     public static parseRealDevices(devices = new Map<string, IDevice[]>()) {
         const devicesUDID = executeCommand("idevice_id  --list").split('\n');
         devicesUDID.forEach(udid => {
