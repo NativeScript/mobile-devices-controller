@@ -59,16 +59,17 @@ export class IOSController {
 
     static getSimulatorPidByToken(token: string) {
         const simulatorPidAsString = executeCommand(`ps ax | grep ${token} | grep -v grep`);
-        const regex = new RegExp(/^\d+/, "gi");
-        const regexMatch = regex.exec(simulatorPidAsString);
-        if (regexMatch !== null && regexMatch.length > 0 && regexMatch[0]) {
+        const result = getRegexResultsAsArray(/^\d+/gi, simulatorPidAsString);
+        let pid = undefined;
+        if (result.length > 0) {
             try {
-                return parseInt(regex.exec(simulatorPidAsString)[0]);
-            } catch (error) {
+                pid = parseInt(result[0].trim());
+            }
+            catch (error) {
                 console.error("Could't parse simulator pid", error);
             }
         }
-        return undefined;
+        return pid;
     }
 
     public static async startSimulator(simulator: IDevice): Promise<IDevice> {

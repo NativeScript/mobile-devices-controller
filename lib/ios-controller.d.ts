@@ -19,7 +19,7 @@ export declare class IOSController {
     static readonly dl: IOSDeviceLib.IOSDeviceLib;
     static runningProcesses: any[];
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
-    static getSimulatorPidByToken(token: string): number;
+    static getSimulatorPidByToken(token: string): any;
     static startSimulator(simulator: IDevice): Promise<IDevice>;
     static restartDevice(device: IDevice): Promise<void>;
     static killAll(): void;
