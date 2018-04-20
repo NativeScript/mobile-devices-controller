@@ -169,7 +169,7 @@ export class IOSController {
             wait(1000);
             const result = executeCommand(`ideviceinstaller -u ${device.token} -U ${bundleId}`);
         } else {
-            executeCommand(`${IOSController.XCRUN} ${device.token} terminate ${bundleId}`);
+            executeCommand(`${IOSController.SIMCTL} ${device.token} terminate ${bundleId}`);
             wait(1000);
             const result = executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
         }
