@@ -62,7 +62,7 @@ export declare class AndroidController {
     static emulatorId(platformVersion: any): string;
     private static sendKeyCommand;
     private static checkAndroid();
-    private static executeAdbCommand(device, command);
+    private static executeAdbCommand(device, command, timeout?);
     private static executeAdbShellCommand(device, command);
     private static getTokenPrefix(device);
     private static getAlwaysFinishActivitiesGlobalSettingValue(device);

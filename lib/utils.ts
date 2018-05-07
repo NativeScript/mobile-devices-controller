@@ -9,13 +9,14 @@ import {
 import { resolve } from "path";
 import { createInterface } from "readline";
 
-export function executeCommand(args, cwd = process.cwd()): string {
+export function executeCommand(args, cwd = process.cwd(), timeout = 720000): string {
     const commands = args.trim().split(" ");
     const baseCommand = commands.shift();
     const output = childProcess.spawnSync(baseCommand, commands, {
         cwd: cwd,
         shell: true,
-        encoding: "UTF8"
+        encoding: "UTF8",
+        timeout: timeout
     });
 
     return output.output[1].toString();

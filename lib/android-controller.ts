@@ -111,8 +111,10 @@ export class AndroidController {
         let isAlive: boolean = true;
         if (emulator.type === DeviceType.EMULATOR) {
             if (emulator.token) {
-                AndroidController.executeAdbCommand(emulator, " emu kill");
-                isAlive = false;
+                try {
+                    AndroidController.executeAdbCommand(emulator, " emu kill");
+                    isAlive = false;
+                } catch (error) { }
             }
 
             if (emulator.pid) {
@@ -137,7 +139,7 @@ export class AndroidController {
                 && Date.now() - startTime >= 5000) {
             }
 
-            console.log(`Device: ${emulator} is successfully killed!`);
+            console.log(`Device: ${emulator.name} is successfully killed!`);
         }
 
         return emulator;
@@ -182,12 +184,18 @@ export class AndroidController {
     }
 
     public static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice) {
-        if (this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'")
-            .toLowerCase()
-            .includes('application not responding')) {
-            console.log("Not responding dialog shown!");
-            return true;
+        try {
+            if (this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'", 2)
+                .toLowerCase()
+                .includes('application not responding')) {
+                console.log("Not responding dialog shown!");
+                return true;
+            }
+        } catch (error) {
+            console.error('Command timeout recieved', error);
+            return false
         }
+
         return false
     }
 
@@ -209,7 +217,7 @@ export class AndroidController {
     }
 
     public static isAppInstalled(device: IDevice, packageId) {
-        let isAppInstalled = AndroidController.getInstalledApps(device).some((pack) => pack.includes(packageId));
+        let isAppInstalled = AndroidController.getInstalledApps(device).some(pack => pack.includes(packageId));
         return isAppInstalled
     }
 
@@ -419,14 +427,12 @@ export class AndroidController {
     }
 
     private static waitUntilEmulatorBoot(deviceId, timeOutInMiliseconds: number): boolean {
-        const startTime = new Date().getTime();
-        let currentTime = new Date().getTime();
+        const startTime = Date.now();
         let found = false;
 
         console.log("Booting emulator ...");
 
-        while ((currentTime - startTime) < timeOutInMiliseconds && !found) {
-            currentTime = new Date().getTime();
+        while ((Date.now() - startTime) <= timeOutInMiliseconds && !found) {
             found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + deviceId);
         }
 
@@ -640,10 +646,10 @@ export class AndroidController {
         }
     }
 
-    private static executeAdbCommand(device: IDevice, command: string) {
+    private static executeAdbCommand(device: IDevice, command: string, timeout: number = 720000) {
         const prefix = AndroidController.getTokenPrefix(device);
         const commandToExecute = `${AndroidController.ADB} -s ${prefix}${device.token} ${command}`;
-        const result = executeCommand(commandToExecute);
+        const result = executeCommand(commandToExecute, process.cwd(), timeout);
         return result;
     }
 
