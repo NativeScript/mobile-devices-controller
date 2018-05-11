@@ -77,9 +77,14 @@ export class AndroidController {
     }
 
     public static async reboot(emulator: IDevice) {
-        // adb shell pm clear com.google.android.apps.nexuslauncher
         try {
-            AndroidController.executeAdbCommand(emulator, 'adb shell pm clear com.google.android.apps.nexuslauncher');
+            if (AndroidController.checkApplicationNotRespondingDialogIsDisplayed(emulator)) {
+                const errorMsgType = AndroidController.getCurrentErrorMessage(emulator);
+                if (errorMsgType) {
+                    AndroidController.executeAdbCommand(emulator, `adb shell am force-stop ${errorMsgType}`);
+                    AndroidController.executeAdbCommand(emulator, `adb shell pm clear ${errorMsgType}`);
+                }
+            }
         } catch{ }
         AndroidController.executeAdbCommand(emulator, 'reboot bootloader');
         const result = AndroidController.waitUntilEmulatorBoot(emulator.token, AndroidController.DEFAULT_BOOT_TIME);
@@ -183,12 +188,16 @@ export class AndroidController {
         }
     }
 
+    public static getCurrientFocusedScreen(device: IDevice) {
+        return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'", 3000);
+    }
+
     public static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice) {
         try {
-            if (this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'", 2)
+            if (AndroidController.getCurrientFocusedScreen(device)
                 .toLowerCase()
                 .includes('application not responding')) {
-                console.log("Not responding dialog shown!");
+                console.log("not responding dialog shown!");
                 return true;
             }
         } catch (error) {
@@ -197,6 +206,11 @@ export class AndroidController {
         }
 
         return false
+    }
+
+    private static getCurrentErrorMessage(device: IDevice) {
+        const parts = AndroidController.getCurrientFocusedScreen(device).split(":")
+        return parts.length > 1 ? parts[1].trim() : undefined
     }
 
     public static refreshApplication(device, appFullName) {
