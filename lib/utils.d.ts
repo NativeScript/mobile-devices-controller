@@ -13,6 +13,7 @@ export declare function searchFiles(folder: string, words: string, recursive?: b
 export declare function isDirectory(fullName: string): boolean;
 export declare function getFiles(folder: string): string[];
 export declare function createRegexPattern(text: string): RegExp;
+export declare function getAllFileNames(folder: string): string[];
 export declare function attachToProcess(processToWatchLog: any, matcher: any, timeOut: any): Promise<{}>;
 export declare function waitForResult(childProcess: any, matcher: any, timeout: any): Promise<string>;
 export declare const wait: (miliseconds: any) => boolean;

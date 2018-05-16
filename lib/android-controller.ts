@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from "child_process";
-import { resolve, delimiter, sep, dirname } from "path";
-import { existsSync } from "fs";
+import { resolve, delimiter, sep, dirname, join } from "path";
+import { existsSync, rmdirSync } from "fs";
 import { Platform, DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
 import {
@@ -9,7 +9,8 @@ import {
     isWin,
     killProcessByName,
     killPid,
-    searchFiles
+    searchFiles,
+    getAllFileNames
 } from "./utils";
 
 const OFFSET_DI_PIXELS = 16;
@@ -61,6 +62,25 @@ export class AndroidController {
 
         if (logPath) {
             options = options + " > " + logPath + " 2>&1";
+        }
+
+        if(!this.checkIfEmulatorIsRunning(emulator.token)){
+            const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
+            const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
+            getAllFileNames(avd).filter(f => f.endsWith(".lock")).forEach(f => {
+                try {
+                    const path = resolve(avd, f);
+                    console.log(`Try to delete ${path}!`);
+                    
+                    if(existsSync(path)){
+                        console.log(`Deleting ${path}!`);
+                        rmdirSync(path);
+                        console.log(`Deleted ${path}!`);                        
+                    }
+                } catch (error) { 
+                    console.log(`Failed to delete lock file for ${avd}!`);   
+                }
+            });
         }
 
         emulator = await AndroidController.startEmulatorProcess(emulator, options);
@@ -267,7 +287,6 @@ export class AndroidController {
                 console.error("Failed to uninstall " + appId + ". Error: " + uninstallResult);
             }
         } else {
-            console.log(`Installed applications: `, appId);
             console.log(`Application: ${appId} is not installed!`);
         }
 

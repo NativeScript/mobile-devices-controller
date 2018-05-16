@@ -171,6 +171,15 @@ export function createRegexPattern(text: string) {
     return regex;
 }
 
+export function getAllFileNames(folder: string) {
+    let files: Array<string> = new Array();
+    readdirSync(resolve(folder)).forEach(file => {
+        files.push(file);
+    });
+
+    return files;
+}
+
 export async function attachToProcess(processToWatchLog, matcher, timeOut) {
     return new Promise((resolve, reject) => {
         waitForResult(processToWatchLog, matcher, timeOut).then((result) => {
