@@ -64,21 +64,21 @@ export class AndroidController {
             options = options + " > " + logPath + " 2>&1";
         }
 
-        if(!this.checkIfEmulatorIsRunning(emulator.token)){
+        if (!this.checkIfEmulatorIsRunning(emulator.token)) {
             const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
             const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
             getAllFileNames(avd).filter(f => f.endsWith(".lock")).forEach(f => {
                 try {
                     const path = resolve(avd, f);
                     console.log(`Try to delete ${path}!`);
-                    
-                    if(existsSync(path)){
+
+                    if (existsSync(path)) {
                         console.log(`Deleting ${path}!`);
                         rmdirSync(path);
-                        console.log(`Deleted ${path}!`);                        
+                        console.log(`Deleted ${path}!`);
                     }
-                } catch (error) { 
-                    console.log(`Failed to delete lock file for ${avd}!`);   
+                } catch (error) {
+                    console.log(`Failed to delete lock file for ${avd}!`);
                 }
             });
         }
@@ -697,17 +697,17 @@ export class AndroidController {
         return result;
     }
 
-    private static getAlwaysFinishActivitiesGlobalSettingValue(device: IDevice): boolean {
+    private static getAlwaysFinishActivitiesGlobalSettingValue(device: IDevice, value): boolean {
         const commandToExecute = `settings get global always_finish_activities`;
-        const result = AndroidController.executeAdbShellCommand(device, commandToExecute).trim().slice(-1) === "1";
+        const result = AndroidController.executeAdbShellCommand(device, commandToExecute).trim().startsWith(value);
         return result;
     }
 
     public static setDontKeepActivities(value: boolean, device: IDevice) {
         const status = value ? 1 : 0;
-        const commandToExecute = `service call activity 43 i32 ${status}`;
+        const commandToExecute = `settings put global always_finish_activities ${status}`;
         AndroidController.executeAdbShellCommand(device, commandToExecute);
-        if (AndroidController.getAlwaysFinishActivitiesGlobalSettingValue(device) !== value) {
+        if (!AndroidController.getAlwaysFinishActivitiesGlobalSettingValue(device, status)) {
             throw new Error(`Failed to set "Don't keep activities" to ${value}!`);
         }
     }
