@@ -1,32 +1,32 @@
 {
-  "name": "mobile-devices-controller",
-  "version": "2.4.9",
-  "main": "index.js",
-  "description": "Manage devices, emulators and simulators.",
-  "keywords": [
-    "device",
-    "emulator",
-    "simulator"
-  ],
-  "author": "Svetoslav Tsenov",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/NativeScript/mobile-devices-controller/issues"
-  },
-  "homepage": "https://github.com/NativeScript/mobile-devices-controller#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/NativeScript/mobile-devices-controller.git"
-  },
-  "dependencies": {
-    "ios-device-lib": "^0.4.10"
-  },
-  "devDependencies": {
-    "@types/node": "^8.0.31",
-    "typescript": "^2.8.0"
-  },
-  "scripts": {
-    "prepare": "tsc",
-    "watch": "tsc -watch"
-  }
+    "name": "mobile-devices-controller",
+    "version": "2.5.2",
+    "main": "index.js",
+    "description": "Manage devices, emulators and simulators.",
+    "keywords": [
+        "device",
+        "emulator",
+        "simulator"
+    ],
+    "author": "Svetoslav Tsenov",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/NativeScript/mobile-devices-controller/issues"
+    },
+    "homepage": "https://github.com/NativeScript/mobile-devices-controller#readme",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/NativeScript/mobile-devices-controller.git"
+    },
+    "dependencies": {
+        "ios-device-lib": "^0.4.10"
+    },
+    "devDependencies": {
+        "@types/node": "^8.0.31",
+        "typescript": "^2.8.0"
+    },
+    "scripts": {
+        "prepare": "tsc",
+        "watch": "tsc -watch"
+    }
 }
