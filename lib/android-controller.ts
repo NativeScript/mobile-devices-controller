@@ -701,7 +701,10 @@ export class AndroidController {
         const commandToExecute = `settings get global always_finish_activities`;
         const resultAsString = AndroidController.executeAdbShellCommand(device, commandToExecute).trim();
         const matchResult = /^\d/igm.exec(resultAsString);
-        return matchResult != null && matchResult.length > 0 ? matchResult[0] == value : false;
+        const result = matchResult != null && matchResult.length > 0 ? matchResult[0] == value : false;
+        if (!result) {
+            console.error(resultAsString);
+        }
     }
 
     public static setDontKeepActivities(value: boolean, device: IDevice) {
