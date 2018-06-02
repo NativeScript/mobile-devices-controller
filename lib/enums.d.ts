@@ -1,11 +1,11 @@
 export declare enum Platform {
     ANDROID = "android",
-    IOS = "ios",
+    IOS = "ios"
 }
 export declare enum DeviceType {
     SIMULATOR = "simulator",
     EMULATOR = "emulator",
-    DEVICE = "device",
+    DEVICE = "device"
 }
 export declare enum Status {
     SHUTDOWN = "shutdown",
@@ -13,5 +13,5 @@ export declare enum Status {
     OFFLINE = "offline",
     BUSY = "busy",
     UNAUTORIZED = "unautorized",
-    INVALID = "invalid",
+    INVALID = "invalid"
 }

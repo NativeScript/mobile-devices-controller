@@ -14,6 +14,7 @@ export declare class AndroidController {
     static runningProcesses: any[];
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
     static getPhysicalDensity(device: IDevice): number;
+    static calculateScreenOffset(density: number): number;
     static getPixelsOffset(device: IDevice): number;
     static setEmulatorConfig(device: IDevice): void;
     static startEmulator(emulator: IDevice, options?: string, logPath?: any): Promise<IDevice>;
@@ -32,7 +33,7 @@ export declare class AndroidController {
     static isAppRunning(device: IDevice, appId: string): boolean;
     static getCurrientFocusedScreen(device: IDevice): string;
     static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice): boolean;
-    private static getCurrentErrorMessage(device);
+    private static getCurrentErrorMessage;
     static refreshApplication(device: any, appFullName: any): void;
     static startApplication(device: IDevice, packageId: string): void;
     static getInstalledApps(device: any): string[];
@@ -51,23 +52,30 @@ export declare class AndroidController {
     static getLaunchableActivity(appFullName: any): string;
     static pullFile(device: IDevice, remotePath: any, destinationFile: any): any;
     static pushFile(device: IDevice, fileName: any, deviceParh: any): any;
-    private static getAaptPath();
-    private static runAaptCommand(appFullName, grep);
-    private static startEmulatorProcess(emulator, options);
-    private static waitUntilEmulatorBoot(deviceId, timeOutInMiliseconds);
-    private static checkIfEmulatorIsRunning(token);
+    private static getAaptPath;
+    private static runAaptCommand;
+    private static startEmulatorProcess;
+    private static waitUntilEmulatorBoot;
+    private static checkIfEmulatorIsRunning;
     static refreshDeviceStatus(token: string, verbose?: boolean): Promise<Status>;
-    private static parseEmulators(runningDevices, emulators?, verbose?);
-    private static checkTelnetReport(avdInfo);
+    private static parseEmulators;
+    /**
+ * Send an arbitrary Telnet command to the device under test.
+ *
+ * @param {string} command - The command to be sent.
+ *
+ * @return {string} The actual output of the given command.
+ */
+    private static sendTelnetCommand;
     static parseRunningDevicesList(verbose: any): AndroidDevice[];
-    private static parseRealDevices(runningDevices, devices?);
+    private static parseRealDevices;
     static emulatorId(platformVersion: any): string;
     private static sendKeyCommand;
-    private static checkAndroid();
-    private static executeAdbCommand(device, command, timeout?);
-    private static executeAdbShellCommand(device, command);
-    private static getTokenPrefix(device);
-    private static getAlwaysFinishActivitiesGlobalSettingValue(device, value);
+    private static checkAndroid;
+    private static executeAdbCommand;
+    private static executeAdbShellCommand;
+    private static getTokenPrefix;
+    private static getAlwaysFinishActivitiesGlobalSettingValue;
     static setDontKeepActivities(value: boolean, device: IDevice): void;
 }
 export declare class AndroidDevice extends Device {

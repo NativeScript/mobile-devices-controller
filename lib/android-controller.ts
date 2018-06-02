@@ -3,6 +3,7 @@ import { resolve, delimiter, sep, dirname, join } from "path";
 import { existsSync, rmdirSync } from "fs";
 import { Platform, DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
+import * as net from "net";
 import {
     waitForOutput,
     executeCommand,
@@ -12,6 +13,7 @@ import {
     searchFiles,
     getAllFileNames
 } from "./utils";
+import { networkInterfaces } from "os";
 
 const OFFSET_DI_PIXELS = 16;
 
@@ -42,8 +44,11 @@ export class AndroidController {
         return parseInt(AndroidController.executeAdbShellCommand(device, "wm density").split(":")[1]) * 0.01;
     }
 
+    public static calculateScreenOffset(density: number) {
+        return Math.floor(OFFSET_DI_PIXELS * density);
+    }
     public static getPixelsOffset(device: IDevice) {
-        return Math.floor(OFFSET_DI_PIXELS * AndroidController.getPhysicalDensity(device));
+        return AndroidController.calculateScreenOffset(AndroidController.getPhysicalDensity(device));
     }
 
     public static setEmulatorConfig(device: IDevice) {
@@ -533,32 +538,17 @@ export class AndroidController {
         });
 
         const busyTokens = new Array();
-        runningDevices.forEach(async (dev) => {
-            if (dev.type === DeviceType.EMULATOR) {
+        for (let index = 0; index < runningDevices.length; index++) {
+            const emu = runningDevices[index];
+            if (emu.type === DeviceType.EMULATOR) {
                 try {
-                    let avdInfo = "";
-                    if (!isWin()) {
-                        const port = dev.token;
-                        //const result = executeCommand("ps aux | grep qemu | grep " + port);
-                        //avdIfno = result.split("-avd")[1].split(" ")[1].trim();
-                        //progressuser    10532  14.1  0.3  4554328  13024 s006  S+   10:15AM  18:21.84 /Users/progressuser/Library/Android/sdk/emulator/qemu/darwin-x86_64/qemu-system-i386 -avd Emulator-Api25-Google
-                        avdInfo = executeCommand("(sleep 2; echo avd name & sleep 2 exit) | telnet localhost " + port).trim();
-                        if (!AndroidController.checkTelnetReport(avdInfo)) {
-                            avdInfo = executeCommand("(sleep 6; echo avd name & sleep 6 exit) | telnet localhost " + port).trim();
-                        }
-                        if (!AndroidController.checkTelnetReport(avdInfo)) {
-                            avdInfo = executeCommand("(sleep 8; echo avd name & sleep 8 exit) | telnet localhost " + port).trim();
-                        }
-                    } else {
-                        // qemu-system-x86_64.exe 9528 Console 1  2 588 980 K Running SVS\tseno  0:01:10 Android Emulator - Emulator-Api25-Google:5564             
-                        avdInfo = executeCommand("tasklist /v /fi \"windowtitle eq Android*\"");
-                    }
+                    const avdInfo = await AndroidController.sendTelnetCommand(emu.token, "avd name");
 
                     emulators.forEach((v, k, m) => {
                         if (avdInfo.includes(k)) {
                             v[0].status = Status.BOOTED;
-                            v[0].token = dev.token;
-                            busyTokens.push(dev.token);
+                            v[0].token = emu.token;
+                            busyTokens.push(emu.token);
                             AndroidController.setEmulatorConfig(v[0]);
                         }
                     })
@@ -566,7 +556,7 @@ export class AndroidController {
                     console.log(error);
                 }
             }
-        });
+        }
 
         if (busyTokens.length === 0) {
             busyTokens.push(5544);
@@ -590,9 +580,56 @@ export class AndroidController {
         return emulators;
     }
 
-    private static checkTelnetReport(avdInfo) {
-        return avdInfo !== "" && avdInfo.toLowerCase().includes("ok") && avdInfo.toLowerCase().includes("connected to localhost");
-    }
+    /**
+ * Send an arbitrary Telnet command to the device under test.
+ *
+ * @param {string} command - The command to be sent.
+ *
+ * @return {string} The actual output of the given command.
+ */
+    private static async sendTelnetCommand(port, command): Promise<string> {
+        console.debug(`Sending telnet command to device: ${command}`);
+        return await new Promise<string>((resolve, reject) => {
+            let conn = net.createConnection(port, 'localhost'),
+                connected = false,
+                readyRegex = /^OK$/m,
+                dataStream = "",
+                res = null;
+            conn.on('connect', () => {
+                console.debug("Socket connection to device created");
+            });
+            conn.on('data', (data) => {
+                let recievedData = data.toString('utf8');
+                if (!connected) {
+                    if (readyRegex.test(recievedData)) {
+                        connected = true;
+                        console.debug("Socket connection to device ready");
+                        conn.write(`${command}\n`);
+                    }
+                } else {
+                    dataStream += data;
+                    if (readyRegex.test(recievedData)) {
+                        res = dataStream.replace(readyRegex, "").trim();
+                        const resArray = res.trim().split('\n');
+                        res = resArray[resArray.length - 1];
+                        console.debug(`Telnet command got response: ${res}`);
+                        conn.write("quit\n");
+                    }
+                }
+            });
+            conn.on('error', (err) => { // eslint-disable-line promise/prefer-await-to-callbacks
+                console.debug(`Telnet command error: ${err.message}`);
+                reject(err);
+            });
+            conn.on('close', () => {
+                if (res === null) {
+                    reject(new Error("Never got a response from command"));
+                } else {
+                    resolve(res);
+                }
+            });
+        });
+    };
 
     public static parseRunningDevicesList(verbose) {
         // examples

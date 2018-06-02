@@ -29,8 +29,8 @@ export declare class IOSController {
     static uninstallApp(device: IDevice, fullAppName: string, bundleId?: string): Promise<void>;
     static refreshApplication(device: IDevice, fullAppName: any): Promise<void>;
     static startApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
-    private static startSimulatorProcess(udid);
-    private static isRunning(token);
+    private static startSimulatorProcess;
+    private static isRunning;
     static parseSimulators(stdout?: any): Map<string, Array<IDevice>>;
     static parseRealDevices(devices?: Map<string, IDevice[]>): Map<string, IDevice[]>;
     static getSimLocation(token: any): string;
@@ -41,19 +41,20 @@ export declare class IOSController {
         pathToVideo: string;
         videoRecoringProcess: ChildProcess;
     };
-    private static checkIfSimulatorIsBooted(udid, timeout);
+    private static checkIfSimulatorIsBooted;
     static getIOSPackageId(deviceType: DeviceType, fullAppName: any): string;
+    static getDevicesScreenInfo(): Map<string, IOSDeviceScreenInfo>;
     /**
      * Get path of Info.plist of iOS app under test.
      * Info.plist holds information for app under test.
      *
      * @return path to Info.plist
      */
-    private static getPlistPath(deviceType, fullAppName);
-    private static waitForBootInSystemLog(simulator, bootedIndicator, startupTimeout);
-    private static tailLogsUntil(token, bootedIndicator, timeoutMs);
+    private static getPlistPath;
+    private static waitForBootInSystemLog;
+    private static tailLogsUntil;
     static getLogDir(token: any): string;
-    private static loadIOSDevicesScreenInfo();
+    private static loadIOSDevicesScreenInfo;
 }
 export declare class IOSDevice extends Device {
     constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, pid?: number);

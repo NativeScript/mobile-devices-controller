@@ -22,8 +22,8 @@ export declare class DeviceController {
         pathToVideo: string;
         videoRecoringProcess: ChildProcess;
     };
-    private static copyProperties(from);
-    private static getAllDevicesByPlatform(platform, verbose?);
-    private static getDevicesByPlatformAndName(platform, name?, verbose?);
-    private static mapDevicesToArray(platform, devices);
+    private static copyProperties;
+    private static getAllDevicesByPlatform;
+    private static getDevicesByPlatformAndName;
+    private static mapDevicesToArray;
 }

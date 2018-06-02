@@ -412,6 +412,14 @@ export class IOSController {
         return result.trim();
     }
 
+    public static getDevicesScreenInfo() {
+        if (IOSController.devicesScreenInfo.size == 0) {
+            IOSController.loadIOSDevicesScreenInfo();
+        }
+
+        return IOSController.devicesScreenInfo;
+    }
+
     /**
      * Get path of Info.plist of iOS app under test.
      * Info.plist holds information for app under test.
