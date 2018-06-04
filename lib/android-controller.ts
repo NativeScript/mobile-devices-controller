@@ -588,7 +588,7 @@ export class AndroidController {
  * @return {string} The actual output of the given command.
  */
     private static async sendTelnetCommand(port, command): Promise<string> {
-        console.debug(`Sending telnet command to device: ${command}`);
+        console.debug(`Sending telnet command device: ${command} to localhost:${port}`);
         return await new Promise<string>((resolve, reject) => {
             let conn = net.createConnection(port, 'localhost'),
                 connected = false,
