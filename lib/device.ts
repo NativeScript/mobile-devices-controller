@@ -1,7 +1,7 @@
 import { Status, DeviceType, Platform } from "./enums";
 
 export interface IDevice {
-  name: string,
+  name: any,
   token: string,
   type: DeviceType,
   platform: Platform,
@@ -20,7 +20,7 @@ export class Device implements IDevice {
   private _info?: string;
   private _config?: any;
 
-  constructor(private _name: string, 
+  constructor(private _name: any, 
     private _apiLevel: string, 
     private _type: DeviceType,
     private _platform: Platform, 
@@ -63,7 +63,7 @@ export class Device implements IDevice {
     return this._type;
   }
 
-  get platform() {
+  get platform() { 
     return this._platform;
   }
 

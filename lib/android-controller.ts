@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from "child_process";
 import { resolve, delimiter, sep, dirname, join } from "path";
-import { existsSync, rmdirSync } from "fs";
+import { existsSync, rmdirSync, unlinkSync } from "fs";
 import { Platform, DeviceType, Status } from "./enums";
 import { IDevice, Device } from "./device";
 import * as net from "net";
@@ -79,7 +79,7 @@ export class AndroidController {
 
                     if (existsSync(path)) {
                         console.log(`Deleting ${path}!`);
-                        rmdirSync(path);
+                        unlinkSync(path);
                         console.log(`Deleted ${path}!`);
                     }
                 } catch (error) {
