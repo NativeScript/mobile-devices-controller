@@ -70,6 +70,7 @@ export class AndroidController {
         }
 
         if (!this.checkIfEmulatorIsRunning(emulator.token)) {
+            AndroidController.kill(emulator);
             const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
             const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
             getAllFileNames(avd).filter(f => f.endsWith(".lock")).forEach(f => {
@@ -142,11 +143,20 @@ export class AndroidController {
         if (emulator.type === DeviceType.EMULATOR) {
             if (emulator.token) {
                 try {
-                    AndroidController.executeAdbCommand(emulator, " emu kill");
-                    isAlive = false;
+                    const result = AndroidController.executeAdbCommand(emulator, " emu kill");
                 } catch (error) { }
             }
+            if (!emulator.pid) {
+                if (!isWin()) {
+                    const grepForEmu = executeCommand(`ps | grep ${emulator.token}`);
+                    const regExp = /^\d+/;
 
+                    if (regExp.test(grepForEmu)) {
+                        const pid = regExp.exec(grepForEmu)[0];
+                        emulator.pid = parseInt(pid);
+                    }
+                }
+            }
             if (emulator.pid) {
                 try {
                     killPid(emulator.pid);
@@ -158,18 +168,28 @@ export class AndroidController {
                 }
             }
 
-            if (!isAlive) {
-                emulator.status = Status.SHUTDOWN;
-                emulator.pid = undefined;
-            }
-
             console.log(`Waiting for ${emulator} to stop!`);
+            
+            const checkIfDeviceIsKilled = token => {
+                return executeCommand(AndroidController.LIST_DEVICES_COMMAND).includes(emulator.token);
+            }
+            
             const startTime = Date.now();
-            while (executeCommand(AndroidController.LIST_DEVICES_COMMAND).includes(emulator.token)
-                && Date.now() - startTime >= 5000) {
+            while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) >= 60000) {
             }
 
-            console.log(`Device: ${emulator.name} is successfully killed!`);
+            if (checkIfDeviceIsKilled(emulator.token)) {
+                console.log(`Device: ${emulator.name} is NOT killed!`);
+                isAlive = true;
+            } else {
+                console.log(`Device: ${emulator.name} is successfully killed!`);
+                isAlive = false;
+            }
+        }
+
+        if (!isAlive) {
+            emulator.status = Status.SHUTDOWN;
+            emulator.pid = undefined;
         }
 
         return emulator;
@@ -598,6 +618,10 @@ export class AndroidController {
             conn.on('connect', () => {
                 console.debug("Socket connection to device created");
             });
+            
+            conn.setTimeout(60000, () => {
+            });
+
             conn.on('data', (data) => {
                 let recievedData = data.toString('utf8');
                 if (!connected) {
@@ -619,6 +643,7 @@ export class AndroidController {
             });
             conn.on('error', (err) => { // eslint-disable-line promise/prefer-await-to-callbacks
                 console.debug(`Telnet command error: ${err.message}`);
+                AndroidController.kill(<any>{ token: port, type: DeviceType.EMULATOR })
                 reject(err);
             });
             conn.on('close', () => {
