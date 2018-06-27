@@ -143,7 +143,16 @@ export class DeviceController {
 
             let shouldInclude = true;
             Object.getOwnPropertyNames(searchQuery).forEach((prop) => {
-                if (searchQuery[prop] && searchQuery[prop] === device[prop]) {
+                if (searchQuery[prop]) {
+                    if (prop === "platform") {
+                        const searchedPlatformVersion = parseFloat(searchQuery[prop]);
+                        const availablePlatofrmVersion = parseFloat(device[prop]);
+                        shouldInclude = searchedPlatformVersion === availablePlatofrmVersion;
+
+                    } else {
+                        shouldInclude = searchQuery[prop] === device[prop];
+                    }
+
                     shouldInclude = shouldInclude && true;
                 } else if (searchQuery[prop] && searchQuery[prop] !== device[prop]) {
                     shouldInclude = shouldInclude && false;
