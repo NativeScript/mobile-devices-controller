@@ -405,13 +405,20 @@ export class IOSController {
                 });
             }
 
-            wait(2000);
-
             videoRecoringProcess = startRecording();
+            wait(3000);
+
+            const checkHasStartedRecording = (timeout, pathToVideo) => {
+                const startTime = Date.now();
+                while (Date.now() - startTime <= timeout && !existsSync(pathToVideo)) {
+                }
+
+                return existsSync(pathToVideo);
+            }
 
             let retryCount = 10;
-            wait(2000);
-            while (!existsSync(pathToVideo) && retryCount >= 0) {
+            let awaitOnRecordingStart = false;
+            while (!checkHasStartedRecording(5000, pathToVideo) && retryCount >= 0) {
                 try {
                     execSync("killall 'QuickTime Player'");
                 } catch (error) { }
@@ -423,15 +430,16 @@ export class IOSController {
                 wait(2000);
 
                 const quicktimeAppleScriptPath = resolve(__dirname, "../bin/startQuickTimePlayer.scpt")
-                spawnSync('osascript', [quicktimeAppleScriptPath, '5'], {
+                spawnSync('osascript', [quicktimeAppleScriptPath, '10'], {
                     shell: true,
                     stdio: 'inherit'
                 });
 
-                wait(5000);
                 videoRecoringProcess = startRecording();
-                wait(5000);
+                awaitOnRecordingStart = true;
             }
+
+            if (awaitOnRecordingStart) wait(3000);
 
             if (!existsSync(pathToVideo)) {
                 console.error(`Couldn't start recording process!`);
@@ -513,7 +521,7 @@ export class IOSController {
             const command = `unzip -o ${fullAppName} -d ${appFullName}`;
             console.log(command);
             executeCommand(command);
-            const appName = executeCommand(`ls ${resolve(appFullName, "Payload")}`).split('\n').filter(f=>f.includes(".app"))[0];
+            const appName = executeCommand(`ls ${resolve(appFullName, "Payload")}`).split('\n').filter(f => f.includes(".app"))[0];
             plistPath = resolve(appFullName, "Payload", appName, "Info.plist");
         } else {
             plistPath = resolve(fullAppName, "Info.plist");
