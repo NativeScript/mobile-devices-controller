@@ -144,7 +144,7 @@ export class DeviceController {
             let shouldInclude = true;
             Object.getOwnPropertyNames(searchQuery).forEach((prop) => {
                 if (searchQuery[prop]) {
-                    if (prop === "platform") {
+                    if (prop.includes("apiLevel")) {
                         const searchedPlatformVersion = parseFloat(searchQuery[prop]);
                         const availablePlatofrmVersion = parseFloat(device[prop]);
                         shouldInclude = searchedPlatformVersion === availablePlatofrmVersion;
