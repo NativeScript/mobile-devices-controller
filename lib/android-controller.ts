@@ -11,7 +11,8 @@ import {
     killProcessByName,
     killPid,
     searchFiles,
-    getAllFileNames
+    getAllFileNames,
+    wait
 } from "./utils";
 import { networkInterfaces } from "os";
 
@@ -169,11 +170,11 @@ export class AndroidController {
             }
 
             console.log(`Waiting for ${emulator} to stop!`);
-            
+
             const checkIfDeviceIsKilled = token => {
                 return executeCommand(AndroidController.LIST_DEVICES_COMMAND).includes(emulator.token);
             }
-            
+
             const startTime = Date.now();
             while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) >= 60000) {
             }
@@ -258,15 +259,21 @@ export class AndroidController {
         return parts.length > 1 ? parts[1].trim() : undefined
     }
 
-    public static refreshApplication(device, appFullName) {
-        const packageId = AndroidController.getPackageId(appFullName);
+    public static reinstallApplication(device, appFullName, packageId: string = undefined) {
+        packageId = packageId || AndroidController.getPackageId(appFullName);
         AndroidController.uninstallApp(device, packageId);
-        AndroidController.installApp(device, appFullName);
+        AndroidController.installApp(device, appFullName, packageId);
+    }
+
+    public static refreshApplication(device, appFullName, packageId: string = undefined) {
+        packageId = packageId || AndroidController.getPackageId(appFullName);
+        AndroidController.reinstallApplication(device, appFullName, packageId);
         AndroidController.startApplication(device, packageId);
     }
 
     public static startApplication(device: IDevice, packageId: string) {
-        const commandToExecute = "monkey -p " + packageId + " 1";
+        //const commandToExecute = "monkey -p " + packageId + " 1";
+        const commandToExecute = ` am start -n ${packageId}`;
         Promise.resolve(AndroidController.executeAdbShellCommand(device, commandToExecute));
     }
 
@@ -280,8 +287,8 @@ export class AndroidController {
         return isAppInstalled
     }
 
-    public static installApp(device: IDevice, testAppName) {
-        const packageId = AndroidController.getPackageId(testAppName);
+    public static installApp(device: IDevice, testAppName, packageId: string = undefined) {
+        packageId = packageId || AndroidController.getPackageId(testAppName);
         let isAppInstalled = AndroidController.isAppInstalled(device, packageId);
         if (isAppInstalled) {
             console.log("Uninstall a previous version " + packageId + " app.");
@@ -304,7 +311,7 @@ export class AndroidController {
     public static uninstallApp(device, appId) {
         const isAppInstalled = AndroidController.isAppInstalled(device, appId);
         if (isAppInstalled) {
-            AndroidController.stopApp(device, appId);
+            AndroidController.stopApplication(device, appId);
             const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId}`);
             if (uninstallResult.includes("Success")) {
                 console.info(appId + " successfully uninstalled.");
@@ -320,7 +327,7 @@ export class AndroidController {
         }
     }
 
-    public static stopApp(device: IDevice, appId) {
+    public static stopApplication(device: IDevice, appId) {
         AndroidController.executeAdbShellCommand(device, `am force-stop ${appId}`);
     }
 
@@ -358,6 +365,12 @@ export class AndroidController {
         }
 
         return { pathToVideo: pathToVideo, devicePath: devicePath, videoRecoringProcess: videoRecoringProcess };
+    }
+
+    public static stopRecordingVideo(device, videoRecoringProcess, devicePath, pathToVideo) {
+        videoRecoringProcess.kill("SIGINT");
+        wait(1000);
+        AndroidController.pullFile(device, devicePath, pathToVideo);
     }
 
     public static getPackageId(appFullName) {
@@ -618,7 +631,7 @@ export class AndroidController {
             conn.on('connect', () => {
                 console.debug("Socket connection to device created");
             });
-            
+
             conn.setTimeout(60000, () => {
             });
 

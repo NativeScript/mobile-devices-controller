@@ -34,13 +34,14 @@ export declare class AndroidController {
     static getCurrientFocusedScreen(device: IDevice): string;
     static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice): boolean;
     private static getCurrentErrorMessage;
-    static refreshApplication(device: any, appFullName: any): void;
+    static reinstallApplication(device: any, appFullName: any, packageId?: string): void;
+    static refreshApplication(device: any, appFullName: any, packageId?: string): void;
     static startApplication(device: IDevice, packageId: string): void;
     static getInstalledApps(device: any): string[];
     static isAppInstalled(device: IDevice, packageId: any): boolean;
-    static installApp(device: IDevice, testAppName: any): string;
+    static installApp(device: IDevice, testAppName: any, packageId?: string): string;
     static uninstallApp(device: any, appId: any): void;
-    static stopApp(device: IDevice, appId: any): void;
+    static stopApplication(device: IDevice, appId: any): void;
     static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<void>;
     static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
@@ -48,6 +49,7 @@ export declare class AndroidController {
         devicePath: string;
         videoRecoringProcess: ChildProcess;
     };
+    static stopRecordingVideo(device: any, videoRecoringProcess: any, devicePath: any, pathToVideo: any): void;
     static getPackageId(appFullName: any): string;
     static getLaunchableActivity(appFullName: any): string;
     static pullFile(device: IDevice, remotePath: any, destinationFile: any): any;

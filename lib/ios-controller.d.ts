@@ -1,5 +1,3 @@
-/// <reference types="node" />
-import { ChildProcess } from "child_process";
 import { IDevice, Device } from "./device";
 import { DeviceType, Status } from "./enums";
 export declare class IOSController {
@@ -16,7 +14,8 @@ export declare class IOSController {
     private static DEVICE_BOOT_TIME;
     private static WAIT_DEVICE_TO_RESPONCE;
     private static _dl;
-    static readonly dl: IOSDeviceLib.IOSDeviceLib;
+    static getDl(): Promise<any>;
+    static disposeDL(): void;
     static runningProcesses: any[];
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
     static getSimulatorPidByToken(token: string): any;
@@ -26,8 +25,10 @@ export declare class IOSController {
     static kill(udid: string): void;
     static getInstalledApps(device: IDevice): any[];
     static installApp(device: IDevice, fullAppName: any): Promise<void>;
+    static stopApplication(device: IDevice, bundleId: string, dispose: boolean): Promise<void>;
     static uninstallApp(device: IDevice, fullAppName: string, bundleId?: string): Promise<void>;
-    static refreshApplication(device: IDevice, fullAppName: any): Promise<void>;
+    static reinstallApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
+    static refreshApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
     static startApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
     private static startSimulatorProcess;
     private static isRunning;
@@ -39,7 +40,7 @@ export declare class IOSController {
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<any>;
     static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
         pathToVideo: string;
-        videoRecoringProcess: ChildProcess;
+        videoRecoringProcess: any;
     };
     private static checkIfSimulatorIsBooted;
     static getIOSPackageId(deviceType: DeviceType, fullAppName: any): string;

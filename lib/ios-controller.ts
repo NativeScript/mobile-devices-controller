@@ -1,6 +1,6 @@
-import { spawn, ChildProcess } from "child_process";
-import { resolve, dirname, basename, sep } from "path";
-import { existsSync, readFileSync, utimes, Stats } from "fs";
+import { spawn, ChildProcess, spawnSync, execSync } from "child_process";
+import { resolve, dirname, basename, sep, extname } from "path";
+import { existsSync, readFileSync, utimes, Stats, unlinkSync } from "fs";
 import {
     waitForOutput,
     executeCommand,
@@ -30,16 +30,25 @@ export class IOSController {
     private static WAIT_DEVICE_TO_RESPONCE = 180000;
 
     private static _dl: IOSDeviceLib.IOSDeviceLib;
-    static get dl() {
+    static getDl() {
         if (!IOSController._dl) {
-            this._dl = new IOSDeviceLib(d => {
-                console.log("Device found!", d);
-            }, device => {
-                console.log("Device LOST!");
-            });
-            wait(3000);
+            return new Promise<any>((resolve, reject) => {
+                IOSController._dl = new IOSDeviceLib(d => {
+                    console.log("Device found!", d);
+                    resolve(IOSController._dl);
+                }, device => {
+                    console.log("Device LOST!");
+                });
+            })
         }
-        return IOSController._dl;
+        return Promise.resolve(IOSController._dl);
+    }
+
+    static disposeDL() {
+        if (IOSController._dl) {
+            IOSController._dl.dispose("SIGTERM");
+            IOSController._dl = undefined;
+        }
     }
 
     public static runningProcesses = new Array();
@@ -144,7 +153,8 @@ export class IOSController {
 
     public static async installApp(device: IDevice, fullAppName) {
         if (device.type === DeviceType.DEVICE) {
-            const installProcess = await IOSController.dl.install(fullAppName, [device.token])[0];
+            const installProcess = await (await IOSController.getDl()).install(fullAppName, [device.token])[0];
+            IOSController.disposeDL();
             if (!installProcess.response.includes("Successfully installed application")) {
                 console.error(installProcess.response);
             }
@@ -154,15 +164,23 @@ export class IOSController {
         }
     }
 
+    public static async stopApplication(device: IDevice, bundleId: string, dispose: boolean) {
+        const apps = IOSController.getInstalledApps(device);
+        if (apps.some(app => app === bundleId)) {
+            const appInfo = { "ddi": undefined, "appId": bundleId, "deviceId": device.token }
+            await (await IOSController.getDl()).stop([appInfo]);
+        }
+
+        if (dispose) {
+            IOSController.disposeDL();
+        }
+    }
+
     public static async uninstallApp(device: IDevice, fullAppName: string, bundleId: string = undefined) {
         bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
         if (device.type === DeviceType.DEVICE) {
             try {
-                const apps = IOSController.getInstalledApps(device);
-                if (apps.some(app => app === bundleId)) {
-                    const appInfo = { "ddi": undefined, "appId": bundleId, "deviceId": device.token }
-                    await IOSController.dl.stop([appInfo]);
-                }
+                await IOSController.stopApplication(device, bundleId, false);
             } catch (error) {
                 console.dir(error);
             }
@@ -176,20 +194,34 @@ export class IOSController {
         }
     }
 
-    public static async refreshApplication(device: IDevice, fullAppName) {
-        const bundleId = IOSController.getIOSPackageId(device.type, fullAppName);
-        IOSController.uninstallApp(device, fullAppName, bundleId);
-        IOSController.installApp(device, fullAppName);
-        IOSController.startApplication(device, fullAppName, bundleId);
+    public static async reinstallApplication(device: IDevice, fullAppName, bundleId: string = undefined) {
+        bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
+        await IOSController.uninstallApp(device, fullAppName, bundleId);
+        await IOSController.installApp(device, fullAppName);
+    }
+
+    public static async refreshApplication(device: IDevice, fullAppName, bundleId: string = undefined) {
+        bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
+        await IOSController.reinstallApplication(device, fullAppName, bundleId);
+        await IOSController.startApplication(device, fullAppName, bundleId);
     }
 
     public static async startApplication(device: IDevice, fullAppName, bundleId: string = undefined) {
         bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
         if (device.type === DeviceType.DEVICE) {
-            const startProcess = await IOSController.dl.start([{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }])[0];
-            if (!startProcess.response.includes("Successfully started application")) {
-                throw new Error(`Failed to start application ${bundleId}`);
+            let startProcess;
+
+            try {
+                startProcess = await (await IOSController.getDl()).start([{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }])[0];
+                if (!startProcess.response.includes("Successfully started application")) {
+                    throw new Error(`Failed to start application ${bundleId}`);
+                }
+            } catch (error) {
+                IOSController.disposeDL();
             }
+
+            IOSController.disposeDL();
+
         } else {
             const result = executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`);
             console.dir(result);
@@ -357,17 +389,64 @@ export class IOSController {
     }
 
     public static startRecordingVideo(device: IDevice, dir, fileName) {
-        if (device.type === DeviceType.DEVICE) {
-            return;
+        let pathToVideo = resolve(dir, `${fileName}.mp4`).replace(" ", "\ ");
+        if (existsSync(pathToVideo)) {
+            unlinkSync(pathToVideo);
         }
+        let videoRecoringProcess;
+        if (device.type === DeviceType.DEVICE) {
+            const p = resolve(__dirname, "../", "bin", "xrecord");
+            console.log(`${p} --quicktime --id=${device.token} --out=${pathToVideo} --force`);
 
-        const pathToVideo = resolve(dir, `${fileName}.mp4`).replace(" ", "\ ");
-        console.log(`${IOSController.XCRUN} simctl io ${device.token} recordVideo ${pathToVideo}`);
-        const videoRecoringProcess = spawn(`xcrun`, ['simctl ', 'io', device.token, 'recordVideo', `'${pathToVideo}'`], {
-            cwd: process.cwd(),
-            shell: true,
-            stdio: 'inherit'
-        });
+            const startRecording = () => {
+                return spawn(`${p}`, [`--quicktime`, `--id=\"${device.token}\"`, `--out=\"${pathToVideo}\"`, `--force`], {
+                    stdio: 'inherit',
+                    shell: true
+                });
+            }
+
+            wait(2000);
+
+            videoRecoringProcess = startRecording();
+
+            let retryCount = 10;
+            wait(2000);
+            while (!existsSync(pathToVideo) && retryCount >= 0) {
+                try {
+                    execSync("killall 'QuickTime Player'");
+                } catch (error) { }
+                try {
+                    videoRecoringProcess.kill("SIGTERM");
+                } catch (error) { }
+
+                retryCount--;
+                wait(2000);
+
+                const quicktimeAppleScriptPath = resolve(__dirname, "../bin/startQuickTimePlayer.scpt")
+                spawnSync('osascript', [quicktimeAppleScriptPath, '5'], {
+                    shell: true,
+                    stdio: 'inherit'
+                });
+
+                wait(5000);
+                videoRecoringProcess = startRecording();
+                wait(5000);
+            }
+
+            if (!existsSync(pathToVideo)) {
+                console.error(`Couldn't start recording process!`);
+                console.error(`Recording couldn't be started! Check device connection and quick time player`);
+                videoRecoringProcess = null;
+                pathToVideo = null;
+            }
+        } else {
+            console.log(`${IOSController.XCRUN} simctl io ${device.token} recordVideo ${pathToVideo}`);
+            videoRecoringProcess = spawn(`xcrun`, ['simctl ', 'io', device.token, 'recordVideo', `'${pathToVideo}'`], {
+                cwd: process.cwd(),
+                shell: true,
+                stdio: 'inherit'
+            });
+        }
         if (videoRecoringProcess) {
             IOSController.runningProcesses.push(videoRecoringProcess.pid);
         }
@@ -428,14 +507,16 @@ export class IOSController {
      */
     private static getPlistPath(deviceType: DeviceType, fullAppName) {
         let plistPath = null;
-        if (deviceType === DeviceType.SIMULATOR) {
-            plistPath = resolve(fullAppName, "Info.plist");
-        } else if (deviceType === DeviceType.DEVICE) {
+        const ext = extname(fullAppName);
+        if (ext.includes('ipa')) {
             const appFullName = dirname(fullAppName) + sep + basename(fullAppName).replace(".ipa", "");
             const command = `unzip -o ${fullAppName} -d ${appFullName}`;
+            console.log(command);
             executeCommand(command);
-            const appName = executeCommand("ls " + resolve(appFullName, "Payload")).trim();
+            const appName = executeCommand(`ls ${resolve(appFullName, "Payload")}`).split('\n').filter(f=>f.includes(".app"))[0];
             plistPath = resolve(appFullName, "Payload", appName, "Info.plist");
+        } else {
+            plistPath = resolve(fullAppName, "Info.plist");
         }
 
         return plistPath;

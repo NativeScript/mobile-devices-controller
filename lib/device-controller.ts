@@ -55,6 +55,30 @@ export class DeviceController {
         }
     }
 
+    public static async startApplication(device: IDevice, appFullPath, bundleId: string = undefined): Promise<void> {
+        if (device.platform === Platform.IOS) {
+            await IOSController.startApplication(device, appFullPath, bundleId)
+        } else {
+            await AndroidController.startApplication(device, bundleId);
+        }
+    }
+
+    public static async stopApplication(device: IDevice, bundleId: string, dispose: boolean = true): Promise<void> {
+        if (device.platform === Platform.IOS) {
+            await IOSController.stopApplication(device, bundleId, dispose)
+        } else {
+            await AndroidController.stopApplication(device, bundleId);
+        }
+    }
+
+    public static getApplicationId(device: IDevice, appFullPath): string {
+        if (device.platform === Platform.IOS) {
+            return IOSController.getIOSPackageId(device.type, appFullPath)
+        } else {
+            return AndroidController.getPackageId(appFullPath);
+        }
+    }
+
     public static async uninstallApp(device: IDevice, appFullPath): Promise<void> {
         if (device.platform === Platform.IOS) {
             const bundleId = IOSController.getIOSPackageId(device.type, appFullPath);
@@ -62,6 +86,14 @@ export class DeviceController {
         } else {
             const packageId = AndroidController.getPackageId(appFullPath);
             await AndroidController.uninstallApp(device, packageId);
+        }
+    }
+
+    public static startRecordingVideo(device: IDevice, dir, fileName) {
+        if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
+            return AndroidController.startRecordingVideo(device, dir, fileName);
+        } else {
+            return IOSController.startRecordingVideo(device, dir, fileName);
         }
     }
 
@@ -138,11 +170,27 @@ export class DeviceController {
         }
     }
 
-    public static startRecordingVideo(device: IDevice, dir, fileName) {
+    public static async reinstallApplication(device: IDevice, appFullName: string, bundleId) {
         if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
-            return AndroidController.startRecordingVideo(device, dir, fileName);
+            return await AndroidController.reinstallApplication(device, appFullName, bundleId);
         } else {
-            return IOSController.startRecordingVideo(device, dir, fileName);
+            return await IOSController.reinstallApplication(device, appFullName, bundleId);
+        }
+    }
+
+    public static async installApplication(device: IDevice, appFullName: string, bundleId) {
+        if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
+            return await AndroidController.installApp(device, appFullName, bundleId);
+        } else {
+            return await IOSController.installApp(device, appFullName);
+        }
+    }
+
+    public static async uninstallAppWithBundle(device: IDevice, bundleId) {
+        if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
+            return await AndroidController.uninstallApp(device, bundleId);
+        } else {
+            return await IOSController.uninstallApp(device, undefined, bundleId);
         }
     }
 
