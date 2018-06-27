@@ -146,6 +146,8 @@ export class DeviceController {
                 if (searchQuery[prop]) {
                     console.log(`Property name: ${prop}`);
                     if (prop.includes("apiLevel")) {
+                        console.log(`${searchQuery[prop]}: ${device[prop]}`);
+
                         const searchedPlatformVersion = parseFloat(searchQuery[prop]);
                         const availablePlatofrmVersion = parseFloat(device[prop]);
                         console.log(`searchedPlatformVersion: ${searchedPlatformVersion}`);
