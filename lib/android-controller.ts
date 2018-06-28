@@ -272,8 +272,8 @@ export class AndroidController {
     }
 
     public static startApplication(device: IDevice, packageId: string) {
-        //const commandToExecute = "monkey -p " + packageId + " 1";
-        const commandToExecute = ` am start -n ${packageId}`;
+        const commandToExecute = "monkey -p " + packageId + " 1";
+        //const commandToExecute = ` am start -n ${packageId}`;
         Promise.resolve(AndroidController.executeAdbShellCommand(device, commandToExecute));
     }
 
