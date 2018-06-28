@@ -145,19 +145,13 @@ export class DeviceController {
             Object.getOwnPropertyNames(searchQuery).forEach((prop) => {
                 if (searchQuery[prop]) {
                     if (prop.includes("apiLevel")) {
-                        console.log(`${searchQuery[prop]}: ${device[prop]}`);
-
                         const searchedPlatformVersion = parseFloat(searchQuery[prop]);
                         const availablePlatofrmVersion = parseFloat(device[prop]);
-                        shouldInclude = searchedPlatformVersion === availablePlatofrmVersion;
+                        shouldInclude = searchedPlatformVersion === availablePlatofrmVersion && shouldInclude;
 
                     } else {
-                        shouldInclude = searchQuery[prop] === device[prop];
+                        shouldInclude = searchQuery[prop] === device[prop] && shouldInclude;
                     }
-
-                    shouldInclude = shouldInclude && true;
-                } else if (searchQuery[prop] && searchQuery[prop] !== device[prop]) {
-                    shouldInclude = shouldInclude && false;
                 }
             });
 
