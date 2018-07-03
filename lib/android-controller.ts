@@ -240,16 +240,20 @@ export class AndroidController {
 
     public static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice) {
         try {
-            if (AndroidController.getCurrientFocusedScreen(device)
-                .toLowerCase()
-                .includes('application not responding')) {
-                console.log("not responding dialog shown!");
+            AndroidController.executeAdbShellCommand(device, " am start -n com.android.settings/com.android.settings.Settings")
+            const errorMsg = AndroidController.getCurrientFocusedScreen(device);
+            if (!errorMsg .toLowerCase()
+                .includes('com.android.settings/com.android.settings.Settings')) {
+                console.log("Emulator is not responding!", errorMsg);
                 return true;
             }
         } catch (error) {
             console.error('Command timeout recieved', error);
+            AndroidController.executeAdbShellCommand(device, " am force-stop  com.android.settings");
             return false
         }
+
+        AndroidController.executeAdbShellCommand(device," am force-stop  com.android.settings");
 
         return false
     }
