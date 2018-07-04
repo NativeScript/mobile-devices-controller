@@ -242,7 +242,7 @@ export class AndroidController {
         try {
             AndroidController.executeAdbShellCommand(device, " am start -n com.android.settings/com.android.settings.Settings")
             const errorMsg = AndroidController.getCurrientFocusedScreen(device);
-            if (!errorMsg .toLowerCase()
+            if (!errorMsg.toLowerCase()
                 .includes('com.android.settings/com.android.settings.Settings')) {
                 console.log("Emulator is not responding!", errorMsg);
                 return true;
@@ -253,7 +253,7 @@ export class AndroidController {
             return false
         }
 
-        AndroidController.executeAdbShellCommand(device," am force-stop  com.android.settings");
+        AndroidController.executeAdbShellCommand(device, " am force-stop  com.android.settings");
 
         return false
     }
@@ -740,6 +740,17 @@ export class AndroidController {
 
     private static sendKeyCommand = (token, key) => {
         return `${AndroidController.ADB} -s ${token} shell input keyevent ${key}`;
+    }
+
+    public static async clearLog(device: IDevice) {
+        await this.executeAdbCommand(device, " logcat -c", 5000);
+    }
+
+    public static async getDeviceLog(device: IDevice, shouldCleanLog: boolean) {
+        await this.executeAdbCommand(device, " logcat ");
+        if (shouldCleanLog) {
+            await this.executeAdbCommand(device, " logcat -c");
+        }
     }
 
     private static checkAndroid() {

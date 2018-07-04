@@ -73,6 +73,8 @@ export declare class AndroidController {
     private static parseRealDevices;
     static emulatorId(platformVersion: any): string;
     private static sendKeyCommand;
+    static clearLog(device: IDevice): Promise<void>;
+    static getDeviceLog(device: IDevice, shouldCleanLog: boolean): Promise<void>;
     private static checkAndroid;
     private static executeAdbCommand;
     private static executeAdbShellCommand;
