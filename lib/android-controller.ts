@@ -746,12 +746,12 @@ export class AndroidController {
         await this.executeAdbCommand(device, " logcat -c", 5000);
     }
 
-    public static async getDeviceLog(device: IDevice, shouldCleanLog: boolean) {
-        await this.executeAdbCommand(device, " logcat ");
-        if (shouldCleanLog) {
-            await this.executeAdbCommand(device, " logcat -c");
-        }
-    }
+    // public static async getDeviceLog(device: IDevice, shouldCleanLog: boolean) {
+    //     await this.executeAdbCommand(device, " logcat ");
+    //     if (shouldCleanLog) {
+    //         await this.executeAdbCommand(device, " logcat -c");
+    //     }
+    // }
 
     private static checkAndroid() {
         let avdMangerExt = "";
