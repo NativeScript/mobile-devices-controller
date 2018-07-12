@@ -63,9 +63,17 @@ export class DeviceController {
         }
     }
 
-    public static async stopApplication(device: IDevice, bundleId: string, dispose: boolean = true): Promise<void> {
+    public static async getInstalledApplication(device: IDevice): Promise<string[]> {
         if (device.platform === Platform.IOS) {
-            await IOSController.stopApplication(device, bundleId, dispose)
+            return await IOSController.getInstalledApps(device);
+        } else {
+            return await AndroidController.getInstalledApps(device);
+        }
+    }
+
+    public static async stopApplication(device: IDevice, bundleId: string): Promise<void> {
+        if (device.platform === Platform.IOS) {
+            await IOSController.stopApplication(device, bundleId)
         } else {
             await AndroidController.stopApplication(device, bundleId);
         }
@@ -183,7 +191,7 @@ export class DeviceController {
         }
     }
 
-    public static async installApplication(device: IDevice, appFullName: string, bundleId) {
+    public static async installApplication(device: IDevice, appFullName: string, bundleId: string = undefined) {
         if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
             return await AndroidController.installApp(device, appFullName, bundleId);
         } else {

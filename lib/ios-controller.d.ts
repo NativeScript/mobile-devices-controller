@@ -25,7 +25,7 @@ export declare class IOSController {
     static kill(udid: string): void;
     static getInstalledApps(device: IDevice): any[];
     static installApp(device: IDevice, fullAppName: any): Promise<void>;
-    static stopApplication(device: IDevice, bundleId: string, dispose: boolean): Promise<void>;
+    static stopApplication(device: IDevice, bundleId: string): Promise<void>;
     static uninstallApp(device: IDevice, fullAppName: string, bundleId?: string): Promise<void>;
     static reinstallApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
     static refreshApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
