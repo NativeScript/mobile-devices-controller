@@ -164,18 +164,24 @@ export class IOSController {
         }
     }
 
-    public static async stopApplication(device: IDevice, bundleId: string) {
+    public static async stopApplication(device: IDevice, bundleId: string): Promise<boolean> {
         const apps = IOSController.getInstalledApps(device);
         if (apps.some(app => app === bundleId)) {
-            const appInfo = { "ddi": undefined, "appId": bundleId, "deviceId": device.token }
-            await Promise.all(await (await IOSController.getDl()).stop([appInfo])).then(function (response) {
-                console.log("App " + bundleId + " stopped !", response);
-            }).catch(err => {
-                console.log("An error occurred running app!", err);
+            const appInfo = { ddi: undefined, appId: bundleId, deviceId: device.token }
+            const dl = await IOSController.getDl();
+            return new Promise<boolean>((res, reject) => {
+                Promise.all(dl.stop([appInfo]))
+                    .then(async response => {
+                        console.log("App " + bundleId + " stopped !", response);
+                        await IOSController.disposeDL();
+                        res(true);
+                    }).catch(async err => {
+                        console.log("An error occurred! Probably app is still running!", err);
+                        await IOSController.disposeDL();
+                        res(false);
+                    });
             });
         }
-
-        await IOSController.disposeDL();
     }
 
     public static async uninstallApp(device: IDevice, fullAppName: string, bundleId: string = undefined) {
