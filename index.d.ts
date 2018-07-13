@@ -1,6 +1,6 @@
 import { Platform } from "./lib/enums";
 import { IDevice } from "./lib/device";
-export { Platform, DeviceType, Status } from "./lib/enums";
+export { Platform, DeviceType, Status, AndroidKeyEvent } from "./lib/enums";
 export { IDevice, Device } from "./lib/device";
 export { AndroidController, AndroidDevice } from "./lib/android-controller";
 export { IOSController, IOSDevice } from "./lib/ios-controller";

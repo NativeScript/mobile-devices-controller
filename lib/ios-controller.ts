@@ -154,7 +154,7 @@ export class IOSController {
     public static async installApp(device: IDevice, fullAppName) {
         if (device.type === DeviceType.DEVICE) {
             const installProcess = await (await IOSController.getDl()).install(fullAppName, [device.token])[0];
-            IOSController.disposeDL();
+            await IOSController.disposeDL();
             if (!installProcess.response.includes("Successfully installed application")) {
                 console.error(installProcess.response);
             }
@@ -164,15 +164,23 @@ export class IOSController {
         }
     }
 
-    public static async stopApplication(device: IDevice, bundleId: string, dispose: boolean) {
+    public static async stopApplication(device: IDevice, bundleId: string): Promise<boolean> {
         const apps = IOSController.getInstalledApps(device);
         if (apps.some(app => app === bundleId)) {
-            const appInfo = { "ddi": undefined, "appId": bundleId, "deviceId": device.token }
-            await (await IOSController.getDl()).stop([appInfo]);
-        }
-
-        if (dispose) {
-            IOSController.disposeDL();
+            const appInfo = { ddi: undefined, appId: bundleId, deviceId: device.token }
+            const dl = await IOSController.getDl();
+            return new Promise<boolean>((res, reject) => {
+                Promise.all(dl.stop([appInfo]))
+                    .then(async response => {
+                        console.log("App " + bundleId + " stopped !", response);
+                        await IOSController.disposeDL();
+                        res(true);
+                    }).catch(async err => {
+                        console.log("An error occurred! Probably app is still running!", err);
+                        await IOSController.disposeDL();
+                        res(false);
+                    });
+            });
         }
     }
 
@@ -180,7 +188,7 @@ export class IOSController {
         bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
         if (device.type === DeviceType.DEVICE) {
             try {
-                await IOSController.stopApplication(device, bundleId, false);
+                await IOSController.stopApplication(device, bundleId);
             } catch (error) {
                 console.dir(error);
             }
@@ -217,10 +225,10 @@ export class IOSController {
                     throw new Error(`Failed to start application ${bundleId}`);
                 }
             } catch (error) {
-                IOSController.disposeDL();
+                await IOSController.disposeDL();
             }
 
-            IOSController.disposeDL();
+            await IOSController.disposeDL();
 
         } else {
             const result = executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`);

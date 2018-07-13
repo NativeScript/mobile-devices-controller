@@ -1,7 +1,7 @@
 import { spawn, ChildProcess } from "child_process";
 import { resolve, delimiter, sep, dirname, join } from "path";
 import { existsSync, rmdirSync, unlinkSync } from "fs";
-import { Platform, DeviceType, Status } from "./enums";
+import { Platform, DeviceType, Status, AndroidKeyEvent } from "./enums";
 import { IDevice, Device } from "./device";
 import * as net from "net";
 import {
@@ -333,6 +333,13 @@ export class AndroidController {
 
     public static stopApplication(device: IDevice, appId) {
         AndroidController.executeAdbShellCommand(device, `am force-stop ${appId}`);
+    }
+
+    public static executeKeyevent(device: IDevice, keyevent: AndroidKeyEvent | string | number) {
+        if (typeof keyevent === 'string') {
+            keyevent = AndroidKeyEvent[keyevent];
+        }
+        AndroidController.executeAdbShellCommand(device, `input keyevent ${keyevent}`);
     }
 
     public static async getScreenshot(device: IDevice, dir, fileName) {

@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { ChildProcess } from "child_process";
-import { DeviceType, Status } from "./enums";
+import { DeviceType, Status, AndroidKeyEvent } from "./enums";
 import { IDevice, Device } from "./device";
 export declare class AndroidController {
     private static DEFAULT_BOOT_TIME;
@@ -42,6 +42,7 @@ export declare class AndroidController {
     static installApp(device: IDevice, testAppName: any, packageId?: string): string;
     static uninstallApp(device: any, appId: any): void;
     static stopApplication(device: IDevice, appId: any): void;
+    static executeKeyevent(device: IDevice, keyevent: AndroidKeyEvent | string | number): void;
     static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<void>;
     static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
@@ -74,7 +75,6 @@ export declare class AndroidController {
     static emulatorId(platformVersion: any): string;
     private static sendKeyCommand;
     static clearLog(device: IDevice): Promise<void>;
-    static getDeviceLog(device: IDevice, shouldCleanLog: boolean): Promise<void>;
     private static checkAndroid;
     private static executeAdbCommand;
     private static executeAdbShellCommand;
