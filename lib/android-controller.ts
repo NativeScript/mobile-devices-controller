@@ -200,12 +200,6 @@ export class AndroidController {
         killProcessByName("qemu-system-i386");
     }
 
-    public static killAllBackgroundProcessesOnDevice(device: IDevice) {
-        console.log(device);
-        let a = AndroidController.executeAdbShellCommand(device, `am kill-all`);
-        console.log(a);
-    }
-
     public static async restartDevice(device: IDevice) {
         if (device.type === DeviceType.EMULATOR) {
             AndroidController.kill(device);
@@ -785,17 +779,12 @@ export class AndroidController {
     private static executeAdbCommand(device: IDevice, command: string, timeout: number = 720000) {
         const prefix = AndroidController.getTokenPrefix(device);
         const commandToExecute = `${AndroidController.ADB} -s ${prefix}${device.token} ${command}`;
-        console.log(commandToExecute);
         const result = executeCommand(commandToExecute, process.cwd(), timeout);
-        console.log(result);
         return result;
     }
 
     private static executeAdbShellCommand(device: IDevice, command: string) {
-        console.log(device);
-        console.log(command);
         const commandToExecute = `shell ${command}`;
-        console.log(commandToExecute);
         const result = AndroidController.executeAdbCommand(device, commandToExecute);
         return result;
     }
