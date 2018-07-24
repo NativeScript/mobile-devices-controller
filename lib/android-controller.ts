@@ -108,8 +108,8 @@ export class AndroidController {
             if (AndroidController.checkApplicationNotRespondingDialogIsDisplayed(emulator)) {
                 const errorMsgType = AndroidController.getCurrentErrorMessage(emulator);
                 if (errorMsgType) {
-                    AndroidController.executeAdbCommand(emulator, `adb shell am force-stop ${errorMsgType}`);
-                    AndroidController.executeAdbCommand(emulator, `adb shell pm clear ${errorMsgType}`);
+                    AndroidController.executeAdbShellCommand(emulator, `am force-stop ${errorMsgType}`);
+                    AndroidController.executeAdbShellCommand(emulator, `pm clear ${errorMsgType}`);
                 }
             }
         } catch{ }
@@ -198,6 +198,12 @@ export class AndroidController {
 
     public static killAll() {
         killProcessByName("qemu-system-i386");
+    }
+
+    public static killAllBackgroundProcessesOnDevice(device: IDevice) {
+        console.log(device);
+        let a = AndroidController.executeAdbShellCommand(device, `am kill-all`);
+        console.log(a);
     }
 
     public static async restartDevice(device: IDevice) {
@@ -779,12 +785,17 @@ export class AndroidController {
     private static executeAdbCommand(device: IDevice, command: string, timeout: number = 720000) {
         const prefix = AndroidController.getTokenPrefix(device);
         const commandToExecute = `${AndroidController.ADB} -s ${prefix}${device.token} ${command}`;
+        console.log(commandToExecute);
         const result = executeCommand(commandToExecute, process.cwd(), timeout);
+        console.log(result);
         return result;
     }
 
     private static executeAdbShellCommand(device: IDevice, command: string) {
+        console.log(device);
+        console.log(command);
         const commandToExecute = `shell ${command}`;
+        console.log(commandToExecute);
         const result = AndroidController.executeAdbCommand(device, commandToExecute);
         return result;
     }
