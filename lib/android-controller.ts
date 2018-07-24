@@ -108,8 +108,8 @@ export class AndroidController {
             if (AndroidController.checkApplicationNotRespondingDialogIsDisplayed(emulator)) {
                 const errorMsgType = AndroidController.getCurrentErrorMessage(emulator);
                 if (errorMsgType) {
-                    AndroidController.executeAdbCommand(emulator, `adb shell am force-stop ${errorMsgType}`);
-                    AndroidController.executeAdbCommand(emulator, `adb shell pm clear ${errorMsgType}`);
+                    AndroidController.executeAdbShellCommand(emulator, `am force-stop ${errorMsgType}`);
+                    AndroidController.executeAdbShellCommand(emulator, `pm clear ${errorMsgType}`);
                 }
             }
         } catch{ }
