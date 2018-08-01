@@ -64,7 +64,11 @@ export function killProcessByName(name) {
 
 export function killPid(pid, signal = "SIGINT") {
     if (!isWin()) {
-        const result = process.kill(pid, -9);
+        try {
+            const result = process.kill(pid, signal);
+            executeCommand(`kill -9 ${pid}`);
+        } catch (error) { }
+
     } else {
         childProcess.execSync('taskkill /PID ' + pid + ' /T /F');
     }

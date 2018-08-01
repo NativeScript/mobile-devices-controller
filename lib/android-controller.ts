@@ -147,26 +147,24 @@ export class AndroidController {
                     const result = AndroidController.executeAdbCommand(emulator, " emu kill");
                 } catch (error) { }
             }
-            if (!emulator.pid) {
-                if (!isWin()) {
-                    const grepForEmu = executeCommand(`ps | grep ${emulator.token}`);
-                    const regExp = /^\d+/;
+            if (!isWin()) {
+                let grepForEmulatorProcesses = executeCommand(`ps | grep ${emulator.name}`).split("\n");
+                executeCommand(`ps | grep ${emulator.token}`).split("\n").forEach(pr => grepForEmulatorProcesses.push(pr));
+                const regExp = /^\d+/;
 
-                    if (regExp.test(grepForEmu)) {
-                        const pid = regExp.exec(grepForEmu)[0];
+                grepForEmulatorProcesses.forEach(processOfEmulator => {
+                    if (regExp.test(processOfEmulator)) {
+                        const pid = regExp.exec(processOfEmulator)[0];
                         emulator.pid = parseInt(pid);
+
+                        try {
+                            killPid(emulator.pid);
+                            if (!isWin()) {
+                                killPid(emulator.pid);
+                            }
+                        } catch (error) { }
                     }
-                }
-            }
-            if (emulator.pid) {
-                try {
-                    killPid(emulator.pid);
-                    if (!isWin()) {
-                        killPid(emulator.pid);
-                    }
-                    isAlive = false;
-                } catch (error) {
-                }
+                });
             }
 
             console.log(`Waiting for ${emulator} to stop!`);
