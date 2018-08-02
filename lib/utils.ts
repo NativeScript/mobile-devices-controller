@@ -66,7 +66,9 @@ export function killPid(pid, signal = "SIGINT") {
     if (!isWin()) {
         try {
             const result = process.kill(pid, signal);
-            executeCommand(`kill -9 ${pid}`);
+            
+            const killCommandLog = executeCommand(`kill -9 ${pid}`);
+            logWarn(killCommandLog)
         } catch (error) { }
 
     } else {
@@ -233,4 +235,54 @@ export const getRegexResultsAsArray = (regex, str) => {
     }
 
     return result;
+}
+
+
+export function logInfo(info, obj = undefined) {
+    if (obj) {
+        info += " " + JSON.stringify(obj);
+    }
+    console.log(`${ConsoleColor.FgCyan}%s${ConsoleColor.Reset}`, info);
+}
+
+export function logWarn(info, obj = undefined) {
+    if (obj) {
+        info += " " + JSON.stringify(obj);
+    }
+    console.log(`${ConsoleColor.BgYellow}${ConsoleColor.FgBlack}%s${ConsoleColor.Reset}`, info);
+}
+
+export function logError(info, obj = undefined) {
+    if (obj) {
+        info += " " + JSON.stringify(obj);
+    }
+    console.log(`${ConsoleColor.BgRed}%s${ConsoleColor.Reset}`, info);
+}
+
+enum ConsoleColor {
+    Reset = "\x1b[0m",
+    Bright = "\x1b[1m",
+    Dim = "\x1b[2m",
+    Underscore = "\x1b[4m",
+    Blink = "\x1b[5m",
+    Reverse = "\x1b[7m",
+    Hidden = "\x1b[8m",
+
+    FgBlack = "\x1b[30m",
+    FgRed = "\x1b[31m",
+    FgGreen = "\x1b[32m",
+    FgYellow = "\x1b[33m",
+    FgBlue = "\x1b[34m",
+    FgMagenta = "\x1b[35m",
+    FgCyan = "\x1b[36m",
+    FgWhite = "\x1b[37m",
+
+    BgBlack = "\x1b[40m",
+    BgRed = "\x1b[41m",
+    BgGreen = "\x1b[42m",
+    BgYellow = "\x1b[43m",
+    BgBlue = "\x1b[44m",
+    BgMagenta = "\x1b[45m",
+    BgCyan = "\x1b[46m",
+    BgWhite = "\x1b[47m"
 }

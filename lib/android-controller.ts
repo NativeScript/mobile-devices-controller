@@ -12,7 +12,9 @@ import {
     killPid,
     searchFiles,
     getAllFileNames,
-    wait
+    wait,
+    logInfo,
+    logError
 } from "./utils";
 import { networkInterfaces } from "os";
 
@@ -147,41 +149,50 @@ export class AndroidController {
                     const result = AndroidController.executeAdbCommand(emulator, " emu kill");
                 } catch (error) { }
             }
-            if (!isWin()) {
-                let grepForEmulatorProcesses = executeCommand(`ps | grep ${emulator.name}`).split("\n");
-                executeCommand(`ps | grep ${emulator.token}`).split("\n").forEach(pr => grepForEmulatorProcesses.push(pr));
-                const regExp = /^\d+/;
 
-                grepForEmulatorProcesses.forEach(processOfEmulator => {
-                    if (regExp.test(processOfEmulator)) {
-                        const pid = regExp.exec(processOfEmulator)[0];
-                        emulator.pid = parseInt(pid);
+            const killEmulatorProcesses = () => {
+                if (emulator.pid) {
+                    killPid(emulator.pid);
+                }
+                if (!isWin()) {
+                    let grepForEmulatorProcesses = executeCommand(`ps | grep ${emulator.name}`).split("\n");
+                    executeCommand(`ps | grep ${emulator.token}`).split("\n").forEach(pr => grepForEmulatorProcesses.push(pr));
+                    const regExp = /^\d+/;
 
-                        try {
-                            killPid(emulator.pid);
-                            if (!isWin()) {
-                                killPid(emulator.pid);
+                    grepForEmulatorProcesses.forEach(processOfEmulator => {
+                        if (regExp.test(processOfEmulator)) {
+                            const pid = parseInt(regExp.exec(processOfEmulator)[0]);
+                            try {
+                                killPid(pid);
+                            } catch (error) { 
+                                logInfo(`Something went wrong trying to kill pid ${pid} that belongs to ${emulator.name}`);
+                                logInfo(`Please have in mind that this only an info since the pid of process could already be destroied!`);
                             }
-                        } catch (error) { }
-                    }
-                });
+                        }
+                    });
+                }
             }
+
+            killEmulatorProcesses();
 
             console.log(`Waiting for ${emulator} to stop!`);
 
             const checkIfDeviceIsKilled = token => {
-                return executeCommand(AndroidController.LIST_DEVICES_COMMAND).includes(emulator.token);
+                wait(1000);
+                return executeCommand(AndroidController.LIST_DEVICES_COMMAND).includes(token);
             }
 
             const startTime = Date.now();
             while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) >= 60000) {
+                logInfo(`Retrying kill all processes related to ${emulator.name}`);
+                killEmulatorProcesses();
             }
 
             if (checkIfDeviceIsKilled(emulator.token)) {
-                console.log(`Device: ${emulator.name} is NOT killed!`);
+                logError(`Device: ${emulator.name} is NOT killed!`);
                 isAlive = true;
             } else {
-                console.log(`Device: ${emulator.name} is successfully killed!`);
+                logInfo(`Device: ${emulator.name} is successfully killed!`);
                 isAlive = false;
             }
         }
@@ -189,6 +200,8 @@ export class AndroidController {
         if (!isAlive) {
             emulator.status = Status.SHUTDOWN;
             emulator.pid = undefined;
+        } else {
+            emulator.status = Status.BUSY;
         }
 
         return emulator;
@@ -196,11 +209,14 @@ export class AndroidController {
 
     public static killAll() {
         killProcessByName("qemu-system-i386");
+        killProcessByName("qemu-system-x86_64");
     }
 
     public static async restartDevice(device: IDevice) {
         if (device.type === DeviceType.EMULATOR) {
+            logInfo(`Ensure device: ${device.name} is not booted!`);
             AndroidController.kill(device);
+            logInfo(`Restarting device ${device.name}`);
             AndroidController.startEmulator(device);
         } else {
             console.log("Not implemented for real device!")
