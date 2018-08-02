@@ -5,7 +5,6 @@ import { Platform, DeviceType, Status, AndroidKeyEvent } from "./enums";
 import { IDevice, Device } from "./device";
 import * as net from "net";
 import {
-    waitForOutput,
     executeCommand,
     isWin,
     killProcessByName,
@@ -14,9 +13,9 @@ import {
     getAllFileNames,
     wait,
     logInfo,
-    logError
+    logError,
+    logWarn
 } from "./utils";
-import { networkInterfaces } from "os";
 
 const OFFSET_DI_PIXELS = 16;
 
@@ -72,8 +71,14 @@ export class AndroidController {
             options = options + " > " + logPath + " 2>&1";
         }
 
-        if (!this.checkIfEmulatorIsRunning(emulator.token)) {
+        const listRunningDevices = executeCommand(AndroidController.LIST_DEVICES_COMMAND)
+        .replace("List of devices attached", "").trim();
+
+        if (listRunningDevices.includes(emulator.token)) {
             AndroidController.kill(emulator);
+        }
+
+        if (!listRunningDevices.includes(emulator.token)) {
             const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
             const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
             getAllFileNames(avd).filter(f => f.endsWith(".lock")).forEach(f => {
@@ -175,7 +180,7 @@ export class AndroidController {
 
             killEmulatorProcesses();
 
-            console.log(`Waiting for ${emulator} to stop!`);
+            logInfo(`Waiting for ${emulator.name} to stop!`);
 
             const checkIfDeviceIsKilled = token => {
                 wait(1000);
@@ -184,7 +189,7 @@ export class AndroidController {
 
             const startTime = Date.now();
             while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) >= 60000) {
-                logInfo(`Retrying kill all processes related to ${emulator.name}`);
+                logWarn(`Retrying kill all processes related to ${emulator.name}`);
                 killEmulatorProcesses();
             }
 
@@ -254,15 +259,22 @@ export class AndroidController {
 
     public static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice) {
         try {
-            AndroidController.executeAdbShellCommand(device, " am start -n com.android.settings/com.android.settings.Settings")
-            const errorMsg = AndroidController.getCurrientFocusedScreen(device);
+            AndroidController.executeAdbShellCommand(device, " am start -n com.android.settings/com.android.settings.Settings");
+
+            let errorMsg = AndroidController.getCurrientFocusedScreen(device);
+            const startTime = Date.now();
+            while (Date.now() - startTime <= 3000
+                    && !errorMsg.toLowerCase()
+                    .includes('com.android.settings/com.android.settings.Settings')) {
+                errorMsg = AndroidController.getCurrientFocusedScreen(device);
+            }
             if (!errorMsg.toLowerCase()
                 .includes('com.android.settings/com.android.settings.Settings')) {
-                console.log("Emulator is not responding!", errorMsg);
+                logWarn("Emulator is not responding!", errorMsg);
                 return true;
             }
         } catch (error) {
-            console.error('Command timeout recieved', error);
+            logError('Command timeout recieved', error);
             AndroidController.executeAdbShellCommand(device, " am force-stop  com.android.settings");
             return false
         }
@@ -526,7 +538,7 @@ export class AndroidController {
         const startTime = Date.now();
         let found = false;
 
-        console.log("Booting emulator ...");
+        logInfo("Booting emulator ...");
 
         while ((Date.now() - startTime) <= timeOutInMiliseconds && !found) {
             found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + deviceId);
@@ -534,9 +546,9 @@ export class AndroidController {
 
         if (!found) {
             let error = deviceId + " failed to boot in " + timeOutInMiliseconds + " seconds.";
-            console.log(error, true);
+            logError(error, true);
         } else {
-            console.log("Emilator is booted!");
+            logInfo("Emilator is booted!");
         }
 
         return found;

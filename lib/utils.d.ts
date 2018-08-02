@@ -18,3 +18,6 @@ export declare function attachToProcess(processToWatchLog: any, matcher: any, ti
 export declare function waitForResult(childProcess: any, matcher: any, timeout: any): Promise<string>;
 export declare const wait: (miliseconds: any) => boolean;
 export declare const getRegexResultsAsArray: (regex: any, str: any) => any[];
+export declare function logInfo(info: any, obj?: any): void;
+export declare function logWarn(info: any, obj?: any): void;
+export declare function logError(info: any, obj?: any): void;
