@@ -32,7 +32,7 @@ export declare class AndroidController {
     static killAdbProcess(): void;
     static isAppRunning(device: IDevice, appId: string): boolean;
     static getCurrientFocusedScreen(device: IDevice): string;
-    static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice): boolean;
+    static checkIfEmulatorIsResponding(device: IDevice): boolean;
     private static getCurrentErrorMessage;
     static reinstallApplication(device: any, appFullName: any, packageId?: string): void;
     static refreshApplication(device: any, appFullName: any, packageId?: string): void;

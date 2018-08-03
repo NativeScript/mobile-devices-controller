@@ -495,7 +495,7 @@ export class IOSController {
 
     public static getIOSPackageId(deviceType: DeviceType, fullAppName) {
         let result = "";
-        const plistPath = IOSController.getPlistPath(deviceType, fullAppName);
+        const plistPath = IOSController.getPlistPath(fullAppName);
 
         if (fileExists(plistPath)) {
             const command = "/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' " + plistPath;
@@ -521,7 +521,7 @@ export class IOSController {
      *
      * @return path to Info.plist
      */
-    private static getPlistPath(deviceType: DeviceType, fullAppName) {
+    private static getPlistPath(fullAppName) {
         let plistPath = null;
         const ext = extname(fullAppName);
         if (ext.includes('ipa')) {

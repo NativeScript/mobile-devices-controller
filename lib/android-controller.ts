@@ -112,7 +112,7 @@ export class AndroidController {
 
     public static async reboot(emulator: IDevice) {
         try {
-            if (AndroidController.checkApplicationNotRespondingDialogIsDisplayed(emulator)) {
+            if (AndroidController.checkIfEmulatorIsResponding(emulator)) {
                 const errorMsgType = AndroidController.getCurrentErrorMessage(emulator);
                 if (errorMsgType) {
                     AndroidController.executeAdbShellCommand(emulator, `am force-stop ${errorMsgType}`);
@@ -257,7 +257,7 @@ export class AndroidController {
         return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'", 3000);
     }
 
-    public static checkApplicationNotRespondingDialogIsDisplayed(device: IDevice) {
+    public static checkIfEmulatorIsResponding(device: IDevice) {
         try {
             AndroidController.executeAdbShellCommand(device, " am start -n com.android.settings/com.android.settings.Settings");
 
@@ -271,7 +271,7 @@ export class AndroidController {
             if (!errorMsg.toLowerCase()
                 .includes('com.android.settings/com.android.settings.Settings')) {
                 logWarn("Emulator is not responding!", errorMsg);
-                return true;
+                return false;
             }
         } catch (error) {
             logError('Command timeout recieved', error);
@@ -281,7 +281,7 @@ export class AndroidController {
 
         AndroidController.executeAdbShellCommand(device, " am force-stop  com.android.settings");
 
-        return false
+        return true
     }
 
     private static getCurrentErrorMessage(device: IDevice) {
