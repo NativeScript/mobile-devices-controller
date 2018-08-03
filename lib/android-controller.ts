@@ -87,12 +87,12 @@ export class AndroidController {
                     console.log(`Try to delete ${path}!`);
 
                     if (existsSync(path)) {
-                        console.log(`Deleting ${path}!`);
+                        logWarn(`Deleting ${path}!`);
                         unlinkSync(path);
-                        console.log(`Deleted ${path}!`);
+                        logWarn(`Deleted ${path}!`);
                     }
                 } catch (error) {
-                    console.log(`Failed to delete lock file for ${avd}!`);
+                    logWarn(`Failed to delete lock file for ${avd}!`);
                 }
             });
         }
@@ -138,7 +138,7 @@ export class AndroidController {
             result = executeCommand(`${AndroidController.sendKeyCommand(token, 82)} && ${AndroidController.sendKeyCommand(token, 66)}`);
         }
         if (!(result !== undefined && result !== "")) {
-            console.error("We couldn't unclock the devie: ", result);
+            logError("We couldn't unclock the devie: ", result);
         }
     }
 
@@ -188,7 +188,7 @@ export class AndroidController {
             }
 
             const startTime = Date.now();
-            while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) >= 60000) {
+            while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) <= 10000) {
                 logWarn(`Retrying kill all processes related to ${emulator.name}`);
                 killEmulatorProcesses();
             }
@@ -224,19 +224,19 @@ export class AndroidController {
             logInfo(`Restarting device ${device.name}`);
             AndroidController.startEmulator(device);
         } else {
-            console.log("Not implemented for real device!")
+            logError("Not implemented for real device!")
         }
 
         return device;
     }
 
     public static startAdb() {
-        console.log("Start adb");
+        logInfo("Start adb");
         executeCommand(AndroidController.ADB + " start-server");
     }
 
     public static stopAdb() {
-        console.log("Stop adb");
+        logInfo("Stop adb");
         executeCommand(AndroidController.ADB + " kill-server");
     }
 
@@ -321,17 +321,17 @@ export class AndroidController {
         packageId = packageId || AndroidController.getPackageId(testAppName);
         let isAppInstalled = AndroidController.isAppInstalled(device, packageId);
         if (isAppInstalled) {
-            console.log("Uninstall a previous version " + packageId + " app.");
+            logInfo("Uninstall a previous version " + packageId + " app.");
             AndroidController.uninstallApp(device, packageId);
         }
 
         const output = AndroidController.executeAdbCommand(device, ` install -r ${testAppName}`);
-        console.info(output);
+       logInfo(output);
 
         isAppInstalled = AndroidController.isAppInstalled(device, packageId);
         if (!isAppInstalled) {
             const errorMsg = `Failed to install ${testAppName} !`;
-            console.error(errorMsg);
+            logError(errorMsg);
             throw new Error(errorMsg);
         }
 
@@ -344,16 +344,16 @@ export class AndroidController {
             AndroidController.stopApplication(device, appId);
             const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId}`);
             if (uninstallResult.includes("Success")) {
-                console.info(appId + " successfully uninstalled.");
+                logInfo(appId + " successfully uninstalled.");
             } else {
-                console.error("Failed to uninstall " + appId + ". Error: " + uninstallResult);
+                logError("Failed to uninstall " + appId + ". Error: " + uninstallResult);
             }
         } else {
-            console.log(`Application: ${appId} is not installed!`);
+            logInfo(`Application: ${appId} is not installed!`);
         }
 
         if (AndroidController.getInstalledApps(device).some(app => app === appId)) {
-            console.error("We couldn't uninstall application!");
+            logError("We couldn't uninstall application!");
         }
     }
 
@@ -425,12 +425,12 @@ export class AndroidController {
         const sdcardFiles = AndroidController.executeAdbShellCommand(device, "ls -la " + remoteBasePath);
         if (sdcardFiles.includes("No such file or directory")) {
             const error = remoteBasePath + " does not exist.";
-            console.log(error);
+            logError(error);
             return undefined;
         }
 
         if (!existsSync(destinationFolder)) {
-            console.log(`The folder ${destinationFolder} doesn't exist!`);
+            logError(`The folder ${destinationFolder} doesn't exist!`);
             return undefined;
         }
 
@@ -440,11 +440,11 @@ export class AndroidController {
         const o = output.toLowerCase();
         if ((o.includes("error")) || (o.includes("failed")) || (o.includes("does not exist"))) {
             const error = "Failed to transfer " + remotePath + " to " + destinationFolder;
-            console.log(error);
-            console.log("Error: " + output);
+            logError(error);
+            logError("Error: " + output);
             return undefined;
         } else {
-            console.log(remotePath + " transferred to " + destinationFile);
+            logInfo(remotePath + " transferred to " + destinationFile);
         }
 
         return destinationFile;
@@ -459,7 +459,7 @@ export class AndroidController {
         const sdcardFiles = AndroidController.executeAdbShellCommand(device, "ls -la " + remoteBasePath);
         if (sdcardFiles.includes("No such file or directory")) {
             const error = remoteBasePath + " does not exist.";
-            console.log(error);
+            logError(error);
             return undefined;
         }
 
@@ -473,10 +473,10 @@ export class AndroidController {
 
         // Push files
         output = AndroidController.executeAdbCommand(device, "push " + fileName + " " + deviceParh);
-        console.log(output);
+        logInfo(output);
         if ((output.toLowerCase().includes("error")) || (output.toLowerCase().includes("failed"))) {
-            console.log("Failed to transfer " + fileName + " to " + deviceParh);
-            console.log("Error: ", output);
+            logError("Failed to transfer " + fileName + " to " + deviceParh);
+            logError("Error: ", output);
             return undefined;
         } else {
             console.log(fileName + " transferred to " + deviceParh);
@@ -527,7 +527,7 @@ export class AndroidController {
             console.log(data.toString());
         });
         process.stdout.on("error", (error) => {
-            console.log(error.toString());
+            logError(error.toString());
         });
         emulator.pid = process.pid;
 
@@ -623,7 +623,7 @@ export class AndroidController {
                         }
                     })
                 } catch (error) {
-                    console.log(error);
+                   logError(error);
                 }
             }
         }
@@ -643,8 +643,8 @@ export class AndroidController {
         });
 
         if (verbose) {
-            console.log("Avds lAist: ", info);
-            console.log("Parsed emulators: ", emulators);
+            logInfo("Avds list info: ", info);
+            logInfo("Parsed emulators: ", emulators);
         }
 
         return emulators;
@@ -666,7 +666,7 @@ export class AndroidController {
                 dataStream = "",
                 res = null;
             conn.on('connect', () => {
-                console.debug("Socket connection to device created");
+                //console.debug("Socket connection to device created");
             });
 
             conn.setTimeout(60000, () => {
@@ -677,7 +677,7 @@ export class AndroidController {
                 if (!connected) {
                     if (readyRegex.test(recievedData)) {
                         connected = true;
-                        console.debug("Socket connection to device ready");
+                        //console.debug("Socket connection to device ready");
                         conn.write(`${command}\n`);
                     }
                 } else {
@@ -686,13 +686,13 @@ export class AndroidController {
                         res = dataStream.replace(readyRegex, "").trim();
                         const resArray = res.trim().split('\n');
                         res = resArray[resArray.length - 1];
-                        console.debug(`Telnet command got response: ${res}`);
+                        //console.debug(`Telnet command got response: ${res}`);
                         conn.write("quit\n");
                     }
                 }
             });
             conn.on('error', (err) => { // eslint-disable-line promise/prefer-await-to-callbacks
-                console.debug(`Telnet command error: ${err.message}`);
+                logError(`Telnet command error: ${err.message}`);
                 AndroidController.kill(<any>{ token: port, type: DeviceType.EMULATOR })
                 reject(err);
             });
@@ -752,7 +752,7 @@ export class AndroidController {
         });
 
         if (verbose) {
-            console.log("Running devices: ", runningDevices);
+            logInfo("Running devices: ", runningDevices);
         }
 
         return devices;
@@ -826,7 +826,7 @@ export class AndroidController {
         const matchResult = /^\d/igm.exec(resultAsString);
         const result: boolean = (matchResult != null && matchResult.length > 0) ? matchResult[0] == value : false;
         if (!result) {
-            console.error(resultAsString);
+            logError(resultAsString);
         }
 
         return result;
