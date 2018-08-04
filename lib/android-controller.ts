@@ -259,17 +259,18 @@ export class AndroidController {
 
     public static checkIfEmulatorIsResponding(device: IDevice) {
         try {
-            AndroidController.executeAdbShellCommand(device, " am start -n com.android.settings/com.android.settings.Settings");
+            const androidSettings = "com.android.settings/com.android.settings.Settings";
+            AndroidController.executeAdbShellCommand(device, ` am start -n ${androidSettings}`);
 
             let errorMsg = AndroidController.getCurrientFocusedScreen(device);
             const startTime = Date.now();
             while (Date.now() - startTime <= 3000
                     && !errorMsg.toLowerCase()
-                    .includes('com.android.settings/com.android.settings.Settings')) {
+                    .includes(androidSettings.toLowerCase())) {
                 errorMsg = AndroidController.getCurrientFocusedScreen(device);
             }
             if (!errorMsg.toLowerCase()
-                .includes('com.android.settings/com.android.settings.Settings')) {
+                .includes(androidSettings.toLowerCase())) {
                 logWarn("Emulator is not responding!", errorMsg);
                 return false;
             }
