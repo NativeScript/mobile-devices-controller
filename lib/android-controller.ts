@@ -62,17 +62,13 @@ export class AndroidController {
         };
     }
 
-    public static async startEmulator(emulator: IDevice, options = "", logPath = undefined): Promise<IDevice> {
+    public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined): Promise<IDevice> {
         if (!emulator.token) {
             emulator.token = AndroidController.emulatorId(emulator.apiLevel) || "5554";
         }
 
-        if (logPath) {
-            options = options + " > " + logPath + " 2>&1";
-        }
-
         const listRunningDevices = executeCommand(AndroidController.LIST_DEVICES_COMMAND)
-        .replace("List of devices attached", "").trim();
+            .replace("List of devices attached", "").trim();
 
         if (listRunningDevices.includes(emulator.token)) {
             AndroidController.kill(emulator);
@@ -97,7 +93,7 @@ export class AndroidController {
             });
         }
 
-        emulator = await AndroidController.startEmulatorProcess(emulator, options);
+        emulator = await AndroidController.startEmulatorProcess(emulator, logPath, options);
 
         const result = await AndroidController.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
 
@@ -115,8 +111,8 @@ export class AndroidController {
             if (AndroidController.checkIfEmulatorIsResponding(emulator)) {
                 const errorMsgType = AndroidController.getCurrentErrorMessage(emulator);
                 if (errorMsgType) {
-                    AndroidController.executeAdbShellCommand(emulator, `am force-stop ${errorMsgType}`);
-                    AndroidController.executeAdbShellCommand(emulator, `pm clear ${errorMsgType}`);
+                    AndroidController.executeAdbShellCommand(emulator, `am force - stop ${errorMsgType} `);
+                    AndroidController.executeAdbShellCommand(emulator, `pm clear ${errorMsgType} `);
                 }
             }
         } catch{ }
@@ -133,9 +129,9 @@ export class AndroidController {
     public static unlock(token, password = undefined) {
         let result = "";
         if (password) {
-            result = executeCommand(`${AndroidController.sendKeyCommand(token, 82)} && ${AndroidController.ADB} -s ${token} shell input text ${password} && ${AndroidController.sendKeyCommand(token, 66)}`);
+            result = executeCommand(`${AndroidController.sendKeyCommand(token, 82)} && ${AndroidController.ADB} -s ${token} shell input text ${password} && ${AndroidController.sendKeyCommand(token, 66)} `);
         } else {
-            result = executeCommand(`${AndroidController.sendKeyCommand(token, 82)} && ${AndroidController.sendKeyCommand(token, 66)}`);
+            result = executeCommand(`${AndroidController.sendKeyCommand(token, 82)} && ${AndroidController.sendKeyCommand(token, 66)} `);
         }
         if (!(result !== undefined && result !== "")) {
             logError("We couldn't unclock the devie: ", result);
@@ -160,8 +156,8 @@ export class AndroidController {
                     killPid(emulator.pid);
                 }
                 if (!isWin()) {
-                    let grepForEmulatorProcesses = executeCommand(`ps | grep ${emulator.name}`).split("\n");
-                    executeCommand(`ps | grep ${emulator.token}`).split("\n").forEach(pr => grepForEmulatorProcesses.push(pr));
+                    let grepForEmulatorProcesses = executeCommand(`ps | grep ${emulator.name} `).split("\n");
+                    executeCommand(`ps | grep ${emulator.token} `).split("\n").forEach(pr => grepForEmulatorProcesses.push(pr));
                     const regExp = /^\d+/;
 
                     grepForEmulatorProcesses.forEach(processOfEmulator => {
@@ -169,8 +165,8 @@ export class AndroidController {
                             const pid = parseInt(regExp.exec(processOfEmulator)[0]);
                             try {
                                 killPid(pid);
-                            } catch (error) { 
-                                logInfo(`Something went wrong trying to kill pid ${pid} that belongs to ${emulator.name}`);
+                            } catch (error) {
+                                logInfo(`Something went wrong trying to kill pid ${pid} that belongs to ${emulator.name} `);
                                 logInfo(`Please have in mind that this only an info since the pid of process could already be destroied!`);
                             }
                         }
@@ -189,7 +185,7 @@ export class AndroidController {
 
             const startTime = Date.now();
             while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) <= 10000) {
-                logWarn(`Retrying kill all processes related to ${emulator.name}`);
+                logWarn(`Retrying kill all processes related to ${emulator.name} `);
                 killEmulatorProcesses();
             }
 
@@ -221,7 +217,7 @@ export class AndroidController {
         if (device.type === DeviceType.EMULATOR) {
             logInfo(`Ensure device: ${device.name} is not booted!`);
             AndroidController.kill(device);
-            logInfo(`Restarting device ${device.name}`);
+            logInfo(`Restarting device ${device.name} `);
             AndroidController.startEmulator(device);
         } else {
             logError("Not implemented for real device!")
@@ -260,12 +256,12 @@ export class AndroidController {
     public static checkIfEmulatorIsResponding(device: IDevice) {
         try {
             const androidSettings = "com.android.settings/com.android.settings.Settings";
-            AndroidController.executeAdbShellCommand(device, ` am start -n ${androidSettings}`);
+            AndroidController.executeAdbShellCommand(device, ` am start - n ${androidSettings} `);
 
             let errorMsg = AndroidController.getCurrientFocusedScreen(device);
             const startTime = Date.now();
             while (Date.now() - startTime <= 3000
-                    && !errorMsg.toLowerCase()
+                && !errorMsg.toLowerCase()
                     .includes(androidSettings.toLowerCase())) {
                 errorMsg = AndroidController.getCurrientFocusedScreen(device);
             }
@@ -304,12 +300,12 @@ export class AndroidController {
 
     public static startApplication(device: IDevice, packageId: string) {
         const commandToExecute = "monkey -p " + packageId + " 1";
-        //const commandToExecute = ` am start -n ${packageId}`;
+        //const commandToExecute = ` am start - n ${ packageId } `;
         Promise.resolve(AndroidController.executeAdbShellCommand(device, commandToExecute));
     }
 
     public static getInstalledApps(device) {
-        const list = AndroidController.executeAdbShellCommand(device, `pm list packages -3`).split("\n");
+        const list = AndroidController.executeAdbShellCommand(device, `pm list packages - 3`).split("\n");
         return list;
     }
 
@@ -326,8 +322,8 @@ export class AndroidController {
             AndroidController.uninstallApp(device, packageId);
         }
 
-        const output = AndroidController.executeAdbCommand(device, ` install -r ${testAppName}`);
-       logInfo(output);
+        const output = AndroidController.executeAdbCommand(device, ` install - r ${testAppName} `);
+        logInfo(output);
 
         isAppInstalled = AndroidController.isAppInstalled(device, packageId);
         if (!isAppInstalled) {
@@ -343,7 +339,7 @@ export class AndroidController {
         const isAppInstalled = AndroidController.isAppInstalled(device, appId);
         if (isAppInstalled) {
             AndroidController.stopApplication(device, appId);
-            const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId}`);
+            const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId} `);
             if (uninstallResult.includes("Success")) {
                 logInfo(appId + " successfully uninstalled.");
             } else {
@@ -359,20 +355,20 @@ export class AndroidController {
     }
 
     public static stopApplication(device: IDevice, appId) {
-        AndroidController.executeAdbShellCommand(device, `am force-stop ${appId}`);
+        AndroidController.executeAdbShellCommand(device, `am force - stop ${appId} `);
     }
 
     public static executeKeyevent(device: IDevice, keyevent: AndroidKeyEvent | string | number) {
         if (typeof keyevent === 'string') {
             keyevent = AndroidKeyEvent[keyevent];
         }
-        AndroidController.executeAdbShellCommand(device, `input keyevent ${keyevent}`);
+        AndroidController.executeAdbShellCommand(device, `input keyevent ${keyevent} `);
     }
 
     public static async getScreenshot(device: IDevice, dir, fileName) {
         fileName = fileName.endsWith(".pne") ? fileName : `${fileName}.png`;
-        const pathToScreenshotPng = `/sdcard/${fileName}`;
-        AndroidController.executeAdbShellCommand(device, `screencap ${pathToScreenshotPng}`);
+        const pathToScreenshotPng = `/ sdcard / ${fileName} `;
+        AndroidController.executeAdbShellCommand(device, `screencap ${pathToScreenshotPng} `);
         const fullFileName = resolve(dir, fileName);
         AndroidController.pullFile(device, pathToScreenshotPng, fullFileName);
         return fullFileName;
@@ -395,9 +391,9 @@ export class AndroidController {
     public static startRecordingVideo(device: IDevice, dir, fileName) {
         const videoFileName = `${fileName}.mp4`;
         const pathToVideo = resolve(dir, videoFileName);
-        const devicePath = `/sdcard/${videoFileName}`;
+        const devicePath = `/ sdcard / ${videoFileName} `;
         const prefix = AndroidController.getTokenPrefix(device);
-        const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', `${prefix}${device.token}`, 'shell', 'screenrecord', `${devicePath}`]);
+        const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', `${prefix} ${device.token} `, 'shell', 'screenrecord', `${devicePath} `]);
         if (videoRecoringProcess) {
             AndroidController.runningProcesses.push(videoRecoringProcess.pid);
         }
@@ -516,10 +512,15 @@ export class AndroidController {
         return result;
     }
 
-    private static async startEmulatorProcess(emulator: IDevice, options) {
-        const process = spawn
-            (AndroidController.EMULATOR,
-            [" -avd ", emulator.name, "-port ", emulator.token, "-no-snapshot", "-no-audio", options || " -wipe-data"], {
+    private static async startEmulatorProcess(emulator: IDevice, logPath: string, options: Array<string>) {
+        options = options || ["-no-snapshot", "-no-audio", "-wipe-data"];
+        if (logPath) {
+            options.push(` > ${logPath} 2 >& 1`);
+        }
+
+        logInfo("Starting emulator with options: ", options);
+        const process = spawn(AndroidController.EMULATOR,
+            [" -avd ", emulator.name, "-port ", emulator.token, options], {
                 shell: true,
                 detached: false
             });
@@ -624,7 +625,7 @@ export class AndroidController {
                         }
                     })
                 } catch (error) {
-                   logError(error);
+                    logError(error);
                 }
             }
         }
