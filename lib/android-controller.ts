@@ -209,6 +209,10 @@ export class AndroidController {
     }
 
     public static killAll() {
+        const script = resolve(__dirname, "scripts", "killallEmulators.sh");
+        if (!isWin() && existsSync(script)) {
+            executeCommand(`sh ${script}`);
+        }
         killProcessByName("qemu-system-i386");
         killProcessByName("qemu-system-x86_64");
     }
