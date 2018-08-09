@@ -1,12 +1,12 @@
-import { spawn, ChildProcess, spawnSync, execSync } from "child_process";
+import { spawn, spawnSync, execSync } from "child_process";
 import { resolve, dirname, basename, sep, extname } from "path";
-import { existsSync, readFileSync, utimes, Stats, unlinkSync } from "fs";
+import { tmpdir } from "os";
+import { existsSync, unlinkSync } from "fs";
 import {
     waitForOutput,
     executeCommand,
     tailFilelUntil,
     fileExists,
-    attachToProcess,
     wait,
     getRegexResultsAsArray
 } from "./utils";
@@ -81,10 +81,10 @@ export class IOSController {
         return pid;
     }
 
-    public static async startSimulator(simulator: IDevice): Promise<IDevice> {
+    public static async startSimulator(simulator: IDevice, directory: string = tmpdir()): Promise<IDevice> {
         let udid = simulator.token;
         executeCommand(IOSController.SIMCTL + " erase " + udid);
-        const process = IOSController.startSimulatorProcess(udid);
+        const process = IOSController.startSimulatorProcess(udid, directory);
 
         let responce: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
         if (responce === true) {
@@ -237,11 +237,12 @@ export class IOSController {
         }
     }
 
-    private static startSimulatorProcess(udid) {
+    private static startSimulatorProcess(udid, cwd: string = tmpdir()) {
         //xcrun instruments -v -t 'Blank' -l 100 -w
         const simProcess = spawn(IOSController.BOOT_DEVICE_COMMAND, [udid], {
             shell: true,
-            detached: false
+            detached: false,
+            cwd: cwd
         });
 
         return simProcess;
