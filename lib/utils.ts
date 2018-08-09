@@ -72,7 +72,7 @@ export function killPid(pid, signal = "SIGINT") {
         } catch (error) { }
 
     } else {
-        childProcess.execSync('taskkill /PID ' + pid + ' /T /F');
+        childProcess.execSync('taskkill /PID ' + pid + ' /T /F || true');
     }
 }
 
