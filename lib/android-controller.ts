@@ -517,14 +517,14 @@ export class AndroidController {
     }
 
     private static async startEmulatorProcess(emulator: IDevice, logPath: string, options: Array<string>) {
-        options = options || ["-no-snapshot", "-no-audio", "-wipe-data"];
+        options = options || [" -no-snapshot", " -no-audio", " -wipe-data"];
         if (logPath) {
             options.push(` > ${logPath} 2 >& 1`);
         }
 
         logInfo("Starting emulator with options: ", options);
         const process = spawn(AndroidController.EMULATOR,
-            [" -avd ", emulator.name, "-port ", emulator.token, options], {
+            [" -avd ", emulator.name, " -port ", emulator.token, options], {
                 shell: true,
                 detached: false
             });
