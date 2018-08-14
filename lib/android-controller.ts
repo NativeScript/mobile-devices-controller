@@ -276,11 +276,11 @@ export class AndroidController {
             }
         } catch (error) {
             logError('Command timeout recieved', error);
-            AndroidController.executeAdbShellCommand(device, " am force-stop  com.android.settings");
+            AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings");
             return false
         }
 
-        AndroidController.executeAdbShellCommand(device, " am force-stop  com.android.settings");
+        AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings");
 
         return true
     }
@@ -370,7 +370,7 @@ export class AndroidController {
     }
 
     public static async getScreenshot(device: IDevice, dir, fileName) {
-        fileName = fileName.endsWith(".pne") ? fileName : `${fileName}.png`;
+        fileName = fileName.endsWith(".png") ? fileName : `${fileName}.png`;
         const pathToScreenshotPng = `/sdcard/${fileName}`;
         AndroidController.executeAdbShellCommand(device, `screencap ${pathToScreenshotPng}`);
         const fullFileName = resolve(dir, fileName);
@@ -395,7 +395,7 @@ export class AndroidController {
     public static startRecordingVideo(device: IDevice, dir, fileName) {
         const videoFileName = `${fileName}.mp4`;
         const pathToVideo = resolve(dir, videoFileName);
-        const devicePath = `/ sdcard / ${videoFileName}`;
+        const devicePath = `/sdcard/${videoFileName}`;
         const prefix = AndroidController.getTokenPrefix(device);
         const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', `${prefix}${device.token}`, 'shell', 'screenrecord', `${devicePath}`]);
         if (videoRecoringProcess) {
@@ -517,14 +517,14 @@ export class AndroidController {
     }
 
     private static async startEmulatorProcess(emulator: IDevice, logPath: string, options: Array<string>) {
-        options = options || [" -no-snapshot", " -no-audio", " -wipe-data"];
+        options = options || ["-no-snapshot", "-no-audio", "-wipe-data"];
         if (logPath) {
             options.push(` > ${logPath} 2 >& 1`);
         }
 
         logInfo("Starting emulator with options: ", options);
         const process = spawn(AndroidController.EMULATOR,
-            [" -avd ", emulator.name, " -port ", emulator.token, options], {
+            [" -avd ", emulator.name, " -port ", emulator.token, ...options], {
                 shell: true,
                 detached: false
             });
@@ -561,9 +561,9 @@ export class AndroidController {
     }
 
     private static checkIfEmulatorIsRunning(token) {
-        let isBooted = executeCommand(AndroidController.ADB + " -s " + token + " shell getprop sys.boot_completed").trim() === "1";
+        let isBooted = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop sys.boot_completed`).trim() === "1";
         if (isBooted) {
-            isBooted = executeCommand(AndroidController.ADB + " -s " + token + " shell getprop init.svc.bootanim").toLowerCase().trim() === "stopped";
+            isBooted = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop init.svc.bootanim`).toLowerCase().trim() === "stopped";
         }
 
         return isBooted;
