@@ -38,12 +38,13 @@ export class DeviceController {
         return filteredDevices;
     }
 
-    public static async startDevice(device: IDevice, options?) {
+    public static async startDevice(device: IDevice, options?: string) {
         const type = device.type || device['_type'];
         if (type === DeviceType.EMULATOR) {
-            return await AndroidController.startEmulator(device, options);
+            const emuOptions = options.split(" ").filter(o => o.trim());
+            return await AndroidController.startEmulator(device, emuOptions);
         } else {
-            return await IOSController.startSimulator(device);
+            return await IOSController.startSimulator(device, options);
         }
     }
 

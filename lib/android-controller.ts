@@ -144,7 +144,7 @@ export class AndroidController {
      */
     public static kill(emulator: IDevice) {
         let isAlive: boolean = true;
-        if (emulator.type === DeviceType.EMULATOR) {
+        if (emulator.type !== DeviceType.DEVICE) {
             if (emulator.token) {
                 try {
                     const result = AndroidController.executeAdbCommand(emulator, " emu kill");
@@ -517,7 +517,7 @@ export class AndroidController {
     }
 
     private static async startEmulatorProcess(emulator: IDevice, logPath: string, options: Array<string>) {
-        options = options || ["-no-snapshot", "-no-audio", "-wipe-data"];
+        options = options || ["-no-audio", "-no-snapshot-save", "-no-boot-anim"];
         if (logPath) {
             options.push(` > ${logPath} 2 >& 1`);
         }
