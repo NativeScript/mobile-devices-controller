@@ -522,7 +522,7 @@ export class AndroidController {
             options.push(` > ${logPath} 2 >& 1`);
         }
 
-        logInfo("Starting emulator with options: ", options);
+        logInfo(`Starting emulator with options: -avd ${emulator.name} -port ${emulator.token}`, options);
         const process = spawn(AndroidController.EMULATOR,
             [" -avd ", emulator.name, " -port ", emulator.token, ...options], {
                 shell: true,
