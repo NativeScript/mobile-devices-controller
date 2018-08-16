@@ -41,7 +41,7 @@ export class DeviceController {
     public static async startDevice(device: IDevice, options?: string) {
         const type = device.type || device['_type'];
         if (type === DeviceType.EMULATOR) {
-            const emuOptions = options.split(" ").filter(o => o.trim());
+            const emuOptions = options ? options.split(" ").filter(o => o.trim()) : undefined;
             return await AndroidController.startEmulator(device, emuOptions);
         } else {
             return await IOSController.startSimulator(device, options);
