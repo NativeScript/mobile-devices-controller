@@ -20,7 +20,7 @@ import {
 const OFFSET_DI_PIXELS = 16;
 
 export class AndroidController {
-    private static DEFAULT_BOOT_TIME = 180000;
+    private static DEFAULT_BOOT_TIME = 150000;
     private static ANDROID_HOME = process.env["ANDROID_HOME"] || "";
     private static EMULATOR = resolve(AndroidController.ANDROID_HOME, "emulator", "emulator");
     private static ADB = resolve(AndroidController.ANDROID_HOME, "platform-tools", "adb");
@@ -120,7 +120,7 @@ export class AndroidController {
         const result = AndroidController.waitUntilEmulatorBoot(emulator.token, AndroidController.DEFAULT_BOOT_TIME);
         if (!result) {
             emulator = await AndroidController.kill(emulator);
-            emulator = await AndroidController.startEmulator(emulator);
+            emulator = await AndroidController.startEmulator(emulator, ["-wipe-data", "-no-snapshot-load", "-no-boot-anim", "-no-audio"]);
         }
 
         return emulator;
@@ -186,7 +186,9 @@ export class AndroidController {
             const startTime = Date.now();
             while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) <= 10000) {
                 logWarn(`Retrying kill all processes related to ${emulator.name}`);
+                wait(1000);
                 killEmulatorProcesses();
+                wait(3000);
             }
 
             if (checkIfDeviceIsKilled(emulator.token)) {
