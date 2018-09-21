@@ -744,7 +744,7 @@ export class AndroidController {
                     devices.push(new AndroidDevice(undefined, undefined, DeviceType.EMULATOR, token, Status.OFFLINE));
                 }
 
-                if (line.includes("usb")) {
+                if (line.includes("usb") || line.includes("vbox86p")) {
                     const token = line.split("   ")[0].trim();
                     const status: Status = Status.BOOTED;
                     const name = line.split("model:")[1].trim().split(" ")[0].trim();
