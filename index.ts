@@ -15,11 +15,11 @@ export async function getAndroidDevices(verbose = false) {
 }
 
 export async function getIOSDevices() {
-    await IOSController.getAllDevices();
+    return await IOSController.getAllDevices();
 }
 
 export async function getDevices(platform: Platform) {
-    await DeviceController.getDevices({ platform: platform });
+    return await DeviceController.getDevices({ platform: platform });
 }
 
 export async function startEmulator(emulator: IDevice, options?) {
@@ -62,4 +62,13 @@ export async function restartDevice(device: IDevice) {
     } else {
         IOSController.restartDevice(device);
     }
+}
+
+if (process.argv.indexOf("--startSimulator") >= 0) {
+    const name = process.argv[process.argv.indexOf("--name") + 1];
+    const apiLevel = process.argv[process.argv.indexOf("--apiLevel") + 1];
+    console.log(apiLevel)
+    getIOSDevices().then(devices => startSimulator(devices.get(name).filter(d => d.apiLevel === apiLevel)[0])
+        .then(d => console.log(d))
+        .catch(e => console.log("", e)))
 }

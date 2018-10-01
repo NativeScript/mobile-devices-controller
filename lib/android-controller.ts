@@ -63,6 +63,8 @@ export class AndroidController {
     }
 
     public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined): Promise<IDevice> {
+        const devices = (await AndroidController.getAllDevices());
+        emulator.token = emulator.name ? emulator.token || ((devices.get(emulator.name) || []).filter(d => d.status === Status.SHUTDOWN)[0] || <any>{}).token : emulator.token;
         if (!emulator.token) {
             emulator.token = AndroidController.emulatorId(emulator.apiLevel) || "5554";
         }
@@ -94,8 +96,14 @@ export class AndroidController {
         }
 
         emulator = await AndroidController.startEmulatorProcess(emulator, logPath, options);
+        let result = await AndroidController.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
 
-        const result = await AndroidController.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
+        if (result !== Status.BOOTED) {
+            AndroidController.kill(emulator);
+            logWarn("Trying to boot emulator again!");
+            emulator = await AndroidController.reboot(emulator);
+            result = await AndroidController.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
+        }
 
         if (result === Status.BOOTED) {
             emulator.status = Status.BOOTED;
@@ -116,8 +124,14 @@ export class AndroidController {
                 }
             }
         } catch{ }
-        AndroidController.executeAdbCommand(emulator, 'reboot bootloader');
-        const result = AndroidController.waitUntilEmulatorBoot(emulator.token, AndroidController.DEFAULT_BOOT_TIME);
+
+        let result;
+        try {
+
+            AndroidController.executeAdbCommand(emulator, 'reboot bootloader');
+            result = AndroidController.waitUntilEmulatorBoot(emulator.token, AndroidController.DEFAULT_BOOT_TIME / 3);
+        } catch{ }
+
         if (!result) {
             emulator = await AndroidController.kill(emulator);
             emulator = await AndroidController.startEmulator(emulator, ["-wipe-data", "-no-snapshot-load", "-no-boot-anim", "-no-audio"]);

@@ -8,6 +8,13 @@
         "emulator",
         "simulator"
     ],
+    "directories": {
+        "lib": "./lib",
+        "bin": "./bin"
+    },
+    "bin": {
+        "d-controller": "./bin/controller.js"
+    },
     "author": "Svetoslav Tsenov",
     "license": "ISC",
     "bugs": {
