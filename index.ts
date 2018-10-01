@@ -66,9 +66,9 @@ export async function restartDevice(device: IDevice) {
 
 if (process.argv.indexOf("--startSimulator") >= 0) {
     const name = process.argv[process.argv.indexOf("--name") + 1];
-    const apiLevel = process.argv[process.argv.indexOf("--apiLevel") + 1];
-    console.log(apiLevel)
-    getIOSDevices().then(devices => startSimulator(devices.get(name).filter(d => d.apiLevel === apiLevel)[0])
+    const apiLevel = process.argv.indexOf("--apiLevel") >= 0 ? process.argv[process.argv.indexOf("--apiLevel") + 1] : undefined;
+    console.log("API LEVEL: ", apiLevel)
+    getIOSDevices().then(devices => startSimulator(devices.get(name).filter(d => apiLevel ? d.apiLevel === apiLevel : true)[0])
         .then(d => console.log(d))
         .catch(e => console.log("", e)))
 }
