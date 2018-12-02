@@ -1,4 +1,6 @@
+/// <reference types="node" />
 import { Status, DeviceType, Platform } from "./enums";
+import { ChildProcess } from "child_process";
 export interface IDevice {
     name: any;
     token: string;
@@ -11,6 +13,7 @@ export interface IDevice {
     apiLevel?: string;
     info?: string;
     config?: any;
+    process?: ChildProcess;
 }
 export declare class Device implements IDevice {
     private _name;

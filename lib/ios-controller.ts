@@ -75,7 +75,7 @@ export class IOSController {
                 pid = parseInt(result[0].trim());
             }
             catch (error) {
-                console.error("Could't parse simulator pid", error);
+                console.error("Couldn't parse simulator pid", error);
             }
         }
         return pid;

@@ -17,6 +17,7 @@ export declare class AndroidController {
     static calculateScreenOffset(density: number): number;
     static getPixelsOffset(device: IDevice): number;
     static setEmulatorConfig(device: IDevice): void;
+    static cleanLockFile(emulator: IDevice): void;
     static startEmulator(emulator: IDevice, options?: Array<string>, logPath?: any): Promise<IDevice>;
     static reboot(emulator: IDevice): Promise<IDevice>;
     static unlock(token: any, password?: any): void;
@@ -31,7 +32,7 @@ export declare class AndroidController {
     static stopAdb(): void;
     static killAdbProcess(): void;
     static isAppRunning(device: IDevice, appId: string): boolean;
-    static getCurrientFocusedScreen(device: IDevice): string;
+    static getCurrentFocusedScreen(device: IDevice): string;
     static checkIfEmulatorIsResponding(device: IDevice): boolean;
     private static getCurrentErrorMessage;
     static reinstallApplication(device: any, appFullName: any, packageId?: string): void;

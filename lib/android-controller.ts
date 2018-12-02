@@ -62,6 +62,25 @@ export class AndroidController {
         };
     }
 
+    public static cleanLockFile(emulator: IDevice){
+        const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
+            const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
+            getAllFileNames(avd).filter(f => f.endsWith(".lock")).forEach(f => {
+                try {
+                    const path = resolve(avd, f);
+                    console.log(`Try to delete ${path}!`);
+
+                    if (existsSync(path)) {
+                        logWarn(`Deleting ${path}!`);
+                        unlinkSync(path);
+                        logWarn(`Deleted ${path}!`);
+                    }
+                } catch (error) {
+                    logWarn(`Failed to delete lock file for ${avd}!`);
+                }
+            });
+    }
+
     public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined): Promise<IDevice> {
         const devices = (await AndroidController.getAllDevices());
         emulator.token = emulator.name ? emulator.token || ((devices.get(emulator.name) || []).filter(d => d.status === Status.SHUTDOWN)[0] || <any>{}).token : emulator.token;
@@ -269,7 +288,7 @@ export class AndroidController {
         }
     }
 
-    public static getCurrientFocusedScreen(device: IDevice) {
+    public static getCurrentFocusedScreen(device: IDevice) {
         return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'", 3000);
     }
 
@@ -278,12 +297,12 @@ export class AndroidController {
             const androidSettings = "com.android.settings/com.android.settings.Settings";
             AndroidController.executeAdbShellCommand(device, ` am start -n ${androidSettings}`);
 
-            let errorMsg = AndroidController.getCurrientFocusedScreen(device);
+            let errorMsg = AndroidController.getCurrentFocusedScreen(device);
             const startTime = Date.now();
             while (Date.now() - startTime <= 3000
                 && !errorMsg.toLowerCase()
                     .includes(androidSettings.toLowerCase())) {
-                errorMsg = AndroidController.getCurrientFocusedScreen(device);
+                errorMsg = AndroidController.getCurrentFocusedScreen(device);
             }
             if (!errorMsg.toLowerCase()
                 .includes(androidSettings.toLowerCase())) {
@@ -302,7 +321,7 @@ export class AndroidController {
     }
 
     private static getCurrentErrorMessage(device: IDevice) {
-        const parts = AndroidController.getCurrientFocusedScreen(device).split(":")
+        const parts = AndroidController.getCurrentFocusedScreen(device).split(":")
         return parts.length > 1 ? parts[1].trim() : undefined
     }
 
@@ -552,7 +571,8 @@ export class AndroidController {
             logError(error.toString());
         });
         emulator.pid = process.pid;
-
+        emulator.process = process;
+        
         return emulator;
     }
 
