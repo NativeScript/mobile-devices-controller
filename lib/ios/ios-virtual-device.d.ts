@@ -12,5 +12,4 @@ export declare class IOSVirtualDevice extends VirtualDevice {
     protected onAttachToDevice(deviceInfo: Device): void;
     protected stdout(...args: any[]): Promise<void>;
     protected stdin(args: any): void;
-    private internalSubscriptionForEvents;
 }

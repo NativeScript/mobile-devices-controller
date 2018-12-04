@@ -78,7 +78,7 @@ export declare class AndroidController {
     static clearLog(device: IDevice): Promise<void>;
     private static checkAndroid;
     private static executeAdbCommand;
-    static executeAdbShellCommand(device: IDevice, command: string): string;
+    static executeAdbShellCommand(device: IDevice, command: string, timeout?: number): string;
     private static getTokenPrefix;
     private static getAlwaysFinishActivitiesGlobalSettingValue;
     static setDontKeepActivities(value: boolean, device: IDevice): void;

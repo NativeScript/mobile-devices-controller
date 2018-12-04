@@ -4,6 +4,7 @@ import { IDevice, Device } from "../device";
 import { IOSController } from "../ios-controller";
 import { spawn } from "child_process";
 import { logInfo, logError, logWarn } from "../utils";
+import { Status } from "../enums";
 
 export class IOSVirtualDevice extends VirtualDevice {
 
@@ -14,16 +15,27 @@ export class IOSVirtualDevice extends VirtualDevice {
     public async startDevice(device: IDevice): Promise<IDevice> {
         this._device = <any>await IOSController.startSimulator(device);
 
-        this.internalSubscriptionForEvents();
+        this._deviceProcess = spawn("xcrun", ["simctl", "spawn", this._device.token, "log", "stream", "--level=info"], {
+            shell: true,
+            detached: true,
+            stdio: ['pipe']
+        });
+
+        super.subscribeForEvents();
+
         this.emit(DeviceSignal.onDeviceStartedSignal, this._device);
 
         return this._device;
     }
 
     public async attachToDevice(device: IDevice): Promise<IDevice> {
-        this.internalSubscriptionForEvents();
+        this._deviceProcess = spawn("xcrun", ["simctl", "spawn", this._device.token, "log", "stream", "--level=info"], {
+            shell: true,
+            detached: true,
+            stdio: ['pipe']
+        });
         this.emit(DeviceSignal.onDeviceAttachedSignal, device);
-        this._device = <any>device;
+        this._device = <any>device || this._device;
 
         return device;
     }
@@ -59,7 +71,7 @@ export class IOSVirtualDevice extends VirtualDevice {
         if (args.toString().includes("Skipping invisible app")) {
             this._invisibleAppsCounter++;
         }
-        if (this._invisibleAppsCounter > 5) {
+        if (this._invisibleAppsCounter > 5 && this._device.status !== Status.SHUTDOWN) {
             logError("Detecting too many invisible applications in simulator log. Probably simulator has a black screen and doesn't respond!");
             await IOSController.kill(this.device.token);
             await this.startDevice(this._device);
@@ -68,14 +80,5 @@ export class IOSVirtualDevice extends VirtualDevice {
 
     protected stdin(args) {
         console.log("stdin: ", args.toString());
-    }
-
-    private internalSubscriptionForEvents() {
-        this._deviceProcess = spawn("xcrun", ["simctl", "spawn", this._device.token, "log", "stream", "--level=info"], {
-            shell: true,
-            detached: true,
-            stdio: ['pipe']
-        });
-        super.subscribeForEvents();
     }
 }

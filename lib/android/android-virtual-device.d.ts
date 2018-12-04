@@ -13,5 +13,4 @@ export declare class AndroidVirtualDevice extends VirtualDevice {
     protected stdout(...args: any[]): void;
     protected stdin(...args: any[]): void;
     protected onAttachToDevice(device: Device): void;
-    private internalSubscriptionForEvents;
 }

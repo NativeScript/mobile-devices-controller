@@ -43,7 +43,7 @@ export class AndroidController {
     }
 
     public static getPhysicalDensity(device: IDevice) {
-        return parseInt(AndroidController.executeAdbShellCommand(device, "wm density").split(":")[1]) * 0.01;
+        return parseInt(AndroidController.executeAdbShellCommand(device, "wm density", 2000).split(":")[1]) * 0.01;
     }
 
     public static calculateScreenOffset(density: number) {
@@ -845,16 +845,16 @@ export class AndroidController {
         }
     }
 
-    private static executeAdbCommand(device: IDevice, command: string, timeout: number = 720000) {
+    private static executeAdbCommand(device: IDevice, command: string, timeout: number = AndroidController.DEFAULT_BOOT_TIME) {
         const prefix = AndroidController.getTokenPrefix(device);
         const commandToExecute = `${AndroidController.ADB} -s ${prefix}${device.token} ${command}`;
         const result = executeCommand(commandToExecute, process.cwd(), timeout);
         return result;
     }
 
-    public static executeAdbShellCommand(device: IDevice, command: string) {
+    public static executeAdbShellCommand(device: IDevice, command: string, timeout: number = AndroidController.DEFAULT_BOOT_TIME) {
         const commandToExecute = `shell ${command}`;
-        const result = AndroidController.executeAdbCommand(device, commandToExecute);
+        const result = AndroidController.executeAdbCommand(device, commandToExecute, timeout);
         return result;
     }
 
