@@ -110,6 +110,7 @@ export class AndroidController {
                     }
                 } catch (error) {
                     logWarn(`Failed to delete lock file for ${avd}!`);
+                    emulator.status = Status.SHUTDOWN;
                 }
             });
         }
@@ -288,8 +289,8 @@ export class AndroidController {
         }
     }
 
-    public static getCurrentFocusedScreen(device: IDevice) {
-        return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'", 3000);
+    public static getCurrentFocusedScreen(device: IDevice, commandTimeout: number = 1000) {
+        return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'", commandTimeout);
     }
 
     public static checkIfEmulatorIsResponding(device: IDevice) {
@@ -851,7 +852,7 @@ export class AndroidController {
         return result;
     }
 
-    private static executeAdbShellCommand(device: IDevice, command: string) {
+    public static executeAdbShellCommand(device: IDevice, command: string) {
         const commandToExecute = `shell ${command}`;
         const result = AndroidController.executeAdbCommand(device, commandToExecute);
         return result;

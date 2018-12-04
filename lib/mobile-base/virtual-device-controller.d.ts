@@ -8,4 +8,5 @@ export declare class VirtualDeviceController implements IVirtualDevice {
     readonly virtualDevice: VirtualDevice;
     startDevice(deviceInfo: IDevice, options: any): Promise<any>;
     stopDevice(): Promise<any>;
+    attachToDevice(deviceInfo: IDevice): Promise<any>;
 }

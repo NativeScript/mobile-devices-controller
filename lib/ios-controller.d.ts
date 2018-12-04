@@ -6,13 +6,11 @@ export declare class IOSController {
     private static XCRUNLISTDEVICES_COMMAND;
     private static BOOT_DEVICE_COMMAND;
     private static GET_BOOTED_DEVICES_COMMAND;
-    private static BOOTED;
-    private static SHUTDOWN;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND;
     private static IOS_DEVICE;
     private static devicesScreenInfo;
     private static DEVICE_BOOT_TIME;
-    private static WAIT_DEVICE_TO_RESPONCE;
+    private static WAIT_DEVICE_TO_RESPONSE;
     private static _dl;
     static getDl(): Promise<any>;
     static disposeDL(): void;

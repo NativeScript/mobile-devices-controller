@@ -13,6 +13,7 @@ export abstract class VirtualDevice extends EventEmitter implements IVirtualDevi
         this.addListener(DeviceSignal.onDeviceStartedSignal, (args) => this.onDeviceStarted(args));
         this.addListener(DeviceSignal.onDeviceKilledSignal, (args) => this.onDeviceKilled(args));
         this.addListener(DeviceSignal.onDeviceErrorSignal, (args) => this.onDeviceError(args));
+        this.addListener(DeviceSignal.onDeviceAttachedSignal, (args) => this.onAttachToDevice(args));
     }
 
     get device(): Device {
@@ -49,10 +50,12 @@ export abstract class VirtualDevice extends EventEmitter implements IVirtualDevi
 
     abstract startDevice(...args);
     abstract stopDevice();
+    abstract attachToDevice(deviceInfo: IDevice);
 
     protected abstract stdin(...args);
     protected abstract stdout(...args);
     protected abstract onDeviceKilled(args);
     protected abstract onDeviceStarted(args);
     protected abstract onDeviceError(args);
+    protected abstract onAttachToDevice(deviceInfo: IDevice);
 }

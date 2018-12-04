@@ -22,4 +22,8 @@ export class VirtualDeviceController implements IVirtualDevice {
     async stopDevice(){
         return await this._virtualDevice.stopDevice();
     }
+
+    async attachToDevice(deviceInfo: IDevice){
+        return await this._virtualDevice.attachToDevice(deviceInfo);
+    }
 }

@@ -21,13 +21,11 @@ export class IOSController {
     private static XCRUNLISTDEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
     private static BOOT_DEVICE_COMMAND = `${IOSController.XCRUN} instruments -v -t 'Blank' -l 1 -w `;
     private static GET_BOOTED_DEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
-    private static BOOTED = "Booted";
-    private static SHUTDOWN = "Shutdown";
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
     private static IOS_DEVICE = "ios-device";
     private static devicesScreenInfo = new Map<string, IOSDeviceScreenInfo>();
     private static DEVICE_BOOT_TIME = 180000;
-    private static WAIT_DEVICE_TO_RESPONCE = 180000;
+    private static WAIT_DEVICE_TO_RESPONSE = 180000;
 
     private static _dl: IOSDeviceLib.IOSDeviceLib;
     static getDl() {
@@ -86,10 +84,10 @@ export class IOSController {
         executeCommand(IOSController.SIMCTL + " erase " + udid);
         const process = IOSController.startSimulatorProcess(udid, directory);
 
-        let responce: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
-        if (responce === true) {
-            responce = IOSController.checkIfSimulatorIsBooted(udid, IOSController.WAIT_DEVICE_TO_RESPONCE);
-            if (responce) {
+        let response: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
+        if (response === true) {
+            response = IOSController.checkIfSimulatorIsBooted(udid, IOSController.WAIT_DEVICE_TO_RESPONSE);
+            if (response) {
 
                 simulator.type = DeviceType.SIMULATOR;
                 simulator.status = Status.BOOTED;
@@ -237,7 +235,7 @@ export class IOSController {
         }
     }
 
-    private static startSimulatorProcess(udid, cwd: string = tmpdir()) {
+    private static startSimulatorProcess(udid, cwd: string = tmpdir(), timeout: number = 120000) {
         //xcrun instruments -v -t 'Blank' -l 100 -w
         const simProcess = spawn(IOSController.BOOT_DEVICE_COMMAND, [udid], {
             shell: true,

@@ -32,7 +32,7 @@ export declare class AndroidController {
     static stopAdb(): void;
     static killAdbProcess(): void;
     static isAppRunning(device: IDevice, appId: string): boolean;
-    static getCurrentFocusedScreen(device: IDevice): string;
+    static getCurrentFocusedScreen(device: IDevice, commandTimeout?: number): string;
     static checkIfEmulatorIsResponding(device: IDevice): boolean;
     private static getCurrentErrorMessage;
     static reinstallApplication(device: any, appFullName: any, packageId?: string): void;
@@ -78,7 +78,7 @@ export declare class AndroidController {
     static clearLog(device: IDevice): Promise<void>;
     private static checkAndroid;
     private static executeAdbCommand;
-    private static executeAdbShellCommand;
+    static executeAdbShellCommand(device: IDevice, command: string): string;
     private static getTokenPrefix;
     private static getAlwaysFinishActivitiesGlobalSettingValue;
     static setDontKeepActivities(value: boolean, device: IDevice): void;
