@@ -3,6 +3,7 @@ import { IDevice, Device } from "../device";
 export declare class IOSVirtualDevice extends VirtualDevice {
     private _invisibleAppsCounter;
     private _shouldTestForErrors;
+    private _cleanErrorsTimeProcess;
     constructor();
     startDevice(device: IDevice): Promise<IDevice>;
     attachToDevice(device: IDevice): Promise<IDevice>;
@@ -13,4 +14,5 @@ export declare class IOSVirtualDevice extends VirtualDevice {
     protected onAttachToDevice(deviceInfo: Device): void;
     protected stdout(...args: any[]): Promise<void>;
     protected stdin(args: any): void;
+    private clearTimer;
 }

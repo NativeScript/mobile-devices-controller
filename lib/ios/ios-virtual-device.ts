@@ -10,10 +10,12 @@ export class IOSVirtualDevice extends VirtualDevice {
 
     private _invisibleAppsCounter = 0;
     private _shouldTestForErrors = false;
+    private _cleanErrorsTimeProcess: NodeJS.Timeout;
 
     constructor() { super(); }
 
     public async startDevice(device: IDevice): Promise<IDevice> {
+        this.clearTimer();
         this._device = <any>await IOSController.startSimulator(device);
 
         this._deviceProcess = spawn("xcrun", ["simctl", "spawn", this._device.token, "log", "stream", "--level=info"], {
@@ -26,10 +28,10 @@ export class IOSVirtualDevice extends VirtualDevice {
 
         this.emit(DeviceSignal.onDeviceStartedSignal, this._device);
 
-        setTimeout(() => {
+        this._cleanErrorsTimeProcess = setTimeout(() => {
             this._shouldTestForErrors = true;
             this._invisibleAppsCounter = 0;
-            console.log("Watching for errors!");
+            console.log(`Watching for errors on device name: ${this._device.name}/ token: ${this._device.token}`);
         }, 120000);
 
         return this._device;
@@ -54,6 +56,7 @@ export class IOSVirtualDevice extends VirtualDevice {
             this._deviceProcess.kill("SIGTERM");
             this._deviceProcess.removeAllListeners();
             this._deviceProcess = null;
+            this.clearTimer();
         }
     }
 
@@ -79,12 +82,22 @@ export class IOSVirtualDevice extends VirtualDevice {
         }
         if (this._invisibleAppsCounter > 10 && this._shouldTestForErrors) {
             logError("Detecting too many invisible applications in simulator log. Probably simulator has a black screen and doesn't respond!");
-            await IOSController.kill(this.device.token);
-            await this.startDevice(this._device);
+            // await IOSController.kill(this.device.token);
+            this.clearTimer();
+            // await this.startDevice(this._device);
         }
     }
 
     protected stdin(args) {
         console.log("stdin: ", args.toString());
+    }
+
+    private clearTimer() {
+        this._invisibleAppsCounter = 0;
+        this._shouldTestForErrors = false;
+        if (this._cleanErrorsTimeProcess) {
+            clearTimeout(this._cleanErrorsTimeProcess);
+            this._cleanErrorsTimeProcess = undefined;
+        }
     }
 }
