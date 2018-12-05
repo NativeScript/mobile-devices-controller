@@ -7,7 +7,7 @@ import { logInfo, logError, logWarn } from "../utils";
 import { Status } from "../enums";
 
 export class IOSVirtualDevice extends VirtualDevice {
-
+    private static readonly SkippingInvisibleApp = "Skipping invisible app";
     private _invisibleAppsCounter = 0;
     private _shouldTestForErrors = false;
     private _cleanErrorsTimeProcess: NodeJS.Timeout;
@@ -51,12 +51,12 @@ export class IOSVirtualDevice extends VirtualDevice {
 
     public stopDevice() {
         IOSController.kill(this._device.token);
+        this.clearTimer();
         if (this._deviceProcess) {
             this.emit(DeviceSignal.onDeviceKilledSignal, this._device);
             this._deviceProcess.kill("SIGTERM");
             this._deviceProcess.removeAllListeners();
             this._deviceProcess = null;
-            this.clearTimer();
         }
     }
 
@@ -77,11 +77,13 @@ export class IOSVirtualDevice extends VirtualDevice {
     }
 
     protected async stdout(...args) {
-        if (args.toString().includes("Skipping invisible app")) {
+        const log = args.toString();
+        if (log.includes(IOSVirtualDevice.SkippingInvisibleApp)) {
             this._invisibleAppsCounter++;
+            console.log(log);
         }
         if (this._invisibleAppsCounter > 10 && this._shouldTestForErrors) {
-            logError("Detecting too many invisible applications in simulator log. Probably simulator has a black screen and doesn't respond!");
+            logError(`${this._device.name}\ ${this._device.token}: Detected ${IOSVirtualDevice.SkippingInvisibleApp} ${this._invisibleAppsCounter} times! Probably simulator screen is black and doesn't respond!`);
             // await IOSController.kill(this.device.token);
             this.clearTimer();
             // await this.startDevice(this._device);
