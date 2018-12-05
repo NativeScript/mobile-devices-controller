@@ -9,6 +9,7 @@ import { Status } from "../enums";
 export class IOSVirtualDevice extends VirtualDevice {
 
     private _invisibleAppsCounter = 0;
+    private _shouldTestForErrors = false;
 
     constructor() { super(); }
 
@@ -24,6 +25,12 @@ export class IOSVirtualDevice extends VirtualDevice {
         super.subscribeForEvents();
 
         this.emit(DeviceSignal.onDeviceStartedSignal, this._device);
+
+        setTimeout(() => {
+            this._shouldTestForErrors = true;
+            this._invisibleAppsCounter = 0;
+            console.log("Watching for errors!");
+        }, 120000);
 
         return this._device;
     }
@@ -67,11 +74,10 @@ export class IOSVirtualDevice extends VirtualDevice {
     }
 
     protected async stdout(...args) {
-        console.log("stdout: ", args.toString());
         if (args.toString().includes("Skipping invisible app")) {
             this._invisibleAppsCounter++;
         }
-        if (this._invisibleAppsCounter > 5 && this._device.status !== Status.SHUTDOWN) {
+        if (this._invisibleAppsCounter > 10 && this._shouldTestForErrors) {
             logError("Detecting too many invisible applications in simulator log. Probably simulator has a black screen and doesn't respond!");
             await IOSController.kill(this.device.token);
             await this.startDevice(this._device);

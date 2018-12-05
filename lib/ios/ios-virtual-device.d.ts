@@ -2,6 +2,7 @@ import { VirtualDevice } from "../mobile-base/virtual-device";
 import { IDevice, Device } from "../device";
 export declare class IOSVirtualDevice extends VirtualDevice {
     private _invisibleAppsCounter;
+    private _shouldTestForErrors;
     constructor();
     startDevice(device: IDevice): Promise<IDevice>;
     attachToDevice(device: IDevice): Promise<IDevice>;
