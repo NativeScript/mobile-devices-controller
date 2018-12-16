@@ -2,8 +2,7 @@ import { Platform, DeviceType, Status } from "./enums";
 import { Device, IDevice } from "./device";
 import { AndroidController } from "./android-controller";
 import { IOSController } from "./ios-controller";
-import { isMac, wait } from "./utils";
-import { ChildProcess } from "child_process";
+import * as utils from "./utils";
 export class DeviceController {
 
     public static async getDivices(query: any) {
@@ -12,7 +11,7 @@ export class DeviceController {
 
     /**
      * 
-     * @param query should be like IDevice
+     * @param query of type IDevice
      */
     public static async getDevices(query: any) {
         const searchQuery = DeviceController.copyProperties(query);
@@ -20,17 +19,9 @@ export class DeviceController {
         if (!searchQuery || !searchQuery.platform) {
             await DeviceController.mapDevicesToArray(Platform.ANDROID, devices);
             await DeviceController.mapDevicesToArray(Platform.IOS, devices);
-        } else if (searchQuery && searchQuery.platform && !searchQuery.name) {
+        } else if (searchQuery && searchQuery.platform) {
             await DeviceController.mapDevicesToArray(searchQuery.platform, devices);
             delete searchQuery.platform;
-        } else if (searchQuery && searchQuery.platform && searchQuery.name) {
-            (await DeviceController.getDevicesByPlatformAndName(searchQuery.platform, searchQuery.name)).forEach(d => {
-                if (!devices.some(currentDevice => currentDevice.token === d.token)) {
-                    devices.push(d);
-                }
-            });
-            delete searchQuery.platform;
-            delete searchQuery.name;
         }
 
         const filteredDevices = DeviceController.filter(devices, searchQuery);
@@ -113,7 +104,7 @@ export class DeviceController {
             await IOSController.kill(device.token);
         }
 
-        wait(2000);
+        utils.wait(2000);
     }
 
     public static killAll(type: DeviceType) {
@@ -138,34 +129,31 @@ export class DeviceController {
         }
 
         if (token) {
-            const devices = await DeviceController.getDevices({});
+            const devices = await DeviceController.getDevices({ "token": token });
             const device = devices.filter(e => e.token === token)[0];
             return device != null ? device.status : Status.SHUTDOWN;
         }
     }
 
+    public static async getRunningDevices(shouldFailOnError: boolean) {
+        const devices = new Array<IDevice>();
+        const emulators = AndroidController.parseRunningDevicesList(false);
+        
+        for (let index = 0; index < emulators.length; index++) {
+            const emulator = emulators[index];
+            emulator.name =  await AndroidController.sendTelnetCommand(emulator.token, "avd name", shouldFailOnError);
+        }
+        devices.push(...emulators);
+        
+        const simulators = (await DeviceController.mapDevicesToArray(Platform.IOS, new Array<Device>()))
+            .filter(d => d.status === Status.BOOTED);
+        devices.push(...simulators);
+
+        return devices;
+    }
+
     public static filter(devices: Array<IDevice>, searchQuery) {
-        return devices.filter((device) => {
-            if (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0) {
-                return true;
-            }
-
-            let shouldInclude = true;
-            Object.getOwnPropertyNames(searchQuery).forEach((prop) => {
-                if (searchQuery[prop]) {
-                    if (prop.includes("apiLevel")) {
-                        const searchedPlatformVersion = parseFloat(searchQuery[prop]);
-                        const availablePlatofrmVersion = parseFloat(device[prop]);
-                        shouldInclude = searchedPlatformVersion === availablePlatofrmVersion && shouldInclude;
-
-                    } else {
-                        shouldInclude = searchQuery[prop] === device[prop] && shouldInclude;
-                    }
-                }
-            });
-
-            return shouldInclude;
-        });
+        return utils.filter(devices, searchQuery);
     }
 
     public static async getScreenshot(device: IDevice, dir, fileName) {
@@ -232,29 +220,11 @@ export class DeviceController {
         let devices = new Map<string, IDevice[]>();
         if (platform.toLowerCase() === Platform.ANDROID) {
             devices = await AndroidController.getAllDevices(verbose);
-        } else if (isMac() && platform.toLowerCase() === Platform.IOS) {
+        } else if (utils.isMac() && platform.toLowerCase() === Platform.IOS) {
             devices = await IOSController.getAllDevices(verbose);
         }
 
         return devices;
-    }
-
-    private static async getDevicesByPlatformAndName(platform: Platform, name?: string, verbose: boolean = false): Promise<Array<IDevice>> {
-        let devices = await DeviceController.getAllDevicesByPlatform(platform);
-
-        if (name && devices.has(name)) {
-            return devices.get(name);
-        } else if (!name) {
-            const allDevices = new Array<IDevice>();
-            devices.forEach((v, k, map) => {
-                v.forEach((d) => {
-                    allDevices.push(d);
-                });
-            });
-            return allDevices;
-        } else {
-            return new Array<IDevice>();
-        }
     }
 
     private static async mapDevicesToArray(platform, devices) {
