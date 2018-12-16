@@ -1,5 +1,4 @@
 /// <reference types="node" />
-import { ChildProcess } from "child_process";
 import { DeviceType, Status, AndroidKeyEvent } from "./enums";
 import { IDevice, Device } from "./device";
 export declare class AndroidController {
@@ -49,7 +48,7 @@ export declare class AndroidController {
     static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
         pathToVideo: string;
         devicePath: string;
-        videoRecoringProcess: ChildProcess;
+        videoRecoringProcess: import("child_process").ChildProcess;
     };
     static stopRecordingVideo(device: any, videoRecoringProcess: any, devicePath: any, pathToVideo: any): void;
     static getPackageId(appFullName: any): string;
@@ -63,6 +62,7 @@ export declare class AndroidController {
     private static checkIfEmulatorIsRunning;
     static refreshDeviceStatus(token: string, verbose?: boolean): Promise<Status>;
     private static parseEmulators;
+    static getTokenForEmulator(busyTokens: Array<number>): number;
     /**
  * Send an arbitrary Telnet command to the device under test.
  *
@@ -70,7 +70,7 @@ export declare class AndroidController {
  *
  * @return {string} The actual output of the given command.
  */
-    private static sendTelnetCommand;
+    static sendTelnetCommand(port: any, command: any, shouldFailOnError?: boolean): Promise<string>;
     static parseRunningDevicesList(verbose: any): AndroidDevice[];
     private static parseRealDevices;
     static emulatorId(platformVersion: any): string;

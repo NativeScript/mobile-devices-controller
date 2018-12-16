@@ -1,6 +1,6 @@
-import { spawn, ChildProcess } from "child_process";
-import { resolve, delimiter, sep, dirname, join } from "path";
-import { existsSync, rmdirSync, unlinkSync } from "fs";
+import { spawn } from "child_process";
+import { resolve, sep, dirname, join } from "path";
+import { existsSync, unlinkSync } from "fs";
 import { Platform, DeviceType, Status, AndroidKeyEvent } from "./enums";
 import { IDevice, Device } from "./device";
 import * as net from "net";
@@ -62,25 +62,24 @@ export class AndroidController {
         };
     }
 
-    public static cleanLockFile(emulator: IDevice){
+    public static cleanLockFile(emulator: IDevice) {
         const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
-            const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
-            getAllFileNames(avd).filter(f => f.endsWith(".lock")).forEach(f => {
-                try {
-                    const path = resolve(avd, f);
-                    console.log(`Try to delete ${path}!`);
+        const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
+        getAllFileNames(avd).filter(f => f.endsWith(".lock")).forEach(f => {
+            try {
+                const path = resolve(avd, f);
+                console.log(`Try to delete ${path}!`);
 
-                    if (existsSync(path)) {
-                        logWarn(`Deleting ${path}!`);
-                        unlinkSync(path);
-                        logWarn(`Deleted ${path}!`);
-                    }
-                } catch (error) {
-                    logWarn(`Failed to delete lock file for ${avd}!`);
+                if (existsSync(path)) {
+                    logWarn(`Deleting ${path}!`);
+                    unlinkSync(path);
+                    logWarn(`Deleted ${path}!`);
                 }
-            });
+            } catch (error) {
+                logWarn(`Failed to delete lock file for ${avd}!`);
+            }
+        });
     }
-
     public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined): Promise<IDevice> {
         const devices = (await AndroidController.getAllDevices());
         emulator.token = emulator.name ? emulator.token || ((devices.get(emulator.name) || []).filter(d => d.status === Status.SHUTDOWN)[0] || <any>{}).token : emulator.token;
@@ -205,12 +204,15 @@ export class AndroidController {
                             }
                         }
                     });
+                    try {
+                        killProcessByName("emulator64-crash-service");
+                    } catch (error) { }
                 }
             }
 
             killEmulatorProcesses();
 
-            logInfo(`Waiting for ${emulator.name} to stop!`);
+            logInfo(`Waiting for ${emulator.name || emulator.token} to stop!`);
 
             const checkIfDeviceIsKilled = token => {
                 wait(1000);
@@ -229,7 +231,7 @@ export class AndroidController {
                 logError(`Device: ${emulator.name} is NOT killed!`);
                 isAlive = true;
             } else {
-                logInfo(`Device: ${emulator.name} is successfully killed!`);
+                logInfo(`Device: ${emulator.name || emulator.token} is successfully killed!`);
                 isAlive = false;
             }
         }
@@ -573,7 +575,7 @@ export class AndroidController {
         });
         emulator.pid = process.pid;
         emulator.process = process;
-        
+
         return emulator;
     }
 
@@ -677,8 +679,7 @@ export class AndroidController {
         emulators.forEach((devices, key, map) => {
             devices.forEach(device => {
                 if (!device.token) {
-                    const lastToken = Math.max(...busyTokens)
-                    const token = lastToken % 2 === 0 ? lastToken + 2 : lastToken + 1;
+                    const token = AndroidController.getTokenForEmulator(busyTokens);
                     device.token = token.toString();
                     busyTokens.push(token);
                 }
@@ -693,6 +694,11 @@ export class AndroidController {
         return emulators;
     }
 
+    public static getTokenForEmulator(busyTokens: Array<number>) {
+        const lastToken = Math.max(...busyTokens)
+        const token = lastToken % 2 === 0 ? lastToken + 2 : lastToken + 1;
+        return token;
+    }
     /**
  * Send an arbitrary Telnet command to the device under test.
  *
@@ -700,7 +706,7 @@ export class AndroidController {
  *
  * @return {string} The actual output of the given command.
  */
-    private static async sendTelnetCommand(port, command): Promise<string> {
+    public static async sendTelnetCommand(port, command, shouldFailOnError: boolean = true): Promise<string> {
         //console.debug(`Sending telnet command device: ${command} to localhost:${port}`);
         return await new Promise<string>((resolve, reject) => {
             let conn = net.createConnection(port, 'localhost'),
@@ -736,8 +742,14 @@ export class AndroidController {
             });
             conn.on('error', (err) => { // eslint-disable-line promise/prefer-await-to-callbacks
                 logError(`Telnet command error: ${err.message}`);
-                AndroidController.kill(<any>{ token: port, type: DeviceType.EMULATOR })
-                reject(err);
+                if (shouldFailOnError) {
+                    AndroidController.kill(<any>{ token: port, type: DeviceType.EMULATOR });
+                }
+                if (shouldFailOnError) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
             });
             conn.on('close', () => {
                 if (res === null) {

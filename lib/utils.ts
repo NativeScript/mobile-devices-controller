@@ -76,7 +76,7 @@ export function killPid(pid, signal = "SIGINT") {
     }
 }
 
-export function tailFilelUntil(file, condition, index = 0) {
+export function tailFileUntil(file, condition, index = 0) {
     const log = readFileSync(file, "UTF8");
     const logTail = log.substr(index, log.length - 1);
     let result = false;
@@ -92,22 +92,12 @@ export function tailFilelUntil(file, condition, index = 0) {
     };
 }
 
-export function fileExists(p) {
-    try {
-        if (existsSync(p)) {
-            return true;
-        }
-
-        return false;
-    } catch (e) {
-        if (e.code == 'ENOENT') {
-            console.log("File does not exist. " + p);
-            return false;
-        }
-
-        console.log("Exception fs.statSync (" + p + "): " + e);
-        throw e;
-    }
+export function filter<T>(devices: Array<T>, searchQuery) {
+    return devices.filter((device) => 
+        (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0)
+        ? true
+        : Object.getOwnPropertyNames(searchQuery).every(prop => searchQuery[prop] ? new RegExp(searchQuery[prop]).test(device[prop]) : true)
+    );
 }
 
 export function searchFiles(folder: string, words: string, recursive: boolean = true, files: Array<string> = new Array()) {

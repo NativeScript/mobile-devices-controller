@@ -5,8 +5,7 @@ import { existsSync, unlinkSync } from "fs";
 import {
     waitForOutput,
     executeCommand,
-    tailFilelUntil,
-    fileExists,
+    tailFileUntil,
     wait,
     getRegexResultsAsArray
 } from "./utils";
@@ -496,7 +495,7 @@ export class IOSController {
         let result = "";
         const plistPath = IOSController.getPlistPath(fullAppName);
 
-        if (fileExists(plistPath)) {
+        if (existsSync(plistPath)) {
             const command = "/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' " + plistPath;
             result = executeCommand(command);
         } else {
@@ -557,9 +556,9 @@ export class IOSController {
         console.info(`We will time out after ${timeoutMs}ms`);
         let isBooted = false;
         try {
-            let result = tailFilelUntil(simLog, "com.apple.intents.intents-image-service", 0);
+            let result = tailFileUntil(simLog, "com.apple.intents.intents-image-service", 0);
             while (!result.result) {
-                result = tailFilelUntil(simLog, bootedIndicator, result.index);
+                result = tailFileUntil(simLog, bootedIndicator, result.index);
             }
             isBooted = result.result;
 
