@@ -28,6 +28,7 @@ export class IOSVirtualDevice extends VirtualDevice {
         super.subscribeForEvents();
 
         this.emit(DeviceSignal.onDeviceStartedSignal, this._device);
+        this._isAlive = true;
 
         this._cleanErrorsTimeProcess = setTimeout(() => {
             this._shouldTestForErrors = true;
@@ -67,6 +68,7 @@ export class IOSVirtualDevice extends VirtualDevice {
             return;
         }
         IOSController.kill(this._device.token);
+        this._isAlive = false;
         this.clearTimer();
         if (this._deviceProcess) {
             this.emit(DeviceSignal.onDeviceKilledSignal, this._device);

@@ -24,6 +24,7 @@ export class AndroidVirtualDevice extends VirtualDevice {
         }, 30000);
 
         this.subscribeForEvents();
+        this._isAlive = true;
         this.emit(DeviceSignal.onDeviceStartedSignal, this._device);
 
         return startedDevice;
@@ -38,6 +39,8 @@ export class AndroidVirtualDevice extends VirtualDevice {
             stdio: ['pipe']
         });
 
+        this._isAlive = true;
+
         if (!this._deviceProcess) {
             this._deviceProcess = this._respondProcess;
             super.subscribeForEvents();
@@ -51,6 +54,7 @@ export class AndroidVirtualDevice extends VirtualDevice {
             return;
         }
         AndroidController.kill(<any>this._device);
+        this._isAlive = false;
         console.log("", this._device);
         this.onDeviceKilled(this._device);
     }

@@ -2,10 +2,10 @@ import { Status, DeviceType, Platform } from "./enums";
 import { ChildProcess } from "child_process";
 
 export interface IDevice {
-  name: any,
-  token: string,
-  type: DeviceType,
-  platform: Platform,
+  name?: string,
+  token?: string,
+  type?: DeviceType,
+  platform?: Platform,
   status?: Status,
   startedAt?: number,
   busySince?: number,
@@ -14,6 +14,7 @@ export interface IDevice {
   info?: string,
   config?: any,
   process?: ChildProcess;
+  parentProcessPid?: number;
 }
 
 export class Device implements IDevice {
@@ -22,16 +23,19 @@ export class Device implements IDevice {
   private _info?: string;
   private _config?: any;
 
-  constructor(private _name: any,
-    private _apiLevel: string,
-    private _type: DeviceType,
-    private _platform: Platform,
-    private _token: string,
-    private _status: Status,
+  constructor(private _name?: any,
+    private _apiLevel?: string,
+    private _type?: DeviceType,
+    private _platform?: Platform,
+    private _token?: string,
+    private _status?: Status,
     private _pid?) {
     this._startedAt = -1;
     this._busySince = -1;
   }
+
+  process?: ChildProcess;
+  parentProcessPid?: number;
 
   get name() {
     return this._name;
@@ -132,7 +136,8 @@ export class Device implements IDevice {
       status: this.status,
       startedAt: this.startedAt,
       pid: this.pid,
-      apiLevel: this.apiLevel
+      apiLevel: this.apiLevel,
+      parentProcessPid: this.apiLevel
     }
   }
 
