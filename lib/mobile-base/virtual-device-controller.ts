@@ -4,6 +4,7 @@ import { AndroidVirtualDevice } from "../android/android-virtual-device";
 import { IOSVirtualDevice } from "../ios/ios-virtual-device";
 import { IVirtualDevice } from "../interfaces/virtual-device";
 import { IDevice } from "../device";
+import { link } from "fs";
 
 export class VirtualDeviceController implements IVirtualDevice {
     private _virtualDevice: VirtualDevice;

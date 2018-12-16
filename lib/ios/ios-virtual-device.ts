@@ -2,15 +2,16 @@ import { VirtualDevice } from "../mobile-base/virtual-device";
 import { DeviceSignal } from "../enums/DeviceSignals";
 import { IDevice, Device } from "../device";
 import { IOSController } from "../ios-controller";
-import { spawn } from "child_process";
+import { spawn, ChildProcess } from "child_process";
 import { logInfo, logError, logWarn } from "../utils";
-import { Status } from "../enums";
 
 export class IOSVirtualDevice extends VirtualDevice {
     private static readonly SkippingInvisibleApp = "Skipping invisible app";
+    private static readonly InvisibleAppsMaxCount = 100;
     private _invisibleAppsCounter = 0;
     private _shouldTestForErrors = false;
     private _cleanErrorsTimeProcess: NodeJS.Timeout;
+    private _respondProcess: ChildProcess;
 
     constructor() { super(); }
 
@@ -38,18 +39,33 @@ export class IOSVirtualDevice extends VirtualDevice {
     }
 
     public async attachToDevice(device: IDevice): Promise<IDevice> {
-        this._deviceProcess = spawn("xcrun", ["simctl", "spawn", this._device.token, "log", "stream", "--level=info"], {
+        if (super._isAttached) return;
+        this._device = <any>device || this._device;
+
+        this._respondProcess = spawn("xcrun", ["simctl", "spawn", this._device.token, "log", "stream", "--level=info"], {
             shell: true,
             detached: true,
             stdio: ['pipe']
         });
+
+        this.clearTimer();
+
+        if (!this._deviceProcess) {
+            this._deviceProcess = this._respondProcess;
+            this.subscribeForEvents();
+        }
+
         this.emit(DeviceSignal.onDeviceAttachedSignal, device);
-        this._device = <any>device || this._device;
+        console.log("Attached to device", device);
 
         return device;
     }
 
     public stopDevice() {
+        if (!this._isAlive) {
+            console.log("Device should already be killed or in process of killing! Killing of device will be skipped!", this._device);
+            return;
+        }
         IOSController.kill(this._device.token);
         this.clearTimer();
         if (this._deviceProcess) {
@@ -81,12 +97,13 @@ export class IOSVirtualDevice extends VirtualDevice {
         if (log.includes(IOSVirtualDevice.SkippingInvisibleApp)) {
             this._invisibleAppsCounter++;
             console.log(log);
+            console.log(`Count: ${this._device.token}`, this._invisibleAppsCounter);
         }
-        if (this._invisibleAppsCounter > 10 && this._shouldTestForErrors) {
-            logError(`${this._device.name}\ ${this._device.token}: Detected ${IOSVirtualDevice.SkippingInvisibleApp} ${this._invisibleAppsCounter} times! Probably simulator screen is black and doesn't respond!`);
-            // await IOSController.kill(this.device.token);
+        if (this._invisibleAppsCounter > IOSVirtualDevice.InvisibleAppsMaxCount && this._shouldTestForErrors) {
+            logError(`${this._device.name}\ ${this._device.token}:\nDetected ${IOSVirtualDevice.SkippingInvisibleApp} ${this._invisibleAppsCounter} times! Probably simulator screen is black and doesn't respond!`);
+            await IOSController.kill(this.device.token);
             this.clearTimer();
-            // await this.startDevice(this._device);
+            await this.startDevice(this._device);
         }
     }
 
@@ -97,6 +114,7 @@ export class IOSVirtualDevice extends VirtualDevice {
     private clearTimer() {
         this._invisibleAppsCounter = 0;
         this._shouldTestForErrors = false;
+        this._isAttached = false;
         if (this._cleanErrorsTimeProcess) {
             clearTimeout(this._cleanErrorsTimeProcess);
             this._cleanErrorsTimeProcess = undefined;

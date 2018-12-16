@@ -5,6 +5,8 @@ import { DeviceSignal } from "../enums/DeviceSignals";
 import { IDevice, Device } from "../device";
 
 export abstract class VirtualDevice extends EventEmitter implements IVirtualDevice {
+    protected _isAttached = false;
+    protected _isAlive: boolean;
     protected _deviceProcess: ChildProcess;
     protected _device: Device;
 
@@ -38,6 +40,7 @@ export abstract class VirtualDevice extends EventEmitter implements IVirtualDevi
         this._deviceProcess.once("close" || "exit" || "disconnect", (data) => {
             const dataToLog = data.toString();
             console.log("close: ", dataToLog);
+            this._isAttached = false;
             this.emit(DeviceSignal.onDeviceKilledSignal, this.device);
         })
 

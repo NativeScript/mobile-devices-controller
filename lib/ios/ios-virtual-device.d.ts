@@ -2,9 +2,11 @@ import { VirtualDevice } from "../mobile-base/virtual-device";
 import { IDevice, Device } from "../device";
 export declare class IOSVirtualDevice extends VirtualDevice {
     private static readonly SkippingInvisibleApp;
+    private static readonly InvisibleAppsMaxCount;
     private _invisibleAppsCounter;
     private _shouldTestForErrors;
     private _cleanErrorsTimeProcess;
+    private _respondProcess;
     constructor();
     startDevice(device: IDevice): Promise<IDevice>;
     attachToDevice(device: IDevice): Promise<IDevice>;

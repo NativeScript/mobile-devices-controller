@@ -7,8 +7,7 @@ import { ChildProcess, spawn } from "child_process";
 
 export class AndroidVirtualDevice extends VirtualDevice {
     private _respondProcess: ChildProcess;
-
-    private _checkEmulatorState;
+    private _checkEmulatorState: NodeJS.Timeout;
 
     constructor() { super(); }
 
@@ -17,22 +16,21 @@ export class AndroidVirtualDevice extends VirtualDevice {
         this._deviceProcess = startedDevice.process;
         this._device = <any>startedDevice;
 
+        // This check is abdroid when the emulator has s black screen and doesn't respond at all.
         this._checkEmulatorState = setInterval(() => {
             if (AndroidController.getCurrentFocusedScreen(this._device).trim() === "") {
                 this.stopDevice();
             }
-        }, 30000)
+        }, 30000);
 
+        this.subscribeForEvents();
         this.emit(DeviceSignal.onDeviceStartedSignal, this._device);
+
         return startedDevice;
     }
 
-    public stopDevice() {
-        AndroidController.kill(<any>this._device);
-        this.onDeviceKilled(this._device);
-    }
-
     public attachToDevice(deviceInfo: IDevice) {
+        if (super._isAttached) return;
         this._device = <any>deviceInfo || this._device;
 
         this._respondProcess = spawn("adb", ["-s", `emulator-${this._device.token}`, 'logcat', '*:E'], {
@@ -40,17 +38,21 @@ export class AndroidVirtualDevice extends VirtualDevice {
             stdio: ['pipe']
         });
 
-        this._respondProcess.stdout.once("close" || "error" || "end", (data) => {
-            const dataToLog = data.toString();
-            console.log("stderr: ", dataToLog);
-            this.emit(DeviceSignal.onDeviceErrorSignal, this._device);
-        });
-
         if (!this._deviceProcess) {
             this._deviceProcess = this._respondProcess;
             super.subscribeForEvents();
         }
         this.emit(DeviceSignal.onDeviceAttachedSignal, deviceInfo);
+    }
+
+    public stopDevice() {
+        if (!this._isAlive) {
+            console.log("Device should already be killed or in process of killing! Killing of device will be skipped!", this._device); 
+            return;
+        }
+        AndroidController.kill(<any>this._device);
+        console.log("", this._device);
+        this.onDeviceKilled(this._device);
     }
 
     protected onDeviceStarted(...args) {
@@ -77,7 +79,7 @@ export class AndroidVirtualDevice extends VirtualDevice {
     }
 
     protected stdout(...args) {
-        console.log("stdout: ", args.toString());
+        //console.log("stdout: ", args.toString());
     }
 
     protected stdin(...args) {
@@ -85,6 +87,7 @@ export class AndroidVirtualDevice extends VirtualDevice {
     }
 
     protected onAttachToDevice(device: Device) {
+        console.log("Attached to device", this._device);
     }
 }
 

@@ -5,8 +5,8 @@ export declare class AndroidVirtualDevice extends VirtualDevice {
     private _checkEmulatorState;
     constructor();
     startDevice(device: Device): Promise<IDevice>;
-    stopDevice(): void;
     attachToDevice(deviceInfo: IDevice): void;
+    stopDevice(): void;
     protected onDeviceStarted(...args: any[]): void;
     protected onDeviceError(...args: any[]): void;
     protected onDeviceKilled(...args: any[]): void;

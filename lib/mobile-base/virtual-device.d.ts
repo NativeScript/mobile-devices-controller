@@ -4,6 +4,8 @@ import { IVirtualDevice } from "../interfaces/virtual-device";
 import { ChildProcess } from "child_process";
 import { IDevice, Device } from "../device";
 export declare abstract class VirtualDevice extends EventEmitter implements IVirtualDevice {
+    protected _isAttached: boolean;
+    protected _isAlive: boolean;
     protected _deviceProcess: ChildProcess;
     protected _device: Device;
     constructor();
