@@ -7,7 +7,7 @@ import { logInfo, logError, logWarn } from "../utils";
 
 export class IOSVirtualDevice extends VirtualDevice {
     private static readonly SkippingInvisibleApp = "Skipping invisible app";
-    private static readonly InvisibleAppsMaxCount = 100;
+    private static readonly InvisibleAppsMaxCount = 1000;
     private _invisibleAppsCounter = 0;
     private _shouldTestForErrors = false;
     private _cleanErrorsTimeProcess: NodeJS.Timeout;
@@ -79,6 +79,7 @@ export class IOSVirtualDevice extends VirtualDevice {
     }
 
     protected onDeviceStarted() {
+        this._isAlive = true;
         logInfo(`Device has started successfully!!!`, this._device);
     }
 
@@ -87,10 +88,12 @@ export class IOSVirtualDevice extends VirtualDevice {
     }
 
     protected onDeviceKilled(args) {
+        this._isAlive = false;
         logWarn("Killed: ", args);
     }
 
     protected onAttachToDevice(deviceInfo: Device) {
+        this._isAlive = true;
         this._device = deviceInfo;
     }
 
@@ -98,7 +101,7 @@ export class IOSVirtualDevice extends VirtualDevice {
         const log = args.toString();
         if (log.includes(IOSVirtualDevice.SkippingInvisibleApp)) {
             this._invisibleAppsCounter++;
-            console.log(log);
+            //console.log(log);
             console.log(`Count: ${this._device.token}`, this._invisibleAppsCounter);
         }
         if (this._invisibleAppsCounter > IOSVirtualDevice.InvisibleAppsMaxCount && this._shouldTestForErrors) {

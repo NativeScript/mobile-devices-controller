@@ -14,7 +14,8 @@ import {
     wait,
     logInfo,
     logError,
-    logWarn
+    logWarn,
+    killAllProcessAndRelatedCommand
 } from "./utils";
 
 const OFFSET_DI_PIXELS = 16;
@@ -28,6 +29,7 @@ export class AndroidController {
     private static AVD_MANAGER = resolve(AndroidController.ANDROID_HOME, "tools", "bin", "avdmanager");
     private static LIST_AVDS = AndroidController.AVD_MANAGER + " list avd";
     private static _emulatorIds: Map<string, string> = new Map();
+    private static lockFilesPredicate = f => { return f.endsWith(".lock") || f.startsWith("snapshot.lock.") };
 
     public static runningProcesses = new Array();
 
@@ -65,21 +67,25 @@ export class AndroidController {
     public static cleanLockFile(emulator: IDevice) {
         const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
         const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
-        getAllFileNames(avd).filter(f => f.endsWith(".lock")).forEach(f => {
-            try {
-                const path = resolve(avd, f);
-                console.log(`Try to delete ${path}!`);
 
-                if (existsSync(path)) {
-                    logWarn(`Deleting ${path}!`);
-                    unlinkSync(path);
-                    logWarn(`Deleted ${path}!`);
+        getAllFileNames(avd)
+            .filter(f => AndroidController.lockFilesPredicate(f))
+            .forEach(f => {
+                try {
+                    const path = resolve(avd, f);
+                    console.log(`Try to delete ${path}!`);
+
+                    if (existsSync(path)) {
+                        logWarn(`Deleting ${path}!`);
+                        unlinkSync(path);
+                        logWarn(`Deleted ${path}!`);
+                    }
+                } catch (error) {
+                    logWarn(`Failed to delete lock file for ${avd}!`);
                 }
-            } catch (error) {
-                logWarn(`Failed to delete lock file for ${avd}!`);
-            }
-        });
+            });
     }
+
     public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined): Promise<IDevice> {
         const devices = (await AndroidController.getAllDevices());
         emulator.token = emulator.name ? emulator.token || ((devices.get(emulator.name) || []).filter(d => d.status === Status.SHUTDOWN)[0] || <any>{}).token : emulator.token;
@@ -97,7 +103,7 @@ export class AndroidController {
         if (!listRunningDevices.includes(emulator.token)) {
             const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
             const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
-            getAllFileNames(avd).filter(f => f.endsWith(".lock")).forEach(f => {
+            getAllFileNames(avd).filter(f => AndroidController.lockFilesPredicate(f)).forEach(f => {
                 try {
                     const path = resolve(avd, f);
                     console.log(`Try to delete ${path}!`);
@@ -180,37 +186,28 @@ export class AndroidController {
         if (emulator.type !== DeviceType.DEVICE) {
             if (emulator.token) {
                 try {
-                    const result = AndroidController.executeAdbCommand(emulator, " emu kill");
+                    AndroidController.executeAdbCommand(emulator, " emu kill");
+                    AndroidController.executeAdbCommand(emulator, " emu kill");
                 } catch (error) { }
             }
 
-            const killEmulatorProcesses = () => {
-                if (emulator.pid) {
-                    killPid(emulator.pid);
-                }
-                if (!isWin()) {
-                    let grepForEmulatorProcesses = executeCommand(`ps | grep ${emulator.name} `).split("\n");
-                    executeCommand(`ps | grep ${emulator.token} `).split("\n").forEach(pr => grepForEmulatorProcesses.push(pr));
-                    const regExp = /^\d+/;
-
-                    grepForEmulatorProcesses.forEach(processOfEmulator => {
-                        if (regExp.test(processOfEmulator)) {
-                            const pid = parseInt(regExp.exec(processOfEmulator)[0]);
-                            try {
-                                killPid(pid);
-                            } catch (error) {
-                                logInfo(`Something went wrong trying to kill pid ${pid} that belongs to ${emulator.name}`);
-                                logInfo(`Please have in mind that this only an info since the pid of process could already be destroied!`);
-                            }
-                        }
-                    });
-                    try {
-                        killProcessByName("emulator64-crash-service");
-                    } catch (error) { }
-                }
+            const killProcesses = (...args) => {
+                args.forEach(arg => {
+                    if (+arg !== NaN) {
+                        killPid(+arg);
+                    }
+                    if (!isWin()) {
+                        executeCommand(killAllProcessAndRelatedCommand(arg));
+                    }
+                    wait(500);
+                });
             }
 
-            killEmulatorProcesses();
+            killProcesses(emulator.pid, emulator.name, emulator.token);
+
+            try {
+                killProcessByName("emulator64-crash-service");
+            } catch (error) { }
 
             logInfo(`Waiting for ${emulator.name || emulator.token} to stop!`);
 
@@ -223,7 +220,7 @@ export class AndroidController {
             while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) <= 10000) {
                 logWarn(`Retrying kill all processes related to ${emulator.name}`);
                 wait(1000);
-                killEmulatorProcesses();
+                killProcesses(emulator.pid, emulator.name, emulator.token);
                 wait(3000);
             }
 
@@ -584,6 +581,9 @@ export class AndroidController {
         let found = false;
 
         logInfo("Booting emulator ...");
+        //emulator: ERROR: There's another emulator instance running with the current AVD 'Emulator-Api23-Default'. Exiting...
+
+
 
         while ((Date.now() - startTime) <= timeOutInMiliseconds && !found) {
             found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + deviceId);

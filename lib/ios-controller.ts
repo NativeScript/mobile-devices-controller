@@ -7,7 +7,8 @@ import {
     executeCommand,
     tailFileUntil,
     wait,
-    getRegexResultsAsArray
+    getRegexResultsAsArray,
+    killAllProcessAndRelatedCommand
 } from "./utils";
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
@@ -122,8 +123,7 @@ export class IOSController {
         executeCommand(`${IOSController.SIMCTL} shutdown ${udid}`);
 
         // Kill all the processes related with sim.id (for example WDA agents).
-        const killAllRelatedProcessesCommand = `ps aux | grep -ie ${udid} | awk '{print $2}' | xargs kill -9`;
-        executeCommand(killAllRelatedProcessesCommand);
+        executeCommand(killAllProcessAndRelatedCommand(udid));
     }
 
     public static getInstalledApps(device: IDevice) {

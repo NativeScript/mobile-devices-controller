@@ -10,6 +10,7 @@ export declare class AndroidController {
     private static AVD_MANAGER;
     private static LIST_AVDS;
     private static _emulatorIds;
+    private static lockFilesPredicate;
     static runningProcesses: any[];
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
     static getPhysicalDensity(device: IDevice): number;

@@ -9,6 +9,8 @@ import {
 import { resolve } from "path";
 import { createInterface } from "readline";
 
+export const killAllProcessAndRelatedCommand = args => `/bin/ps aux | grep -i ${args} | grep -v grep | awk '{print $2}' | xargs kill -9 `;
+ 
 export function executeCommand(args, cwd = process.cwd(), timeout = 720000): string {
     const commands = args.trim().split(" ");
     const baseCommand = commands.shift();
