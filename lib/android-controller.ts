@@ -576,7 +576,7 @@ export class AndroidController {
         return emulator;
     }
 
-    private static waitUntilEmulatorBoot(deviceId, timeOutInMiliseconds: number): boolean {
+    private static waitUntilEmulatorBoot(deviceId, timeOutInMilliseconds: number): boolean {
         const startTime = Date.now();
         let found = false;
 
@@ -585,15 +585,15 @@ export class AndroidController {
 
 
 
-        while ((Date.now() - startTime) <= timeOutInMiliseconds && !found) {
+        while ((Date.now() - startTime) <= timeOutInMilliseconds && !found) {
             found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + deviceId);
         }
 
         if (!found) {
-            let error = deviceId + " failed to boot in " + timeOutInMiliseconds + " seconds.";
+            let error = deviceId + " failed to boot in " + timeOutInMilliseconds + " seconds.";
             logError(error, true);
         } else {
-            logInfo("Emilator is booted!");
+            logInfo("Emulator is booted!");
         }
 
         return found;

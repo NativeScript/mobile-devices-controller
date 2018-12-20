@@ -29,7 +29,7 @@ export class DeviceController {
         return filteredDevices;
     }
 
-    public static async startDevice(device: IDevice, options?: string) {
+    public static async startDevice(device: IDevice, options?: string): Promise<IDevice> {
         const type = device.type || device['_type'];
         if (type === DeviceType.EMULATOR) {
             const emuOptions = options ? options.split(" ").filter(o => o.trim()) : undefined;
@@ -138,13 +138,13 @@ export class DeviceController {
     public static async getRunningDevices(shouldFailOnError: boolean) {
         const devices = new Array<IDevice>();
         const emulators = AndroidController.parseRunningDevicesList(false);
-        
+
         for (let index = 0; index < emulators.length; index++) {
             const emulator = emulators[index];
-            emulator.name =  await AndroidController.sendTelnetCommand(emulator.token, "avd name", shouldFailOnError);
+            emulator.name = await AndroidController.sendTelnetCommand(emulator.token, "avd name", shouldFailOnError);
         }
         devices.push(...emulators);
-        
+
         const simulators = (await DeviceController.mapDevicesToArray(Platform.IOS, new Array<Device>()))
             .filter(d => d.status === Status.BOOTED);
         devices.push(...simulators);
@@ -197,21 +197,11 @@ export class DeviceController {
     }
 
     private static copyProperties(from: IDevice) {
-        const to: IDevice = { platform: undefined, token: undefined, name: undefined, type: undefined }
-        if (!from || Object.getOwnPropertyNames(from).length <= 0) {
-            return undefined;
-        }
+        let to: IDevice = {};
+        if (!from) return to;
+        Object.assign(to, from);
+        Object.getOwnPropertyNames(to).every(prop => to[prop] && delete to[prop]);
 
-        Object.getOwnPropertyNames(from).forEach((prop) => {
-            if (from[prop]) {
-                to[prop] = from[prop];
-            }
-        });
-        Object.getOwnPropertyNames(to).forEach((prop) => {
-            if (!to[prop]) {
-                delete to[prop];
-            }
-        });
 
         return to;
     }
