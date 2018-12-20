@@ -87,8 +87,8 @@ export class AndroidController {
     }
 
     public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined): Promise<IDevice> {
-        const devices = (await AndroidController.getAllDevices());
-        emulator.token = emulator.name ? emulator.token || ((devices.get(emulator.name) || []).filter(d => d.status === Status.SHUTDOWN)[0] || <any>{}).token : emulator.token;
+        // const devices = (await AndroidController.getAllDevices());
+        // emulator.token = emulator.name ? emulator.token || ((devices.get(emulator.name) || []).filter(d => d.status === Status.SHUTDOWN)[0] || <any>{}).token : emulator.token;
         if (!emulator.token) {
             emulator.token = AndroidController.emulatorId(emulator.apiLevel) || "5554";
         }
