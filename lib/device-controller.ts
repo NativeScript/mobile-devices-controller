@@ -200,8 +200,7 @@ export class DeviceController {
         let to: IDevice = {};
         if (!from) return to;
         Object.assign(to, from);
-        Object.getOwnPropertyNames(to).every(prop => to[prop] && delete to[prop]);
-
+        Object.getOwnPropertyNames(to).forEach(prop => !to[prop] && delete to[prop]);
 
         return to;
     }
