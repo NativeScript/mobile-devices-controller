@@ -82,9 +82,12 @@ export class IOSController {
     }
 
     public static deleteDevice(token: string) {
-        spawnSync(`xcrun simctl delete ${token}`, {
+        const result = spawnSync(`xcrun simctl delete ${token}`, {
             shell: true
         });
+        if (result.status !== 0) {
+            logError("", result);
+        }
     }
 
     public static fullResetOfSimulator(simulator: IDevice) {
