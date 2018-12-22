@@ -1,4 +1,5 @@
 export declare const killAllProcessAndRelatedCommand: (args: any) => string;
+export declare const isProcessAlive: (arg: any) => boolean;
 export declare function executeCommand(args: any, cwd?: string, timeout?: number): string;
 export declare function waitForOutput(process: any, matcher: any, errorMatcher: any, timeout: any): Promise<boolean>;
 export declare function isWin(): boolean;

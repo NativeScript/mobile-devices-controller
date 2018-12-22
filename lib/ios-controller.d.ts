@@ -4,7 +4,6 @@ export declare class IOSController {
     private static XCRUN;
     private static SIMCTL;
     private static XCRUNLISTDEVICES_COMMAND;
-    private static BOOT_DEVICE_COMMAND;
     private static GET_BOOTED_DEVICES_COMMAND;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND;
     private static IOS_DEVICE;
@@ -17,6 +16,8 @@ export declare class IOSController {
     static runningProcesses: any[];
     static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
     static getSimulatorPidByToken(token: string): any;
+    static deleteDevice(token: string): void;
+    static fullResetOfSimulator(simulator: IDevice): IDevice;
     static startSimulator(simulator: IDevice, directory?: string): Promise<IDevice>;
     static restartDevice(device: IDevice): Promise<void>;
     static killAll(): void;

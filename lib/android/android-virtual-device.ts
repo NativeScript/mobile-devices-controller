@@ -15,6 +15,7 @@ export class AndroidVirtualDevice extends VirtualDevice {
         const startedDevice = await AndroidController.startEmulator(device);
         this._deviceProcess = startedDevice.process;
         this._device = <any>startedDevice;
+        delete this._device.process;
 
         // This check is abdroid when the emulator has s black screen and doesn't respond at all.
         this._checkEmulatorState = setInterval(() => {
@@ -50,10 +51,12 @@ export class AndroidVirtualDevice extends VirtualDevice {
 
     public stopDevice() {
         if (!this._isAlive) {
-            console.log("Device should already be killed or in process of killing! Killing of device will be skipped!", this._device); 
+            console.log("Device should already be killed or in process of killing! Killing of device will be skipped!", this._device);
             return;
         }
         AndroidController.kill(<any>this._device);
+        clearInterval(this._checkEmulatorState);
+        this._checkEmulatorState = null;
         this._isAlive = false;
         console.log("", this._device);
         this.onDeviceKilled(this._device);
@@ -94,9 +97,3 @@ export class AndroidVirtualDevice extends VirtualDevice {
         console.log("Attached to device", this._device);
     }
 }
-
-
-// softsenov2:mobile-devices-controller tsenov$ ps aux | grep 'Android'
-// tsenov           32233   0.0  0.0  4267768    900 s011  S+    5:33pm   0:00.00 grep Android
-// tsenov           31898   0.0  0.3  4526504  52180   ??  S     5:23pm   0:01.43 /Users/tsenov/Library/Android/sdk/emulator/emulator64-crash-service -pipe com.google.AndroidEmulator.CrashService.31884 -ppid 31884 -data-dir /tmp/android-tsenov/9b503177-6ef1-4486-b837-9fc8dd0154bd
-// mcsoftsenov2:mobile-devices-controller tsenov$

@@ -15,6 +15,7 @@ export interface IDevice {
   config?: any,
   process?: ChildProcess;
   parentProcessPid?: number;
+  initType?: any;
 }
 
 export class Device implements IDevice {

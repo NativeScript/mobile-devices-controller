@@ -10,7 +10,20 @@ import { resolve } from "path";
 import { createInterface } from "readline";
 
 export const killAllProcessAndRelatedCommand = args => `/bin/ps aux | grep -i ${args} | grep -v grep | awk '{print $2}' | xargs kill -9 `;
- 
+
+export const isProcessAlive = (arg: any) => {
+    const result = childProcess.spawnSync(`/bin/ps aux`, [`| grep -i ${arg} | grep -v grep`], {
+        shell: true
+    });
+    const test = !result.output.every(output => !output || output.length === 0)
+        && result.output
+            .filter(output => output && output.length > 0)
+            .every(f => {
+                return new RegExp(arg.toString().trim()).test(f + "");
+            });
+    console.log(`Is process ${arg} alive: ${test}`);
+    return test;
+}
 export function executeCommand(args, cwd = process.cwd(), timeout = 720000): string {
     const commands = args.trim().split(" ");
     const baseCommand = commands.shift();
@@ -68,7 +81,7 @@ export function killPid(pid, signal = "SIGINT") {
     if (!isWin()) {
         try {
             const result = process.kill(pid, signal);
-            
+
             const killCommandLog = executeCommand(`kill -9 ${pid}`);
             logWarn(killCommandLog)
         } catch (error) { }
@@ -95,10 +108,10 @@ export function tailFileUntil(file, condition, index = 0) {
 }
 
 export function filter<T>(devices: Array<T>, searchQuery) {
-    return devices.filter((device) => 
+    return devices.filter((device) =>
         (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0)
-        ? true
-        : Object.getOwnPropertyNames(searchQuery).every(prop => searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop]).test(device[prop]) : true)
+            ? true
+            : Object.getOwnPropertyNames(searchQuery).every(prop => searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop]).test(device[prop]) : true)
     );
 }
 

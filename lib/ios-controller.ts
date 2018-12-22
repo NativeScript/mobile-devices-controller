@@ -8,7 +8,10 @@ import {
     tailFileUntil,
     wait,
     getRegexResultsAsArray,
-    killAllProcessAndRelatedCommand
+    killAllProcessAndRelatedCommand,
+    logError,
+    isProcessAlive,
+    logInfo
 } from "./utils";
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
@@ -19,7 +22,6 @@ export class IOSController {
     private static XCRUN = "xcrun ";
     private static SIMCTL = `${IOSController.XCRUN} simctl`;
     private static XCRUNLISTDEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
-    private static BOOT_DEVICE_COMMAND = `${IOSController.XCRUN} instruments -v -t 'Blank' -l 1 -w `;
     private static GET_BOOTED_DEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
     private static IOS_DEVICE = "ios-device";
@@ -79,19 +81,81 @@ export class IOSController {
         return pid;
     }
 
+    public static deleteDevice(token: string) {
+        spawnSync(`xcrun simctl delete ${token}`, {
+            shell: true
+        });
+    }
+
+    public static fullResetOfSimulator(simulator: IDevice) {
+        const typesString = spawnSync(IOSController.SIMCTL, ["list", "devicetypes"], {
+            shell: true
+        });
+        const typesArray = typesString.stdout.toString().split("\n");
+        const type = simulator.initType || simulator.name.split(" ").slice(0, 2).join("-");
+        //device_types_output.scan /(.*) \((.*)\)/
+        const correctType = typesArray.filter(t => t.toLowerCase().includes(type.replace(" ", "-").toLowerCase()))[0];
+        if (!correctType) {
+            logError("Please provide correct simulator type!");
+        }
+        // runtimes = JSON.parse `xcrun simctl list -j runtimes`
+        // devices = JSON.parse `xcrun simctl list -j devices`
+        const runTimesString = spawnSync(IOSController.SIMCTL, ["list", "runtimes"], {
+            shell: true
+        });
+
+        //runtimes = runtimes_output.scan /(.*) \(.*\) - (com.apple.+)$/
+        const runTimesArray = runTimesString.stdout.toString().split("\n");
+        const runTimeRow = runTimesArray.filter(r => r.includes(simulator.apiLevel))[0];
+        const runTime = runTimeRow.split(") - ")[1].trim();
+        if (!runTime) {
+            logError("No such runtime available!")
+        }
+
+        if (simulator.token) {
+            IOSController.deleteDevice(simulator.token);
+            console.log(`Deleted: `, simulator);
+        }
+        const command = `xcrun simctl create "${simulator.name}" "${type}" "${runTime}"`
+        console.log(command);
+        const result = executeCommand(command);
+        if (result && result.trim()) {
+            simulator.token = result.trim();
+        }
+        // spawnSync(IOSController.SIMCTL, ["delete", "unavailable"], { shell: true });
+
+        return simulator;
+    }
+
     public static async startSimulator(simulator: IDevice, directory: string = tmpdir()): Promise<IDevice> {
         let udid = simulator.token;
-        executeCommand(IOSController.SIMCTL + " erase " + udid);
-        const process = IOSController.startSimulatorProcess(udid, directory);
+        // if (isProcessAlive("Simulator.app")) {
+        //     simulator = IOSController.fullResetOfSimulator(simulator);
+        //     udid = simulator.token;
+        // } else {
+        // const clearSimResult = executeCommand(`rm -rfv ${process.env.HOME}/Library/Developer/CoreSimulator/Devices/${udid}/data`);
+        const eraseSimResult = executeCommand(`${IOSController.SIMCTL} erase ${udid}`);
+        // }
 
-        let response: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
-        if (response === true) {
-            response = IOSController.checkIfSimulatorIsBooted(udid, IOSController.WAIT_DEVICE_TO_RESPONSE);
+        let startedProcess = IOSController.startSimulatorProcess(udid, directory);
+        if (startedProcess.stderr.toString().toLowerCase().includes("unable to boot deleted device")
+            || startedProcess.stderr.toString().toLowerCase().includes("Failed to load")) {
+            simulator = IOSController.fullResetOfSimulator(simulator);
+            udid = simulator.token;
+            startedProcess = IOSController.startSimulatorProcess(udid, directory);
+        }
+        // let response: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
+        if (startedProcess.stderr.toString().trim() !== "" || +startedProcess.signal !== 0) {
+            logError(`Probably the simulator ${simulator.name}\ ${simulator.token} failed to start!`);
+            logError(startedProcess.stderr.toString());
+        }
+
+        if (startedProcess.stdout.toString().includes("Instruments Trace Complete")) {
+            const response = IOSController.checkIfSimulatorIsBooted(udid, IOSController.WAIT_DEVICE_TO_RESPONSE);
             if (response) {
-
                 simulator.type = DeviceType.SIMULATOR;
                 simulator.status = Status.BOOTED;
-                simulator.pid = IOSController.getSimulatorPidByToken(simulator.token);
+                simulator.pid = startedProcess.pid;// IOSController.getSimulatorPidByToken(simulator.token);
                 simulator.startedAt = Date.now();
                 console.log(`Launched simulator with name: ${simulator.name}; udid: ${simulator.token}; status: ${simulator.status}`);
             }
@@ -121,7 +185,6 @@ export class IOSController {
     public static kill(udid: string) {
         console.log(`Killing simulator with udid ${udid}`);
         executeCommand(`${IOSController.SIMCTL} shutdown ${udid}`);
-
         // Kill all the processes related with sim.id (for example WDA agents).
         executeCommand(killAllProcessAndRelatedCommand(udid));
     }
@@ -234,12 +297,13 @@ export class IOSController {
         }
     }
 
-    private static startSimulatorProcess(udid, cwd: string = tmpdir(), timeout: number = 120000) {
-        //xcrun instruments -v -t 'Blank' -l 100 -w
-        const simProcess = spawn(IOSController.BOOT_DEVICE_COMMAND, [udid], {
+    private static startSimulatorProcess(udid, cwd: string = tmpdir(), timeout: number = IOSController.DEVICE_BOOT_TIME) {
+        // xcrun instruments -v -t 'Blank' -l 100 -w
+        // xcrun instruments -w ${udid} -t Blank `;
+        const simProcess = spawnSync(IOSController.XCRUN, ['instruments', '-w', udid, '-t', 'Blank'], {
             shell: true,
-            detached: false,
-            cwd: cwd
+            cwd: cwd,
+            timeout: timeout
         });
 
         return simProcess;

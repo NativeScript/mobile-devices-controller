@@ -30,6 +30,10 @@ export class IOSVirtualDevice extends VirtualDevice {
         this.emit(DeviceSignal.onDeviceStartedSignal, this._device);
         this._isAlive = true;
 
+        if(this._cleanErrorsTimeProcess){
+            clearTimeout(this._cleanErrorsTimeProcess);
+            this._cleanErrorsTimeProcess = null;
+        }
         this._cleanErrorsTimeProcess = setTimeout(() => {
             this._shouldTestForErrors = true;
             this._invisibleAppsCounter = 0;
@@ -90,6 +94,7 @@ export class IOSVirtualDevice extends VirtualDevice {
     protected onDeviceKilled(args) {
         this._isAlive = false;
         logWarn("Killed: ", args);
+        this.clearTimer();
     }
 
     protected onAttachToDevice(deviceInfo: Device) {
@@ -102,6 +107,7 @@ export class IOSVirtualDevice extends VirtualDevice {
         if (log.includes(IOSVirtualDevice.SkippingInvisibleApp)) {
             this._invisibleAppsCounter++;
         }
+
         if (this._invisibleAppsCounter > IOSVirtualDevice.InvisibleAppsMaxCount && this._shouldTestForErrors) {
             logError(`${this._device.name}\ ${this._device.token}:\nDetected ${IOSVirtualDevice.SkippingInvisibleApp} ${this._invisibleAppsCounter} times! Probably simulator screen is black and doesn't respond!`);
             await IOSController.kill(this.device.token);
@@ -118,9 +124,7 @@ export class IOSVirtualDevice extends VirtualDevice {
         this._invisibleAppsCounter = 0;
         this._shouldTestForErrors = false;
         this._isAttached = false;
-        if (this._cleanErrorsTimeProcess) {
-            clearTimeout(this._cleanErrorsTimeProcess);
-            this._cleanErrorsTimeProcess = undefined;
-        }
+        clearTimeout(this._cleanErrorsTimeProcess);
+        this._cleanErrorsTimeProcess = null;
     }
 }
