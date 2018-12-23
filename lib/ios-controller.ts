@@ -86,7 +86,7 @@ export class IOSController {
             shell: true
         });
         if (result.status !== 0) {
-            logError("", result);
+            logError("", result.output.toString());
         }
     }
 
@@ -95,10 +95,11 @@ export class IOSController {
             shell: true
         });
         const typesArray = typesString.stdout.toString().split("\n");
-        const type = simulator.initType || simulator.name.split(" ").slice(0, 2).join("-");
+        let type = simulator.initType || simulator.name.split(" ").slice(0, 2).join("-");
         //device_types_output.scan /(.*) \((.*)\)/
         const correctType = typesArray.filter(t => t.toLowerCase().includes(type.replace(" ", "-").toLowerCase()))[0];
-        if (!correctType) {
+        type = correctType.split("(")[0].trim();
+        if (!type) {
             logError("Please provide correct simulator type!");
         }
         // runtimes = JSON.parse `xcrun simctl list -j runtimes`
@@ -124,21 +125,23 @@ export class IOSController {
         const result = executeCommand(command);
         if (result && result.trim()) {
             simulator.token = result.trim();
+        }else{
+            logError("Failed to create simulator!", result);
         }
-        // spawnSync(IOSController.SIMCTL, ["delete", "unavailable"], { shell: true });
 
         return simulator;
     }
 
     public static async startSimulator(simulator: IDevice, directory: string = tmpdir()): Promise<IDevice> {
         let udid = simulator.token;
-        // if (isProcessAlive("Simulator.app")) {
-        //     simulator = IOSController.fullResetOfSimulator(simulator);
-        //     udid = simulator.token;
-        // } else {
-        // const clearSimResult = executeCommand(`rm -rfv ${process.env.HOME}/Library/Developer/CoreSimulator/Devices/${udid}/data`);
-        const eraseSimResult = executeCommand(`${IOSController.SIMCTL} erase ${udid}`);
-        // }
+
+        if (isProcessAlive("Simulator.app")) {
+            simulator = IOSController.fullResetOfSimulator(simulator);
+            udid = simulator.token;
+        } else {
+            // const clearSimResult = executeCommand(`rm -rfv ${process.env.HOME}/Library/Developer/CoreSimulator/Devices/${udid}/data`);
+            const eraseSimResult = executeCommand(`${IOSController.SIMCTL} erase ${udid}`);
+        }
 
         let startedProcess = IOSController.startSimulatorProcess(udid, directory);
         if (startedProcess.stderr.toString().toLowerCase().includes("unable to boot deleted device")
@@ -148,7 +151,7 @@ export class IOSController {
             startedProcess = IOSController.startSimulatorProcess(udid, directory);
         }
         // let response: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
-        if (startedProcess.stderr.toString().trim() !== "" || +startedProcess.signal !== 0) {
+        if (startedProcess.stderr.toString().trim() !== "" || +startedProcess.status !== 0) {
             logError(`Probably the simulator ${simulator.name}\ ${simulator.token} failed to start!`);
             logError(startedProcess.stderr.toString());
         }
