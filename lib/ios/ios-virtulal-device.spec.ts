@@ -3,8 +3,31 @@ import { DeviceSignal } from "../enums/DeviceSignals";
 import { DeviceController } from "../device-controller";
 import { IOSController } from "../ios-controller";
 import { Status } from "../enums";
+import { assert } from "chai";
 
 describe("start and kill ios device", async () => {
+
+    it("create simulator iPhone X", async () => {
+        const device = (await DeviceController.getDevices({ name: "^iPhone X$" }))[0];
+        const createdDevice = IOSController.fullResetOfSimulator({ name: device.name, apiLevel: device.apiLevel });
+        const isNewDeviceAvailable = (await DeviceController.getDevices(createdDevice))[0];
+        assert.isTrue(isNewDeviceAvailable && isNewDeviceAvailable.token === createdDevice.token && isNewDeviceAvailable.token !== device.token);
+    })
+
+    it("create simulator iPhone XR adn delete old one", async () => {
+        const device = (await DeviceController.getDevices({ name: "iPhone XR$" }))[0];
+        const createdDevice = IOSController.fullResetOfSimulator({ name: device.name, apiLevel: device.apiLevel, token: device.token });
+        const isNewDeviceAvailable = (await DeviceController.getDevices(createdDevice))[0];
+        assert.isTrue(isNewDeviceAvailable && isNewDeviceAvailable.token === createdDevice.token && isNewDeviceAvailable.token !== device.token);
+        const oldDevice = (await DeviceController.getDevices({ token: device.token }))[0];
+        assert.isUndefined(oldDevice);
+    })
+
+    it("create simulator with invalid options", async () => {
+        const device = (await DeviceController.getDevices({ name: "iPhone XR$" }))[0];
+        const createdDevice = IOSController.fullResetOfSimulator({ name: device.name });
+        assert.isTrue(createdDevice.name == "iPhone XR" && !createdDevice.token);
+    })
 
     it("test start device", () => {
         return new Promise(async (resolve, reject) => {
