@@ -91,39 +91,41 @@ export class IOSController {
     }
 
     public static fullResetOfSimulator(simulator: IDevice) {
-        const typesString = spawnSync(IOSController.SIMCTL, ["list", "devicetypes"], {
-            shell: true
+        if ((!simulator.name || !simulator.initType) && !simulator.apiLevel) {
+            console.log("To recreate simulator it is need to be specified simulator name or type and apiLevel!");
+            return simulator;
+        }
+
+        simulator.name = simulator.name || simulator.initType;
+
+        const iOSDevicesInfo = spawnSync(IOSController.SIMCTL, ["list", "-j"], {
+            shell: true,
+            encoding: "UTF8"
         });
-        const typesArray = typesString.stdout.toString().split("\n");
-        let type = simulator.initType || simulator.name.split(" ").slice(0, 2).join("-");
-        //device_types_output.scan /(.*) \((.*)\)/
-        const correctType = typesArray.filter(t => t.toLowerCase().includes(type.replace(" ", "-").toLowerCase()))[0];
-        type = correctType.split("(")[0].trim();
+        const iOSDevicesInfoAsObj = JSON.parse(iOSDevicesInfo.stdout.toString());
+
+        let desiredType = simulator.initType || simulator.name.split(" ").slice(0, 2).join("-");
+        const type = iOSDevicesInfoAsObj.devicetypes.filter(dt =>
+            dt.identifier.toLowerCase().includes(desiredType.toLowerCase())
+            || dt.name.toLowerCase().includes(desiredType.toLowerCase()))[0];
         if (!type) {
             logError("Please provide correct simulator type!");
         }
-        // runtimes = JSON.parse `xcrun simctl list -j runtimes`
-        // devices = JSON.parse `xcrun simctl list -j devices`
-        const runTimesString = spawnSync(IOSController.SIMCTL, ["list", "runtimes"], {
-            shell: true
-        });
-
-        //runtimes = runtimes_output.scan /(.*) \(.*\) - (com.apple.+)$/
-        const runTimesArray = runTimesString.stdout.toString().split("\n");
-        const runTimeRow = runTimesArray.filter(r => r.includes(simulator.apiLevel))[0];
-        const runTime = runTimeRow.split(") - ")[1].trim();
+        const runTime = iOSDevicesInfoAsObj.runtimes.filter(drt => new RegExp(drt.version).test(simulator.apiLevel))[0];
         if (!runTime) {
             logError("No such runtime available!")
         }
 
         const oldToken = simulator.token;
-        const command = `xcrun simctl create "${simulator.name}" "${type}" "${runTime}"`
+        const command = `xcrun simctl create "${simulator.name}" "${type.name}" "${runTime.identifier}"`
         console.log(command);
         const result = executeCommand(command);
         if (result && result.trim()) {
             simulator.token = result.trim();
-            IOSController.deleteDevice(oldToken);
-            console.log(`Clean/ remove: `, oldToken);
+            if (oldToken) {
+                IOSController.deleteDevice(oldToken);
+                console.log(`Remove: `, oldToken);
+            }
         } else {
             logError("Failed to create simulator!", result);
         }
