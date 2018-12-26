@@ -561,15 +561,10 @@ export class AndroidController {
         const process = spawn(AndroidController.EMULATOR,
             [" -avd ", emulator.name, " -port ", emulator.token, ...options], {
                 shell: true,
-                detached: false
+                detached: false,
+                stdio: 'ignore'
             });
 
-        process.stdout.on("data", (data) => {
-            console.log(data.toString());
-        });
-        process.stdout.on("error", (error) => {
-            logError(error.toString());
-        });
         emulator.pid = process.pid;
         emulator.process = process;
 
