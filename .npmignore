@@ -3,6 +3,7 @@
 **/*.map
 **/*.ts
 **/*.tgz
+**/*.spec.*
 node_modules
 .vscode
 .git

@@ -111,7 +111,7 @@ export function filter<T>(devices: Array<T>, searchQuery) {
     return devices.filter((device) =>
         (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0)
             ? true
-            : Object.getOwnPropertyNames(searchQuery).every(prop => searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop]).test(device[prop]) : true)
+            : Object.getOwnPropertyNames(searchQuery).every(prop => searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop], "ig").test(device[prop]) : true)
     );
 }
 
