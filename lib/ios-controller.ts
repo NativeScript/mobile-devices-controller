@@ -116,16 +116,15 @@ export class IOSController {
             logError("No such runtime available!")
         }
 
-        if (simulator.token) {
-            IOSController.deleteDevice(simulator.token);
-            console.log(`Deleted: `, simulator);
-        }
+        const oldToken = simulator.token;
         const command = `xcrun simctl create "${simulator.name}" "${type}" "${runTime}"`
         console.log(command);
         const result = executeCommand(command);
         if (result && result.trim()) {
             simulator.token = result.trim();
-        }else{
+            IOSController.deleteDevice(oldToken);
+            console.log(`Clean/ remove: `, oldToken);
+        } else {
             logError("Failed to create simulator!", result);
         }
 
@@ -136,8 +135,13 @@ export class IOSController {
         let udid = simulator.token;
 
         if (isProcessAlive("Simulator.app")) {
-            simulator = IOSController.fullResetOfSimulator(simulator);
-            udid = simulator.token;
+            try {
+                const newSim = IOSController.fullResetOfSimulator(simulator);
+                if (newSim.token) {
+                    simulator = newSim;
+                    udid = simulator.token;
+                }
+            } catch (error) { }
         } else {
             // const clearSimResult = executeCommand(`rm -rfv ${process.env.HOME}/Library/Developer/CoreSimulator/Devices/${udid}/data`);
             const eraseSimResult = executeCommand(`${IOSController.SIMCTL} erase ${udid}`);

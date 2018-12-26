@@ -1,6 +1,6 @@
 {
     "name": "mobile-devices-controller",
-    "version": "3.1.2",
+    "version": "3.1.4",
     "main": "index.js",
     "description": "Manage devices, emulators and simulators.",
     "keywords": [
@@ -29,11 +29,16 @@
         "ios-device-lib": "^0.4.15"
     },
     "devDependencies": {
+        "@types/chai": "^4.1.7",
+        "@types/mocha": "^5.2.5",
         "@types/node": "^10.12.10",
+        "chai": "^4.2.0",
+        "mocha": "^5.2.0",
         "typescript": "^3.2.0"
     },
     "scripts": {
         "prepare": "tsc",
-        "watch": "tsc -watch"
+        "watch": "tsc -watch",
+        "test": "mocha --recursive ./**/*spec.js --timeout 99999"
     }
 }

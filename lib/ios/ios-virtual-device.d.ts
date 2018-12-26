@@ -1,21 +1,16 @@
 import { VirtualDevice } from "../mobile-base/virtual-device";
 import { IDevice, Device } from "../device";
 export declare class IOSVirtualDevice extends VirtualDevice {
-    private static readonly SkippingInvisibleApp;
-    private static readonly InvisibleAppsMaxCount;
-    private _invisibleAppsCounter;
-    private _shouldTestForErrors;
-    private _cleanErrorsTimeProcess;
-    private _respondProcess;
+    private _checkSimulatorState;
     constructor();
     startDevice(device: IDevice): Promise<IDevice>;
     attachToDevice(device: IDevice): Promise<IDevice>;
+    detach(): void;
     stopDevice(): void;
-    protected onDeviceStarted(): void;
-    protected onDeviceError(...args: any[]): void;
-    protected onDeviceKilled(args: any): void;
-    protected onAttachToDevice(deviceInfo: Device): void;
-    protected stdout(...args: any[]): Promise<void>;
-    protected stdin(args: any): void;
-    private clearTimer;
+    protected onDeviceStarted(deviceInfo: IDevice): void;
+    protected onDeviceError(args: any): void;
+    protected onDeviceKilled(deviceInfo: IDevice): void;
+    protected onDeviceAttach(deviceInfo: Device): void;
+    private detachFromEventListeners;
+    private static spawnLog;
 }

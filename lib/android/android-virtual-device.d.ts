@@ -1,16 +1,16 @@
 import { VirtualDevice } from "../mobile-base/virtual-device";
 import { Device, IDevice } from "../device";
 export declare class AndroidVirtualDevice extends VirtualDevice {
-    private _respondProcess;
     private _checkEmulatorState;
     constructor();
-    startDevice(device: Device): Promise<IDevice>;
-    attachToDevice(deviceInfo: IDevice): void;
+    startDevice(device: IDevice): Promise<IDevice>;
+    attachToDevice(deviceInfo: IDevice): Device;
+    detach(): void;
     stopDevice(): void;
-    protected onDeviceStarted(...args: any[]): void;
-    protected onDeviceError(...args: any[]): void;
-    protected onDeviceKilled(...args: any[]): void;
-    protected stdout(...args: any[]): void;
-    protected stdin(...args: any[]): void;
-    protected onAttachToDevice(device: Device): void;
+    protected onDeviceStarted(deviceInfo: IDevice): void;
+    protected onDeviceError(args: any): void;
+    protected onDeviceKilled(deviceInfo: IDevice): void;
+    protected onDeviceAttach(deviceInfo: IDevice): void;
+    private detachFromEventListeners;
+    private static spawnLog;
 }

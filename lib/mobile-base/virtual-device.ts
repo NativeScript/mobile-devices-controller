@@ -13,9 +13,9 @@ export abstract class VirtualDevice extends EventEmitter implements IVirtualDevi
     constructor() {
         super();
         this.addListener(DeviceSignal.onDeviceStartedSignal, (args) => this.onDeviceStarted(args));
+        this.addListener(DeviceSignal.onDeviceAttachedSignal, (args) => this.onDeviceAttach(args));
         this.addListener(DeviceSignal.onDeviceKilledSignal, (args) => this.onDeviceKilled(args));
         this.addListener(DeviceSignal.onDeviceErrorSignal, (args) => this.onDeviceError(args));
-        this.addListener(DeviceSignal.onDeviceAttachedSignal, (args) => this.onAttachToDevice(args));
     }
 
     get device(): Device {
@@ -23,42 +23,33 @@ export abstract class VirtualDevice extends EventEmitter implements IVirtualDevi
     }
 
     protected subscribeForEvents() {
-        this._deviceProcess.stdin.on("data", (data) => this.stdin(data));
-        this._deviceProcess.stdout.on("data", (data) => this.stdout(data));
-
-        this._deviceProcess.stderr.on("data", (data) => {
-            const dataToLog = data.toString();
-            console.log("stderr: ", dataToLog);
-        });
-
         this._deviceProcess.once("uncaughtException", (data) => {
-            const dataToLog = data.toString();
+            const dataToLog = data && data.toString();
             console.log("error: ", dataToLog);
             this.emit(DeviceSignal.onDeviceKilledSignal, this._device);
         });
 
         this._deviceProcess.once("close" || "exit" || "disconnect", (data) => {
-            const dataToLog = data.toString();
+            const dataToLog = data && data.toString();
             console.log("close: ", dataToLog);
             this._isAttached = false;
             this.emit(DeviceSignal.onDeviceKilledSignal, this.device);
         })
 
         this._deviceProcess.once("error", (data) => {
-            const dataToLog = data.toString();
+            const dataToLog = data && data.toString();
             console.log("error: ", dataToLog);
             this.emit(DeviceSignal.onDeviceKilledSignal, this.device);
         })
     }
 
     abstract startDevice(...args);
-    abstract stopDevice();
     abstract attachToDevice(deviceInfo: IDevice);
+    abstract detach();
+    abstract stopDevice();
 
-    protected abstract stdin(...args);
-    protected abstract stdout(...args);
-    protected abstract onDeviceKilled(args);
-    protected abstract onDeviceStarted(args);
+    protected abstract onDeviceStarted(deviceInfo: IDevice);
+    protected abstract onDeviceAttach(deviceInfo: IDevice);
+    protected abstract onDeviceKilled(deviceInfo: IDevice);
     protected abstract onDeviceError(args);
-    protected abstract onAttachToDevice(deviceInfo: IDevice);
 }

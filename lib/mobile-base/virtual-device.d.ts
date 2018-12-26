@@ -12,12 +12,11 @@ export declare abstract class VirtualDevice extends EventEmitter implements IVir
     readonly device: Device;
     protected subscribeForEvents(): void;
     abstract startDevice(...args: any[]): any;
-    abstract stopDevice(): any;
     abstract attachToDevice(deviceInfo: IDevice): any;
-    protected abstract stdin(...args: any[]): any;
-    protected abstract stdout(...args: any[]): any;
-    protected abstract onDeviceKilled(args: any): any;
-    protected abstract onDeviceStarted(args: any): any;
+    abstract detach(): any;
+    abstract stopDevice(): any;
+    protected abstract onDeviceStarted(deviceInfo: IDevice): any;
+    protected abstract onDeviceAttach(deviceInfo: IDevice): any;
+    protected abstract onDeviceKilled(deviceInfo: IDevice): any;
     protected abstract onDeviceError(args: any): any;
-    protected abstract onAttachToDevice(deviceInfo: IDevice): any;
 }
