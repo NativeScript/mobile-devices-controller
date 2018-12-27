@@ -1,9 +1,9 @@
 import { spawn, spawnSync, execSync } from "child_process";
 import { resolve, dirname, basename, sep, extname } from "path";
 import { tmpdir } from "os";
-import { existsSync, unlinkSync } from "fs";
+import { existsSync, unlinkSync, readdirSync, statSync } from "fs";
+import { glob } from "glob";
 import {
-    waitForOutput,
     executeCommand,
     tailFileUntil,
     wait,
@@ -11,7 +11,6 @@ import {
     killAllProcessAndRelatedCommand,
     logError,
     isProcessAlive,
-    logInfo
 } from "./utils";
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
@@ -136,6 +135,9 @@ export class IOSController {
     public static async startSimulator(simulator: IDevice, directory: string = tmpdir()): Promise<IDevice> {
         let udid = simulator.token;
 
+        // && simulator.name
+        // && !simulator.name.toLowerCase().includes("iphone 7")
+        // && !simulator.name.toLowerCase().includes("iphone 8")
         if (isProcessAlive("Simulator.app")) {
             try {
                 const newSim = IOSController.fullResetOfSimulator(simulator);
@@ -212,9 +214,14 @@ export class IOSController {
                 }
             })
         } else {
-            const rowData = executeCommand(`find ${IOSController.getSimLocation(device.token)} /data/Containers/Bundle/Application -type d -name *.app`).split("\n");
+            const simLocation = `${IOSController.getSimLocation(device.token)}`
+            const installedApps = glob.sync(`${simLocation}/**/*.app`);
+            const rowData = installedApps
+                .filter(f => {
+                    return f.endsWith(".app") && statSync(f).isDirectory();
+                })
             rowData.forEach(data => {
-                const rowBundle = executeCommand(`defaults read " ${data} /Info.plist | grep CFBundleIdentifier`);
+                const rowBundle = executeCommand(`defaults read ${data}/Info.plist | grep CFBundleIdentifier`);
                 const appId = rowBundle.split("\"")[1];
                 apps.push(appId);
             });
@@ -414,8 +421,9 @@ export class IOSController {
     }
 
     public static getSimLocation(token) {
-        const simRoot = resolve(process.env.HOME, "/Library/Developer/CoreSimulator/Devices/", token);
-        return simRoot;
+        const simRootHome = resolve(process.env["HOME"], "Library/Developer/CoreSimulator/Devices/", token, "data/Containers/Bundle/Application");
+        const simRoot = resolve("/Library/Developer/CoreSimulator/Devices/", token, "data/Containers/Bundle/Application");
+        return existsSync(simRootHome) ? simRootHome : simRoot;
     }
 
     public static filterDeviceBy(...args) {
