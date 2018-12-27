@@ -107,12 +107,16 @@ export function tailFileUntil(file, condition, index = 0) {
     };
 }
 
+export const sortDescByApiLevelPredicate = (a, b) => { return (+a.apiLevel !== NaN && +b.apiLevel) ? +b.apiLevel - +a.apiLevel : -1 };
+export const sortAscByApiLevelPredicate = (a, b) => { return (+a.apiLevel !== NaN && +b.apiLevel) ? +a.apiLevel - +b.apiLevel : -1 };
+
+export const filterPredicate = (searchQuery, device) =>
+    (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0)
+        ? true : Object.getOwnPropertyNames(searchQuery)
+            .every(prop => searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop], "ig").test(device[prop]) : true)
+
 export function filter<T>(devices: Array<T>, searchQuery) {
-    return devices.filter((device) =>
-        (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0)
-            ? true
-            : Object.getOwnPropertyNames(searchQuery).every(prop => searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop], "ig").test(device[prop]) : true)
-    );
+    return devices.filter((device) => filterPredicate(searchQuery, device))
 }
 
 export function searchFiles(folder: string, words: string, recursive: boolean = true, files: Array<string> = new Array()) {

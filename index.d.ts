@@ -8,6 +8,7 @@ export { DeviceController } from "./lib/device-controller";
 export { VirtualDeviceController } from "./lib/mobile-base/virtual-device-controller";
 export { VirtualDevice } from "./lib/mobile-base/virtual-device";
 export { DeviceSignal } from "./lib/enums/DeviceSignals";
+export { sortAscByApiLevelPredicate, sortDescByApiLevelPredicate, filterPredicate } from "./lib/utils";
 export declare function getAndroidDevices(verbose?: boolean): Promise<void>;
 export declare function getIOSDevices(): Promise<Map<string, IDevice[]>>;
 export declare function getDevices(platform: Platform): Promise<IDevice[]>;

@@ -1,32 +1,18 @@
 import { Platform, DeviceType, Status } from "./enums";
-import { Device, IDevice } from "./device";
+import { IDevice } from "./device";
 import { AndroidController } from "./android-controller";
 import { IOSController } from "./ios-controller";
 import * as utils from "./utils";
 export class DeviceController {
-
-    public static async getDivices(query: any) {
-        return DeviceController.getDevices(query);
-    }
-
     /**
      * 
      * @param query of type IDevice
      */
     public static async getDevices(query: any) {
         const searchQuery = DeviceController.copyProperties(query);
-        const devices = new Array<IDevice>();
-        if (!searchQuery || !searchQuery.platform) {
-            await DeviceController.mapDevicesToArray(Platform.ANDROID, devices);
-            await DeviceController.mapDevicesToArray(Platform.IOS, devices);
-        } else if (searchQuery && searchQuery.platform) {
-            await DeviceController.mapDevicesToArray(searchQuery.platform, devices);
-            delete searchQuery.platform;
-        }
+        const devices: Array<IDevice> = await DeviceController.mapDevicesToArray(searchQuery);
 
-        const filteredDevices = DeviceController.filter(devices, searchQuery);
-
-        return filteredDevices;
+        return devices;
     }
 
     public static async startDevice(device: IDevice, options?: string): Promise<IDevice> {
@@ -116,6 +102,12 @@ export class DeviceController {
     }
 
     public static async refreshDeviceStatus(token: string, platform: Platform = undefined, verbose = false) {
+        if (token) {
+            const devices = await DeviceController.getDevices({ token: token });
+            const device = devices.filter(e => e.token === token)[0];
+            return device != null ? device.status : Status.SHUTDOWN;
+        }
+
         if (platform === Platform.ANDROID) {
             const emulators = AndroidController.parseRunningDevicesList(verbose);
             const emulator = emulators.filter(e => e.token === token)[0];
@@ -123,15 +115,9 @@ export class DeviceController {
         }
 
         if (platform === Platform.IOS) {
-            const simulators = await DeviceController.mapDevicesToArray(Platform.IOS, new Array<Device>());
+            const simulators = await DeviceController.mapDevicesToArray({ platform: Platform.IOS });
             const simulator = simulators.filter(e => e.token === token)[0];
             return simulator != null ? simulator.status : Status.SHUTDOWN;
-        }
-
-        if (token) {
-            const devices = await DeviceController.getDevices({ "token": token });
-            const device = devices.filter(e => e.token === token)[0];
-            return device != null ? device.status : Status.SHUTDOWN;
         }
     }
 
@@ -145,7 +131,7 @@ export class DeviceController {
         }
         devices.push(...emulators);
 
-        const simulators = (await DeviceController.mapDevicesToArray(Platform.IOS, new Array<Device>()))
+        const simulators = (await DeviceController.mapDevicesToArray({ platform: Platform.IOS }))
             .filter(d => d.status === Status.BOOTED);
         devices.push(...simulators);
 
@@ -196,7 +182,7 @@ export class DeviceController {
         }
     }
 
-    private static copyProperties(from: IDevice) {
+    public static copyProperties(from: IDevice) {
         let to: IDevice = {};
         if (!from) return to;
         Object.assign(to, from);
@@ -205,24 +191,18 @@ export class DeviceController {
         return to;
     }
 
-    private static async getAllDevicesByPlatform(platform: Platform, verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
-        let devices = new Map<string, IDevice[]>();
-        if (platform.toLowerCase() === Platform.ANDROID) {
-            devices = await AndroidController.getAllDevices(verbose);
-        } else if (utils.isMac() && platform.toLowerCase() === Platform.IOS) {
-            devices = await IOSController.getAllDevices(verbose);
+    private static async mapDevicesToArray(query: IDevice, verbose: boolean = false) {
+        const devices: Array<IDevice> = new Array();
+
+        if (utils.isMac() && !query.platform || (query.platform && query.platform.toLowerCase() === Platform.IOS)) {
+            (await IOSController.getAllDevices(verbose))
+                .forEach((v, k, map) => v.forEach(d => utils.filterPredicate(query, d) && devices.push(d)));
         }
 
-        return devices;
-    }
-
-    private static async mapDevicesToArray(platform, devices) {
-        const allDevices = await DeviceController.getAllDevicesByPlatform(platform);
-        allDevices.forEach((v, k, map) => {
-            v.forEach(d => {
-                devices.push(d);
-            });
-        });
+        if (!query.platform || (query.platform && query.platform.toLowerCase() === Platform.ANDROID)) {
+            (await AndroidController.getAllDevices(verbose))
+                .forEach((v, k, map) => v.forEach(d => utils.filterPredicate(query, d) && devices.push(d)));
+        }
 
         return devices;
     }

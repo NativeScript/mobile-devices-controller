@@ -1,7 +1,6 @@
-import { Platform, DeviceType } from "./enums";
+import { Platform, DeviceType, Status } from "./enums";
 import { IDevice } from "./device";
 export declare class DeviceController {
-    static getDivices(query: any): Promise<IDevice[]>;
     /**
      *
      * @param query of type IDevice
@@ -20,7 +19,7 @@ export declare class DeviceController {
     };
     static kill(device: IDevice): Promise<void>;
     static killAll(type: DeviceType): void;
-    static refreshDeviceStatus(token: string, platform?: Platform, verbose?: boolean): Promise<any>;
+    static refreshDeviceStatus(token: string, platform?: Platform, verbose?: boolean): Promise<Status>;
     static getRunningDevices(shouldFailOnError: boolean): Promise<IDevice[]>;
     static filter(devices: Array<IDevice>, searchQuery: any): IDevice[];
     static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
@@ -28,7 +27,6 @@ export declare class DeviceController {
     static reinstallApplication(device: IDevice, appFullName: string, bundleId: any): Promise<void>;
     static installApplication(device: IDevice, appFullName: string, bundleId?: string): Promise<string | void>;
     static uninstallAppWithBundle(device: IDevice, bundleId: any): Promise<void>;
-    private static copyProperties;
-    private static getAllDevicesByPlatform;
+    static copyProperties(from: IDevice): IDevice;
     private static mapDevicesToArray;
 }
