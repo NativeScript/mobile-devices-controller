@@ -43,7 +43,7 @@ export declare class AndroidController {
     static installApp(device: IDevice, testAppName: any, packageId?: string): string;
     static uninstallApp(device: any, appId: any): void;
     static stopApplication(device: IDevice, appId: any): void;
-    static executeKeyevent(device: IDevice, keyevent: AndroidKeyEvent | string | number): void;
+    static executeKeyEvent(device: IDevice, keyEvent: AndroidKeyEvent | string | number): void;
     static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<void>;
     static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
@@ -85,5 +85,5 @@ export declare class AndroidController {
     static setDontKeepActivities(value: boolean, device: IDevice): void;
 }
 export declare class AndroidDevice extends Device {
-    constructor(name: string, apiLevel: any, type: DeviceType, token?: string, status?: Status, pid?: number);
+    constructor(name: string, apiLevel: any, type: DeviceType, releaseVersion: string, token?: string, status?: Status, pid?: number);
 }

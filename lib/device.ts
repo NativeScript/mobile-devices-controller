@@ -11,6 +11,7 @@ export interface IDevice {
   busySince?: number,
   pid?: number,
   apiLevel?: string,
+  releaseVersion?: string,
   info?: string,
   config?: any,
   process?: ChildProcess;
@@ -30,7 +31,8 @@ export class Device implements IDevice {
     private _platform?: Platform,
     private _token?: string,
     private _status?: Status,
-    private _pid?) {
+    private _pid?,
+    private _releaseVersion?: string) {
     this._startedAt = -1;
     this._busySince = -1;
   }
@@ -50,10 +52,20 @@ export class Device implements IDevice {
     this._apiLevel = api;
   }
 
+  /**
+   * Android related only
+   */
+  set releaseVersion(releaseVersion) {
+    this._releaseVersion = releaseVersion;
+  }
+
+  get releaseVersion() {
+    return this._releaseVersion;
+  }
+
   get apiLevel() {
     return this._apiLevel;
   }
-
   set token(token) {
     this._token = token;
   }

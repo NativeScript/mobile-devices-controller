@@ -15,6 +15,7 @@ import {
 import { IDevice, Device } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
 import { IOSDeviceLib } from "ios-device-lib";
+import { DeviceController } from "./device-controller";
 
 export class IOSController {
 
@@ -133,6 +134,12 @@ export class IOSController {
     }
 
     public static async startSimulator(simulator: IDevice, directory: string = tmpdir()): Promise<IDevice> {
+        simulator.type = DeviceType.SIMULATOR;
+        simulator.platform = Platform.IOS;
+        if (!simulator.token) {
+            simulator = (await DeviceController.getDevices(simulator))[0];
+        }
+
         let udid = simulator.token;
 
         // && simulator.name
@@ -197,6 +204,9 @@ export class IOSController {
     }
 
     public static kill(udid: string) {
+        if (!udid) {
+            logError("Please provide device token!");
+        }
         console.log(`Killing simulator with udid ${udid}`);
         executeCommand(`${IOSController.SIMCTL} shutdown ${udid}`);
         // Kill all the processes related with sim.id (for example WDA agents).

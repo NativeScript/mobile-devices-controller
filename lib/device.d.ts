@@ -11,6 +11,7 @@ export interface IDevice {
     busySince?: number;
     pid?: number;
     apiLevel?: string;
+    releaseVersion?: string;
     info?: string;
     config?: any;
     process?: ChildProcess;
@@ -25,15 +26,20 @@ export declare class Device implements IDevice {
     private _token?;
     private _status?;
     private _pid?;
+    private _releaseVersion?;
     private _startedAt?;
     private _busySince?;
     private _info?;
     private _config?;
-    constructor(_name?: any, _apiLevel?: string, _type?: DeviceType, _platform?: Platform, _token?: string, _status?: Status, _pid?: any);
+    constructor(_name?: any, _apiLevel?: string, _type?: DeviceType, _platform?: Platform, _token?: string, _status?: Status, _pid?: any, _releaseVersion?: string);
     process?: ChildProcess;
     parentProcessPid?: number;
     name: any;
     apiLevel: any;
+    /**
+     * Android related only
+     */
+    releaseVersion: any;
     token: any;
     type: any;
     platform: Platform;

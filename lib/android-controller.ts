@@ -73,12 +73,8 @@ export class AndroidController {
             .forEach(f => {
                 try {
                     const path = resolve(avd, f);
-                    console.log(`Try to delete ${path}!`);
-
                     if (existsSync(path)) {
-                        logWarn(`Deleting ${path}!`);
                         unlinkSync(path);
-                        logWarn(`Deleted ${path}!`);
                     }
                 } catch (error) {
                     logWarn(`Failed to delete lock file for ${avd}!`);
@@ -89,8 +85,18 @@ export class AndroidController {
     public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined): Promise<IDevice> {
         // const devices = (await AndroidController.getAllDevices());
         // emulator.token = emulator.name ? emulator.token || ((devices.get(emulator.name) || []).filter(d => d.status === Status.SHUTDOWN)[0] || <any>{}).token : emulator.token;
+        if (!emulator.name) {
+            logError("Please provide emulator name");
+        }
+
         if (!emulator.token) {
-            emulator.token = AndroidController.emulatorId(emulator.apiLevel) || "5554";
+            emulator.token = emulator.apiLevel ? (AndroidController.emulatorId(emulator.apiLevel) || "5554") : "5554";
+        }
+
+        executeCommand(killAllProcessAndRelatedCommand(`emulator${emulator.name}`));
+
+        if (emulator.name) {
+            executeCommand(killAllProcessAndRelatedCommand(emulator.name));
         }
 
         const listRunningDevices = executeCommand(AndroidController.LIST_DEVICES_COMMAND)
@@ -100,39 +106,38 @@ export class AndroidController {
             AndroidController.kill(emulator);
         }
 
-        if (!listRunningDevices.includes(emulator.token)) {
-            const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
-            const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
-            getAllFileNames(avd).filter(f => AndroidController.lockFilesPredicate(f)).forEach(f => {
+        const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
+
+        const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
+        getAllFileNames(avd)
+            .filter(f => AndroidController.lockFilesPredicate(f))
+            .forEach(f => {
                 try {
                     const path = resolve(avd, f);
-                    console.log(`Try to delete ${path}!`);
-
                     if (existsSync(path)) {
-                        logWarn(`Deleting ${path}!`);
                         unlinkSync(path);
-                        logWarn(`Deleted ${path}!`);
                     }
                 } catch (error) {
                     logWarn(`Failed to delete lock file for ${avd}!`);
                     emulator.status = Status.SHUTDOWN;
                 }
             });
-        }
 
+        emulator.type = DeviceType.EMULATOR;
         emulator = await AndroidController.startEmulatorProcess(emulator, logPath, options);
-        let result = await AndroidController.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
+        let result = await AndroidController.waitUntilEmulatorBoot(emulator, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
 
         if (result !== Status.BOOTED) {
             AndroidController.kill(emulator);
             logWarn("Trying to boot emulator again!");
-            emulator = await AndroidController.reboot(emulator);
-            result = await AndroidController.waitUntilEmulatorBoot(emulator.token, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
+            emulator = await AndroidController.startEmulator(emulator, options, logPath);
         }
 
         if (result === Status.BOOTED) {
             emulator.status = Status.BOOTED;
             emulator.startedAt = Date.now();
+            emulator.releaseVersion = AndroidController.executeAdbShellCommand(emulator, ` getprop ro.build.version.release`).trim();
+            emulator.apiLevel = AndroidController.executeAdbShellCommand(emulator, ` getprop ro.build.version.sdk`).trim();
         }
 
         AndroidController.setEmulatorConfig(emulator);
@@ -152,9 +157,8 @@ export class AndroidController {
 
         let result;
         try {
-
             AndroidController.executeAdbCommand(emulator, 'reboot bootloader');
-            result = AndroidController.waitUntilEmulatorBoot(emulator.token, AndroidController.DEFAULT_BOOT_TIME / 3);
+            result = AndroidController.waitUntilEmulatorBoot(emulator, AndroidController.DEFAULT_BOOT_TIME / 3);
         } catch{ }
 
         if (!result) {
@@ -187,13 +191,12 @@ export class AndroidController {
             if (emulator.token) {
                 try {
                     AndroidController.executeAdbCommand(emulator, " emu kill");
-                    AndroidController.executeAdbCommand(emulator, " emu kill");
                 } catch (error) { }
             }
 
             const killProcesses = (...args) => {
                 args.forEach(arg => {
-                    if (+arg !== NaN) {
+                    if (!isNaN(arg)) {
                         killPid(+arg);
                     }
                     if (!isWin()) {
@@ -203,7 +206,7 @@ export class AndroidController {
                 });
             }
 
-            killProcesses(emulator.pid, emulator.name, emulator.token);
+            killProcesses(emulator.pid, emulator.name, `emulator-${emulator.token}`);
 
             try {
                 killProcessByName("emulator64-crash-service");
@@ -248,6 +251,7 @@ export class AndroidController {
         if (!isWin() && existsSync(script)) {
             executeCommand(`sh ${script}`);
         }
+        AndroidController.stopAdb();
         killProcessByName("qemu-system-i386");
         killProcessByName("qemu-system-x86_64");
     }
@@ -310,7 +314,7 @@ export class AndroidController {
                 return false;
             }
         } catch (error) {
-            logError('Command timeout recieved', error);
+            logError('Command timeout received', error);
             AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings");
             return false
         }
@@ -397,11 +401,11 @@ export class AndroidController {
         AndroidController.executeAdbShellCommand(device, `am force-stop ${appId}`);
     }
 
-    public static executeKeyevent(device: IDevice, keyevent: AndroidKeyEvent | string | number) {
-        if (typeof keyevent === 'string') {
-            keyevent = AndroidKeyEvent[keyevent];
+    public static executeKeyEvent(device: IDevice, keyEvent: AndroidKeyEvent | string | number) {
+        if (typeof keyEvent === 'string') {
+            keyEvent = AndroidKeyEvent[keyEvent];
         }
-        AndroidController.executeAdbShellCommand(device, `input keyevent ${keyevent}`);
+        AndroidController.executeAdbShellCommand(device, `input keyevent ${keyEvent}`);
     }
 
     public static async getScreenshot(device: IDevice, dir, fileName) {
@@ -571,7 +575,7 @@ export class AndroidController {
         return emulator;
     }
 
-    private static waitUntilEmulatorBoot(deviceId, timeOutInMilliseconds: number): boolean {
+    private static waitUntilEmulatorBoot(device: IDevice, timeOutInMilliseconds: number): boolean {
         const startTime = Date.now();
         let found = false;
 
@@ -581,12 +585,12 @@ export class AndroidController {
 
 
         while ((Date.now() - startTime) <= timeOutInMilliseconds && !found) {
-            found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + deviceId);
+            found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + device.token);
         }
 
+        found = AndroidController.checkIfEmulatorIsResponding(device);
         if (!found) {
-            let error = deviceId + " failed to boot in " + timeOutInMilliseconds + " seconds.";
-            logError(error, true);
+            logError(`${device.token} failed to boot in ${timeOutInMilliseconds} milliseconds`, true);
         } else {
             logInfo("Emulator is booted!");
         }
@@ -631,7 +635,7 @@ export class AndroidController {
 
             if (line.toLowerCase().includes("name")) {
                 const name = line.split("Name: ")[1].trim();
-                emulator = new AndroidDevice(name, undefined, DeviceType.EMULATOR, undefined, Status.SHUTDOWN);
+                emulator = new AndroidDevice(name, undefined, DeviceType.EMULATOR, undefined, undefined, Status.SHUTDOWN);
             }
             if (line.includes("Tag/ABI:")) {
                 //const apiLevel = /\d+((.|,)\d+)?/gi.exec(line.split("Tag/ABI:")[0].trim());
@@ -658,6 +662,8 @@ export class AndroidController {
                         if (avdInfo.includes(k)) {
                             v[0].status = Status.BOOTED;
                             v[0].token = emu.token;
+                            v[0].releaseVersion = emu.releaseVersion;
+                            v[0].apiLevel = emu.apiLevel;
                             busyTokens.push(emu.token);
                             AndroidController.setEmulatorConfig(v[0]);
                         }
@@ -717,16 +723,16 @@ export class AndroidController {
             });
 
             conn.on('data', (data) => {
-                let recievedData = data.toString('utf8');
+                let receivedData = data.toString('utf8');
                 if (!connected) {
-                    if (readyRegex.test(recievedData)) {
+                    if (readyRegex.test(receivedData)) {
                         connected = true;
                         //console.debug("Socket connection to device ready");
                         conn.write(`${command}\n`);
                     }
                 } else {
                     dataStream += data;
-                    if (readyRegex.test(recievedData)) {
+                    if (readyRegex.test(receivedData)) {
                         res = dataStream.replace(readyRegex, "").trim();
                         const resArray = res.trim().split('\n');
                         res = resArray[resArray.length - 1];
@@ -776,27 +782,27 @@ export class AndroidController {
                 return line.split("   ")[0].replace(/\D+/ig, '');
             }
             if (line.trim().includes("device")) {
-                if (line.includes(DeviceType.EMULATOR.toString().toLowerCase())) {
-                    const token = parseEmulatorToken(line);
-                    devices.push(new AndroidDevice(undefined, undefined, DeviceType.EMULATOR, token, Status.BOOTED));
+                let token = line.split("   ")[0].trim();
+                const releaseVersion = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop ro.build.version.release`).trim();
+                const apiLevel = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop ro.build.version.sdk`).trim();
+                if (line.startsWith(DeviceType.EMULATOR.toString().toLowerCase())) {
+                    token = parseEmulatorToken(line);
+                    devices.push(new AndroidDevice(undefined, apiLevel, DeviceType.EMULATOR, releaseVersion, token, Status.BOOTED));
                 }
 
                 if (line.includes(Status.OFFLINE.toString().toLowerCase())) {
-                    const token = parseEmulatorToken(line);
-                    devices.push(new AndroidDevice(undefined, undefined, DeviceType.EMULATOR, token, Status.OFFLINE));
+                    token = parseEmulatorToken(line);
+                    devices.push(new AndroidDevice(undefined, apiLevel, DeviceType.EMULATOR, releaseVersion, token, Status.OFFLINE));
                 }
 
                 if (line.includes("usb") || line.includes("vbox86p")) {
-                    const token = line.split("   ")[0].trim();
                     const status: Status = Status.BOOTED;
                     const name = line.split("model:")[1].trim().split(" ")[0].trim();
-                    const apiLevel = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop ro.build.version.release`).trim();
-                    devices.push(new AndroidDevice(name, apiLevel, DeviceType.DEVICE, token, status));
+                    devices.push(new AndroidDevice(name, apiLevel, DeviceType.DEVICE, releaseVersion, token, status));
                 }
 
                 if (line.includes("unauthorized")) {
-                    const status: Status = Status.UNAUTORIZED;
-                    devices.push(new AndroidDevice(Status.UNAUTORIZED, Status.UNAUTORIZED, DeviceType.DEVICE, "", Status.UNAUTORIZED));
+                    devices.push(new AndroidDevice(Status.UNAUTORIZED, Status.UNAUTORIZED, DeviceType.DEVICE, undefined, "", Status.UNAUTORIZED));
                 }
             }
         });
@@ -893,7 +899,7 @@ export class AndroidController {
 }
 
 export class AndroidDevice extends Device {
-    constructor(name: string, apiLevel, type: DeviceType, token?: string, status?: Status, pid?: number) {
-        super(name, apiLevel, type, Platform.ANDROID, token, status, pid);
+    constructor(name: string, apiLevel, type: DeviceType, releaseVersion: string, token?: string, status?: Status, pid?: number) {
+        super(name, apiLevel, type, Platform.ANDROID, token, status, pid, releaseVersion);
     }
 }

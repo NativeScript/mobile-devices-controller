@@ -8,8 +8,9 @@ import {
 
 import { resolve } from "path";
 import { createInterface } from "readline";
+import { DeviceType, Platform } from "./enums";
 
-export const killAllProcessAndRelatedCommand = args => `/bin/ps aux | grep -i ${args} | grep -v grep | awk '{print $2}' | xargs kill -9 `;
+export const killAllProcessAndRelatedCommand = args => `/bin/ps aux | grep -i ${args} | awk '{print $2}' | xargs kill -9 `;
 
 export const isProcessAlive = (arg: any) => {
     const result = childProcess.spawnSync(`/bin/ps aux`, [`| grep -i ${arg} | grep -v grep`], {
@@ -34,7 +35,7 @@ export function executeCommand(args, cwd = process.cwd(), timeout = 720000): str
         timeout: timeout
     });
 
-    return output.output[1].toString();
+    return output && output.stdout && output.stdout.toString();
 }
 
 export function waitForOutput(process, matcher, errorMatcher, timeout) {
@@ -113,9 +114,24 @@ export const sortAscByApiLevelPredicate = (a, b) => { return (+a.apiLevel !== Na
 export const filterPredicate = (searchQuery, device) =>
     (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0)
         ? true : Object.getOwnPropertyNames(searchQuery)
-            .every(prop => searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop], "ig").test(device[prop]) : true)
+            .every(prop => searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop], "ig").test(device[prop]) : true);
+
+export const filterAndroidPredicate = (searchQuery, device) =>
+    (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0)
+        ? true : Object.getOwnPropertyNames(searchQuery)
+            .every(prop => {
+                if (searchQuery[prop]
+                    && (prop === "apiLevel" || prop === "releaseVersion")) {
+                    return new RegExp(searchQuery[prop], "ig").test(device[prop]) || new RegExp(searchQuery[prop], "ig").test(device["releaseVersion"]);
+                }
+                return searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop], "ig").test(device[prop]) : true
+            });
 
 export function filter<T>(devices: Array<T>, searchQuery) {
+    if (searchQuery.type === DeviceType.EMULATOR || searchQuery.Platform === Platform.ANDROID) {
+        return devices.filter((device) => filterAndroidPredicate(searchQuery, device))
+    }
+
     return devices.filter((device) => filterPredicate(searchQuery, device))
 }
 

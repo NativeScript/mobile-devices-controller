@@ -17,7 +17,16 @@ export class DeviceController {
 
     public static async startDevice(device: IDevice, options?: string): Promise<IDevice> {
         const type = device.type || device['_type'];
-        if (type === DeviceType.EMULATOR) {
+        const platform = device.platform || device['_platform'];
+        if (!device.type && !device.platform) {
+            device = (await DeviceController.getDevices(device))[0];
+        }
+
+        if (!device) {
+            utils.logError(`Device doesn't exist!`);
+        }
+
+        if (type === DeviceType.EMULATOR || platform === Platform.ANDROID) {
             const emuOptions = options ? options.split(" ").filter(o => o.trim()) : undefined;
             return await AndroidController.startEmulator(device, emuOptions);
         } else {
@@ -84,7 +93,10 @@ export class DeviceController {
     }
 
     public static async kill(device: IDevice) {
-        if (device.type === DeviceType.EMULATOR) {
+        if (!device.type && !device.platform) {
+            device = (await DeviceController.getDevices(device))[0];
+        }
+        if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
             await AndroidController.kill(device);
         } else {
             await IOSController.kill(device.token);
@@ -201,7 +213,7 @@ export class DeviceController {
 
         if (!query.platform || (query.platform && query.platform.toLowerCase() === Platform.ANDROID)) {
             (await AndroidController.getAllDevices(verbose))
-                .forEach((v, k, map) => v.forEach(d => utils.filterPredicate(query, d) && devices.push(d)));
+                .forEach((v, k, map) => v.forEach(d => utils.filterAndroidPredicate(query, d) && devices.push(d)));
         }
 
         return devices;

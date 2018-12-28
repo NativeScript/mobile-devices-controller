@@ -2,10 +2,54 @@ import { IOSVirtualDevice } from "./ios-virtual-device";
 import { DeviceSignal } from "../enums/DeviceSignals";
 import { DeviceController } from "../device-controller";
 import { IOSController } from "../ios-controller";
-import { Status } from "../enums";
+import { Status, Platform } from "../enums";
 import { assert } from "chai";
+import { IDevice } from "lib/device";
 
 describe("start and kill ios device", async () => {
+
+    before("before all", () => {
+        IOSController.killAll();
+    });
+
+    after("after all", () => {
+        IOSController.killAll();
+    });
+
+    it("start and kill device 10 times iPhone XR", async () => {
+        const deviceQuery = { name: "iPhone XR", platform: Platform.IOS };
+        for (let index = 0; index < 10; index++) {
+            console.log("index: ", index);
+            const startedDevice = await DeviceController.startDevice(deviceQuery);
+            let bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
+            assert.isTrue(bootedDevices.length === 1);
+            await DeviceController.kill(startedDevice);
+            bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
+            assert.isEmpty(bootedDevices);
+        }
+
+        IOSController.killAll();
+    });
+
+    it("start diff devices", async () => {
+        const iPhoneXR = { name: "iPhone XR", apiLevel: "12.1" };
+        const iPhoneXR12 = { name: "iPhone XR 12", apiLevel: "12.1" };
+        const iPhoneX12 = { name: "iPhone X", apiLevel: "12.1" };
+        const iPhone712 = { name: "iPhone 7", apiLevel: "12.1" };
+        for (let index = 0; index < [iPhoneXR, iPhoneXR12, iPhoneX12, iPhone712].length; index++) {
+            const element = [iPhoneXR, iPhoneXR12, iPhoneX12, iPhone712][index];
+            await IOSController.fullResetOfSimulator(element);
+        }
+        let ds = [iPhoneXR, iPhoneXR12, iPhoneX12, iPhone712, iPhoneXR, iPhoneXR12, iPhoneX12, iPhone712];
+        for (let index = 0; index < ds.length; index++) {
+            delete (<IDevice>ds[index]).token;
+            await DeviceController.startDevice(ds[index]);
+            const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
+            assert.isTrue(bootedDevices.some(d => d.name === ds[index].name) && bootedDevices.length >= 1);
+        }
+
+        IOSController.killAll();
+    });
 
     it("create simulator iPhone X", async () => {
         const device = (await DeviceController.getDevices({ name: "^iPhone X$" }))[0];
