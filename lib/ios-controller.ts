@@ -1,7 +1,7 @@
 import { spawn, spawnSync, execSync } from "child_process";
 import { resolve, dirname, basename, sep, extname } from "path";
 import { tmpdir } from "os";
-import { existsSync, unlinkSync, readdirSync, statSync } from "fs";
+import { existsSync, unlinkSync, statSync } from "fs";
 import { glob } from "glob";
 import {
     executeCommand,

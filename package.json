@@ -1,6 +1,6 @@
 {
     "name": "mobile-devices-controller",
-    "version": "3.1.5-2",
+    "version": "3.1.5-3",
     "main": "index.js",
     "description": "Manage devices, emulators and simulators.",
     "keywords": [
@@ -26,7 +26,8 @@
         "url": "git+https://github.com/NativeScript/mobile-devices-controller.git"
     },
     "dependencies": {
-        "ios-device-lib": "^0.4.15"
+        "ios-device-lib": "^0.4.15",
+        "glob": "^7.1.3"
     },
     "devDependencies": {
         "@types/chai": "^4.1.7",
