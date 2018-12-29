@@ -83,8 +83,11 @@ export class AndroidController {
             });
     }
 
-    public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined): Promise<IDevice> {
-        if (!emulator.name || !emulator.token) {
+    public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined, retries = 3): Promise<IDevice> {
+        if (!emulator.token) {
+            emulator.token = emulator.apiLevel ? (AndroidController.emulatorId(emulator.apiLevel) || "5554") : "5554";
+        }
+        if (!emulator.name || !emulator.apiLevel) {
             emulator.type = DeviceType.EMULATOR;
             emulator.platform = Platform.ANDROID;
 
@@ -94,9 +97,11 @@ export class AndroidController {
             delete searchQuery.startedAt;
             delete searchQuery.busySince;
             delete searchQuery.parentProcessPid;
+            delete searchQuery.process;
             delete searchQuery.pid;
             delete searchQuery.config;
-            const devices = (await DeviceController.getDevices(emulator));
+            delete searchQuery.token;
+            const devices = (await DeviceController.getDevices(searchQuery));
             if (devices && devices.length > 0) {
                 emulator = devices[0];
             } else {
@@ -105,10 +110,6 @@ export class AndroidController {
         }
         if (!emulator.name) {
             logError("Please provide emulator name");
-        }
-
-        if (!emulator.token) {
-            emulator.token = emulator.apiLevel ? (AndroidController.emulatorId(emulator.apiLevel) || "5554") : "5554";
         }
 
         executeCommand(killAllProcessAndRelatedCommand(`emulator-${emulator.token}`));
@@ -145,7 +146,8 @@ export class AndroidController {
         if (result !== Status.BOOTED) {
             AndroidController.kill(emulator);
             logWarn("Trying to boot emulator again!");
-            emulator = await AndroidController.startEmulator(emulator, options, logPath);
+            retries--;
+            emulator = await AndroidController.startEmulator(emulator, options, logPath, retries);
         }
 
         if (result === Status.BOOTED) {
@@ -326,6 +328,10 @@ export class AndroidController {
             if (!errorMsg.toLowerCase()
                 .includes(androidSettings.toLowerCase())) {
                 logWarn("Emulator is not responding!", errorMsg);
+                if (device.apiLevel && !isNaN(+device.apiLevel) && +device.apiLevel < 5) {
+                    console.log(`Skip check if device is responding since api level is lower than 5.0`);
+                    return true;
+                }
                 return false;
             }
         } catch (error) {
@@ -333,8 +339,9 @@ export class AndroidController {
             AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings");
             return false
         }
-
-        AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings");
+        try {
+            AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings");
+        } catch (error) { }
 
         return true
     }
@@ -596,8 +603,6 @@ export class AndroidController {
 
         logInfo("Booting emulator ...");
         //emulator: ERROR: There's another emulator instance running with the current AVD 'Emulator-Api23-Default'. Exiting...
-
-
 
         while ((Date.now() - startTime) <= timeOutInMilliseconds && !found) {
             found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + device.token);

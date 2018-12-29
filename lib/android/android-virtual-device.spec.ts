@@ -31,6 +31,26 @@ describe("start and kill android device", async () => {
         AndroidController.killAll();
     });
 
+    it("start and kill device 10 times Emulator-Api18-Default -wipe-data", async () => {
+        const deviceQueries = [
+             { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
+             { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
+             { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
+             { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
+             { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
+             { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
+             { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
+        ]
+        for (let index = 0; index < deviceQueries.length; index++) {
+            await DeviceController.startDevice(deviceQueries[index], index % 2 !== 0 ? "-wipe-data" : "");
+            await DeviceController.kill(deviceQueries[index]);
+            const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED, platform: Platform.ANDROID });
+            assert.isEmpty(bootedDevices);
+        }
+
+        AndroidController.killAll();
+    });
+
     it("start and kill device 10 times Emulator-Api26-Google -wipe-data", async () => {
         const deviceQuery = { name: "Emulator-Api26-Google", platform: Platform.ANDROID };
         for (let index = 0; index < 10; index++) {
