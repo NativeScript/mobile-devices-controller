@@ -17,6 +17,7 @@ import {
     logWarn,
     killAllProcessAndRelatedCommand
 } from "./utils";
+import { DeviceController } from "./device-controller";
 
 const OFFSET_DI_PIXELS = 16;
 
@@ -83,8 +84,25 @@ export class AndroidController {
     }
 
     public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined): Promise<IDevice> {
-        // const devices = (await AndroidController.getAllDevices());
-        // emulator.token = emulator.name ? emulator.token || ((devices.get(emulator.name) || []).filter(d => d.status === Status.SHUTDOWN)[0] || <any>{}).token : emulator.token;
+        if (!emulator.name || !emulator.token) {
+            emulator.type = DeviceType.EMULATOR;
+            emulator.platform = Platform.ANDROID;
+
+            let searchQuery: IDevice = {};
+            Object.assign(searchQuery, emulator);
+            delete searchQuery.info;
+            delete searchQuery.startedAt;
+            delete searchQuery.busySince;
+            delete searchQuery.parentProcessPid;
+            delete searchQuery.pid;
+            delete searchQuery.config;
+            const devices = (await DeviceController.getDevices(emulator));
+            if (devices && devices.length > 0) {
+                emulator = devices[0];
+            } else {
+                logError("Requested device is missing", devices);
+            }
+        }
         if (!emulator.name) {
             logError("Please provide emulator name");
         }
@@ -93,11 +111,8 @@ export class AndroidController {
             emulator.token = emulator.apiLevel ? (AndroidController.emulatorId(emulator.apiLevel) || "5554") : "5554";
         }
 
-        executeCommand(killAllProcessAndRelatedCommand(`emulator${emulator.name}`));
-
-        if (emulator.name) {
-            executeCommand(killAllProcessAndRelatedCommand(emulator.name));
-        }
+        executeCommand(killAllProcessAndRelatedCommand(`emulator-${emulator.token}`));
+        executeCommand(killAllProcessAndRelatedCommand(emulator.name));
 
         const listRunningDevices = executeCommand(AndroidController.LIST_DEVICES_COMMAND)
             .replace("List of devices attached", "").trim();
