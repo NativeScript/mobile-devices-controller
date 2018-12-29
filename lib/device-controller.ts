@@ -15,7 +15,7 @@ export class DeviceController {
         return devices;
     }
 
-    public static async startDevice(device: IDevice, options?: string): Promise<IDevice> {
+    public static async startDevice(device: IDevice, options?: string, shouldHardResetDevices: boolean = true): Promise<IDevice> {
         const type = device.type || device['_type'];
         const platform = device.platform || device['_platform'];
         if (!device.type && !device.platform) {
@@ -27,10 +27,12 @@ export class DeviceController {
         }
 
         if (type === DeviceType.EMULATOR || platform === Platform.ANDROID) {
+            options = shouldHardResetDevices ? (options || "") + " -wipe-data " : options;
             const emuOptions = options ? options.split(" ").filter(o => o.trim()) : undefined;
+
             return await AndroidController.startEmulator(device, emuOptions);
         } else {
-            return await IOSController.startSimulator(device, options);
+            return await IOSController.startSimulator(device, options, shouldHardResetDevices);
         }
     }
 
@@ -58,9 +60,15 @@ export class DeviceController {
         }
     }
 
-    public static async stopApplication(device: IDevice, bundleId: string): Promise<void> {
-        if (device.platform === Platform.IOS) {
-            await IOSController.stopApplication(device, bundleId)
+    /**
+     * 
+     * @param device { token: string, type: DeviceType, platform: Platform }
+     * @param bundleId or package id 
+     * @param appName required for ios devices
+     */
+    public static async stopApplication(device: IDevice, bundleId: string, appName?: string): Promise<void> {
+        if (device.platform === Platform.IOS || device.type === DeviceType.SIMULATOR) {
+            await IOSController.stopApplication(device, bundleId, appName)
         } else {
             await AndroidController.stopApplication(device, bundleId);
         }

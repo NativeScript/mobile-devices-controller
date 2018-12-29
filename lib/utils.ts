@@ -10,7 +10,10 @@ import { resolve } from "path";
 import { createInterface } from "readline";
 import { DeviceType, Platform } from "./enums";
 
-export const killAllProcessAndRelatedCommand = args => `/bin/ps aux | grep -i ${args} | awk '{print $2}' | xargs kill -9 `;
+export const killAllProcessAndRelatedCommand = args => {
+    const greps = Array.isArray(args) ? " | grep -i " + args.join(" | grep -i ") : ` | grep -i ${args}`;
+    return `/bin/ps aux ${greps} | awk '{print $2}' | xargs kill -9 `
+};
 
 export const isProcessAlive = (arg: any) => {
     const result = childProcess.spawnSync(`/bin/ps aux`, [`| grep -i ${arg} | grep -v grep`], {

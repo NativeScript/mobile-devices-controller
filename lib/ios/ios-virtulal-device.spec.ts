@@ -5,6 +5,9 @@ import { IOSController } from "../ios-controller";
 import { Status, Platform } from "../enums";
 import { assert } from "chai";
 import { IDevice } from "lib/device";
+import { mkdirSync, copyFileSync } from "fs";
+import { spawnSync } from "child_process";
+import { dirname } from "path";
 
 describe("start and kill ios device", async () => {
 
@@ -226,6 +229,43 @@ describe("start and kill ios device", async () => {
             await iOSVirtualDevice.detach();
             await iOSVirtualDevice.attachToDevice(d);
             await iOSVirtualDevice.stopDevice();
+        });
+    });
+
+    describe("install/ uninstall app", () => {
+
+        const deviceQuery = {
+            name: "^iPhone XR$",
+            apiLevel: "12.1",
+            platform: Platform.IOS,
+            status: Status.BOOTED
+        };
+
+        let appToInstall = "/Users/tsenov/git/nativescript/e2e/modal-navigation/platforms/ios/build/emulator/modalnavigation.app";
+        let appBundleId = "org.nativescript.modalnavigation";
+        let appName = "modalnavigation";
+
+
+        it("install app", async () => {
+            let device = (await DeviceController.getDevices(deviceQuery))[0];
+            if (!device) {
+                deviceQuery.status = Status.SHUTDOWN;
+                device = (await DeviceController.getDevices(deviceQuery))[0];
+                device = await IOSController.startSimulator(device);
+            }
+            await IOSController.installApp(device, appToInstall);
+            let startAppResult = await IOSController.startApplication(device, appToInstall);
+            await IOSController.stopApplication(device, appBundleId, appName);
+            let uninstallApp = await IOSController.uninstallApp(device, appToInstall, appBundleId);
+            let apps = await IOSController.getInstalledApps(device);
+            assert.isTrue(!apps.some(app => app.includes(appName)));
+
+            await IOSController.installApp(device, appToInstall);
+            await IOSController.installApp(device, appToInstall);
+            apps = await IOSController.getInstalledApps(device);
+            startAppResult = await IOSController.startApplication(device, appToInstall);
+            assert.isTrue(startAppResult.result);
+            await IOSController.stopApplication(device, appBundleId, appName);
         });
     });
 })

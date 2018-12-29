@@ -3,6 +3,7 @@ import { resolve, dirname, basename, sep, extname } from "path";
 import { tmpdir } from "os";
 import { existsSync, unlinkSync, statSync } from "fs";
 import { glob } from "glob";
+import * as rimraf from "rimraf";
 import {
     executeCommand,
     tailFileUntil,
@@ -33,13 +34,18 @@ export class IOSController {
     static getDl() {
         if (!IOSController._dl) {
             return new Promise<any>((resolve, reject) => {
+                const connectionTimeout = setTimeout(() => {
+                    resolve(false);
+                }, 30000);
                 IOSController._dl = new IOSDeviceLib(d => {
                     console.log("Device found!", d);
+                    clearTimeout(connectionTimeout);
                     resolve(IOSController._dl);
                 }, device => {
                     console.log("Device LOST!");
+                    resolve(false);
                 });
-            })
+            });
         }
         return Promise.resolve(IOSController._dl);
     }
@@ -133,7 +139,7 @@ export class IOSController {
         return simulator;
     }
 
-    public static async startSimulator(simulator: IDevice, directory: string = tmpdir()): Promise<IDevice> {
+    public static async startSimulator(simulator: IDevice, directory: string = tmpdir(), shouldFullResetSimulator: boolean = true): Promise<IDevice> {
         simulator.type = DeviceType.SIMULATOR;
         simulator.platform = Platform.IOS;
         if (!simulator.token) {
@@ -145,7 +151,7 @@ export class IOSController {
         // && simulator.name
         // && !simulator.name.toLowerCase().includes("iphone 7")
         // && !simulator.name.toLowerCase().includes("iphone 8")
-        if (isProcessAlive("Simulator.app")) {
+        if (isProcessAlive("Simulator.app") && shouldFullResetSimulator) {
             try {
                 const newSim = IOSController.fullResetOfSimulator(simulator);
                 if (newSim.token) {
@@ -153,8 +159,7 @@ export class IOSController {
                     udid = simulator.token;
                 }
             } catch (error) { }
-        } else {
-            // const clearSimResult = executeCommand(`rm -rfv ${process.env.HOME}/Library/Developer/CoreSimulator/Devices/${udid}/data`);
+        } else if (shouldFullResetSimulator) {
             const eraseSimResult = executeCommand(`${IOSController.SIMCTL} erase ${udid}`);
         }
 
@@ -166,7 +171,9 @@ export class IOSController {
             startedProcess = IOSController.startSimulatorProcess(udid, directory);
         }
         // let response: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
-        if (startedProcess.stderr.toString().trim() !== "" || +startedProcess.status !== 0) {
+        if (startedProcess.stderr 
+            && startedProcess.stderr.toString().trim() !== "" 
+            || startedProcess.status !== 0) {
             logError(`Probably the simulator ${simulator.name}\ ${simulator.token} failed to start!`);
             logError(startedProcess.stderr.toString());
         }
@@ -176,7 +183,7 @@ export class IOSController {
             if (response) {
                 simulator.type = DeviceType.SIMULATOR;
                 simulator.status = Status.BOOTED;
-                simulator.pid = startedProcess.pid;// IOSController.getSimulatorPidByToken(simulator.token);
+                simulator.pid = startedProcess.pid;
                 simulator.startedAt = Date.now();
                 console.log(`Launched simulator with name: ${simulator.name}; udid: ${simulator.token}; status: ${simulator.status}`);
             }
@@ -249,45 +256,60 @@ export class IOSController {
             }
         } else {
             const result = executeCommand(`${IOSController.SIMCTL} install ${device.token} ${fullAppName}`);
-            console.dir(result);
         }
     }
 
-    public static async stopApplication(device: IDevice, bundleId: string): Promise<boolean> {
+    /**
+    * @param device - of type {token: string, type: DeviceType}
+    * @param bundleId - should be provided when DeviceType.DEVICE else undefined
+    * @param appName - should be provided when DeviceType.SIMULATOR else undefined
+    **/
+    public static async stopApplication(device: IDevice, bundleId: string, appName: string): Promise<boolean> {
         const apps = IOSController.getInstalledApps(device);
-        if (apps.some(app => app === bundleId)) {
-            const appInfo = { ddi: undefined, appId: bundleId, deviceId: device.token }
-            const dl = await IOSController.getDl();
-            return new Promise<boolean>((res, reject) => {
-                Promise.all(dl.stop([appInfo]))
-                    .then(async response => {
-                        console.log("App " + bundleId + " stopped !", response);
-                        await IOSController.disposeDL();
-                        res(true);
-                    }).catch(async err => {
-                        console.log("An error occurred! Probably app is still running!", err);
-                        await IOSController.disposeDL();
-                        res(false);
+        if (apps.some(app => app.includes(bundleId))) {
+            if (!device.type) {
+                device.platform = Platform.IOS;
+                const d = (await DeviceController.getDevices(device))[0];
+                device.type = d && d.type;
+            }
+            if (device.type && device.type === DeviceType.SIMULATOR) {
+                executeCommand(`${IOSController.SIMCTL} ${device.token} terminate ${bundleId}`);
+                executeCommand(killAllProcessAndRelatedCommand([device.token, appName]));
+            } else {
+                const appInfo = { ddi: undefined, appId: bundleId, deviceId: device.token }
+                const dl = await IOSController.getDl();
+                if (dl) {
+                    return new Promise<boolean>((res, reject) => {
+                        Promise.all(dl.stop([appInfo]))
+                            .then(async response => {
+                                console.log("App " + bundleId + " stopped !", response);
+                                await IOSController.disposeDL();
+                                res(true);
+                            }).catch(async err => {
+                                console.log("An error occurred! Probably app is still running!", err);
+                                await IOSController.disposeDL();
+                                res(false);
+                            });
                     });
-            });
+                }
+            }
         }
     }
 
     public static async uninstallApp(device: IDevice, fullAppName: string, bundleId: string = undefined) {
         bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
-        if (device.type === DeviceType.DEVICE) {
-            try {
-                await IOSController.stopApplication(device, bundleId);
-            } catch (error) {
-                console.dir(error);
-            }
+        let result = "";
+        try {
+            await IOSController.stopApplication(device, bundleId, basename(fullAppName));
+            wait(500);
+        } catch (error) {
+            console.dir(error);
+        }
 
-            wait(1000);
-            const result = executeCommand(`ideviceinstaller -u ${device.token} -U ${bundleId}`);
+        if (device.type === DeviceType.DEVICE) {
+            result = executeCommand(`ideviceinstaller -u ${device.token} -U ${bundleId}`);
         } else {
-            executeCommand(`${IOSController.SIMCTL} ${device.token} terminate ${bundleId}`);
-            wait(1000);
-            const result = executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
+            result = executeCommand(`${IOSController.SIMCTL} uninstall ${device.token} ${bundleId}`);
         }
     }
 
@@ -303,15 +325,18 @@ export class IOSController {
         await IOSController.startApplication(device, fullAppName, bundleId);
     }
 
-    public static async startApplication(device: IDevice, fullAppName, bundleId: string = undefined) {
+    public static async startApplication(device: IDevice, fullAppName, bundleId: string = undefined): Promise<{ output: string, result: boolean }> {
         bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
+        let output = "";
+        let result = false;
         if (device.type === DeviceType.DEVICE) {
             let startProcess;
-
             try {
-                startProcess = await (await IOSController.getDl()).start([{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }])[0];
+                output = await (await IOSController.getDl()).start([{ "ddi": undefined, "appId": bundleId, "deviceId": device.token }])[0];
                 if (!startProcess.response.includes("Successfully started application")) {
                     throw new Error(`Failed to start application ${bundleId}`);
+                } else {
+                    result = true;
                 }
             } catch (error) {
                 await IOSController.disposeDL();
@@ -320,10 +345,11 @@ export class IOSController {
             await IOSController.disposeDL();
 
         } else {
-            const result = executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`);
-            console.dir(result);
-            Promise.resolve(result);
+            output = executeCommand(`${IOSController.SIMCTL} launch ${device.token} ${bundleId}`, process.cwd(), 60000);
+            result = output.includes(bundleId);
         }
+
+        return Promise.resolve({ output: output, result: result });
     }
 
     private static startSimulatorProcess(udid, cwd: string = tmpdir(), timeout: number = IOSController.DEVICE_BOOT_TIME) {

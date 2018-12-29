@@ -18,17 +18,25 @@ export declare class IOSController {
     static getSimulatorPidByToken(token: string): any;
     static deleteDevice(token: string): void;
     static fullResetOfSimulator(simulator: IDevice): IDevice;
-    static startSimulator(simulator: IDevice, directory?: string): Promise<IDevice>;
+    static startSimulator(simulator: IDevice, directory?: string, shouldFullResetSimulator?: boolean): Promise<IDevice>;
     static restartDevice(device: IDevice): Promise<void>;
     static killAll(): void;
     static kill(udid: string): void;
     static getInstalledApps(device: IDevice): any[];
     static installApp(device: IDevice, fullAppName: any): Promise<void>;
-    static stopApplication(device: IDevice, bundleId: string): Promise<boolean>;
+    /**
+    * @param device - of type {token: string, type: DeviceType}
+    * @param bundleId - should be provided when DeviceType.DEVICE else undefined
+    * @param appName - should be provided when DeviceType.SIMULATOR else undefined
+    **/
+    static stopApplication(device: IDevice, bundleId: string, appName: string): Promise<boolean>;
     static uninstallApp(device: IDevice, fullAppName: string, bundleId?: string): Promise<void>;
     static reinstallApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
     static refreshApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
-    static startApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
+    static startApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<{
+        output: string;
+        result: boolean;
+    }>;
     private static startSimulatorProcess;
     private static isRunning;
     static parseSimulators(stdout?: any): Map<string, Array<IDevice>>;
