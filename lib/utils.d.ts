@@ -1,4 +1,4 @@
-export declare const killAllProcessAndRelatedCommand: (args: any) => string;
+export declare const killAllProcessAndRelatedCommand: (args: any) => void;
 export declare const isProcessAlive: (arg: any) => boolean;
 export declare function executeCommand(args: any, cwd?: string, timeout?: number): string;
 export declare function waitForOutput(process: any, matcher: any, errorMatcher: any, timeout: any): Promise<boolean>;
@@ -24,6 +24,7 @@ export declare function attachToProcess(processToWatchLog: any, matcher: any, ti
 export declare function waitForResult(childProcess: any, matcher: any, timeout: any): Promise<string>;
 export declare const wait: (miliseconds: any) => boolean;
 export declare const getRegexResultsAsArray: (regex: any, str: any) => any[];
+export declare const copyIDeviceQuery: (source: any, target?: {}) => {};
 export declare function logInfo(info: any, obj?: any): void;
 export declare function logWarn(info: any, obj?: any): void;
 export declare function logError(info: any, obj?: any): void;

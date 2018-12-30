@@ -2,7 +2,6 @@ import * as childProcess from "child_process";
 import {
     readFileSync,
     readdirSync,
-    existsSync,
     statSync
 } from "fs";
 
@@ -11,8 +10,17 @@ import { createInterface } from "readline";
 import { DeviceType, Platform } from "./enums";
 
 export const killAllProcessAndRelatedCommand = args => {
-    const greps = Array.isArray(args) ? " | grep -i " + args.join(" | grep -i ") : ` | grep -i ${args}`;
-    return `/bin/ps aux ${greps} | awk '{print $2}' | xargs kill -9 `
+    if (!args || args.length === 0) return;
+    args = Array.isArray(args) ? args : [args];
+    const greps = new Array();
+    args.forEach(e => greps.push(`| grep -ie "${e}"`));
+    greps.push("| awk '{print $2}'", "| xargs kill -9");
+
+    const output = childProcess.execSync("/bin/ps aux", ...greps, {
+        shell: true,
+        encoding: "UTF8",
+        timeout: 10000
+    });
 };
 
 export const isProcessAlive = (arg: any) => {
@@ -29,8 +37,7 @@ export const isProcessAlive = (arg: any) => {
     return test;
 }
 export function executeCommand(args, cwd = process.cwd(), timeout = 720000): string {
-    const commands = args.trim().split(" ");
-    const baseCommand = commands.shift();
+    const [baseCommand, ...commands] = args.trim().split(" ").filter(c => c && c.trim() !== "");
     const output = childProcess.spawnSync(baseCommand, commands, {
         cwd: cwd,
         shell: true,
@@ -265,6 +272,17 @@ export const getRegexResultsAsArray = (regex, str) => {
     return result;
 }
 
+export const copyIDeviceQuery = (source, target = {}) => {
+    Object.getOwnPropertyNames(source)
+        .forEach(prop => {
+            const p = prop.startsWith("_") ? prop.substring(1) : prop;
+            if (source[p]) {
+                target[p] = source[p];
+            }
+        });
+
+    return target;
+}
 
 export function logInfo(info, obj = undefined) {
     if (obj) {

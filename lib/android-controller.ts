@@ -15,7 +15,8 @@ import {
     logInfo,
     logError,
     logWarn,
-    killAllProcessAndRelatedCommand
+    killAllProcessAndRelatedCommand,
+    copyIDeviceQuery
 } from "./utils";
 import { DeviceController } from "./device-controller";
 
@@ -103,7 +104,7 @@ export class AndroidController {
             delete searchQuery.token;
             const devices = (await DeviceController.getDevices(searchQuery));
             if (devices && devices.length > 0) {
-                emulator = devices[0];
+                copyIDeviceQuery(devices[0], emulator);
             } else {
                 logError("Requested device is missing", devices);
             }
@@ -112,18 +113,9 @@ export class AndroidController {
             logError("Please provide emulator name");
         }
 
-        executeCommand(killAllProcessAndRelatedCommand(`emulator-${emulator.token}`));
-        executeCommand(killAllProcessAndRelatedCommand(emulator.name));
-
-        const listRunningDevices = executeCommand(AndroidController.LIST_DEVICES_COMMAND)
-            .replace("List of devices attached", "").trim();
-
-        if (listRunningDevices.includes(emulator.token)) {
-            AndroidController.kill(emulator);
-        }
+        AndroidController.kill(emulator, false);
 
         const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
-
         const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
         getAllFileNames(avd)
             .filter(f => AndroidController.lockFilesPredicate(f))
@@ -202,7 +194,7 @@ export class AndroidController {
      * Implement kill process
      * @param emulator 
      */
-    public static kill(emulator: IDevice) {
+    public static kill(emulator: IDevice, verbose = true) {
         let isAlive: boolean = true;
         if (emulator.type !== DeviceType.DEVICE) {
             if (emulator.token) {
@@ -217,7 +209,7 @@ export class AndroidController {
                         killPid(+arg);
                     }
                     if (!isWin()) {
-                        executeCommand(killAllProcessAndRelatedCommand(arg));
+                        killAllProcessAndRelatedCommand(arg);
                     }
                     wait(500);
                 });
@@ -229,7 +221,9 @@ export class AndroidController {
                 killProcessByName("emulator64-crash-service");
             } catch (error) { }
 
-            logInfo(`Waiting for ${emulator.name || emulator.token} to stop!`);
+            if (verbose) {
+                logInfo(`Waiting for ${emulator.name || emulator.token} to stop!`);
+            }
 
             const checkIfDeviceIsKilled = token => {
                 wait(1000);
@@ -238,7 +232,9 @@ export class AndroidController {
 
             const startTime = Date.now();
             while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) <= 10000) {
-                logWarn(`Retrying kill all processes related to ${emulator.name}`);
+                if (verbose) {
+                    logWarn(`Retrying kill all processes related to ${emulator.name}`);
+                }
                 wait(1000);
                 killProcesses(emulator.pid, emulator.name, emulator.token);
                 wait(3000);
@@ -248,7 +244,10 @@ export class AndroidController {
                 logError(`Device: ${emulator.name} is NOT killed!`);
                 isAlive = true;
             } else {
-                logInfo(`Device: ${emulator.name || emulator.token} is successfully killed!`);
+                if (verbose) {
+                    logInfo(`Device: ${emulator.name || emulator.token} is successfully killed!`);
+                }
+
                 isAlive = false;
             }
         }
@@ -271,6 +270,7 @@ export class AndroidController {
         AndroidController.stopAdb();
         killProcessByName("qemu-system-i386");
         killProcessByName("qemu-system-x86_64");
+        AndroidController.startAdb();
     }
 
     public static async restartDevice(device: IDevice) {
@@ -320,7 +320,7 @@ export class AndroidController {
 
             let errorMsg = AndroidController.getCurrentFocusedScreen(device);
             const startTime = Date.now();
-            while (Date.now() - startTime <= 3000
+            while (Date.now() - startTime <= 5000
                 && !errorMsg.toLowerCase()
                     .includes(androidSettings.toLowerCase())) {
                 errorMsg = AndroidController.getCurrentFocusedScreen(device);
@@ -679,7 +679,7 @@ export class AndroidController {
                     const avdInfo = await AndroidController.sendTelnetCommand(emu.token, "avd name");
 
                     emulators.forEach((v, k, m) => {
-                        if (avdInfo.includes(k)) {
+                        if (avdInfo && avdInfo.includes(k)) {
                             v[0].status = Status.BOOTED;
                             v[0].token = emu.token;
                             v[0].releaseVersion = emu.releaseVersion;
@@ -740,6 +740,7 @@ export class AndroidController {
             });
 
             conn.setTimeout(60000, () => {
+
             });
 
             conn.on('data', (data) => {
@@ -763,14 +764,12 @@ export class AndroidController {
             });
             conn.on('error', (err) => { // eslint-disable-line promise/prefer-await-to-callbacks
                 logError(`Telnet command error: ${err.message}`);
-                if (shouldFailOnError) {
-                    AndroidController.kill(<any>{ token: port, type: DeviceType.EMULATOR });
-                }
-                if (shouldFailOnError) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
+                // if (shouldFailOnError) {
+                //     AndroidController.kill(<any>{ token: port, type: DeviceType.EMULATOR });
+                //     reject(err);
+                // } else {
+                resolve();
+                //}
             });
             conn.on('close', () => {
                 if (res === null) {

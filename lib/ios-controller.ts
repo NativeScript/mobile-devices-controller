@@ -217,7 +217,7 @@ export class IOSController {
         console.log(`Killing simulator with udid ${udid}`);
         executeCommand(`${IOSController.SIMCTL} shutdown ${udid}`);
         // Kill all the processes related with sim.id (for example WDA agents).
-        executeCommand(killAllProcessAndRelatedCommand(udid));
+        killAllProcessAndRelatedCommand(udid);
     }
 
     public static getInstalledApps(device: IDevice) {
@@ -274,7 +274,7 @@ export class IOSController {
             }
             if (device.type && device.type === DeviceType.SIMULATOR) {
                 executeCommand(`${IOSController.SIMCTL} ${device.token} terminate ${bundleId}`);
-                executeCommand(killAllProcessAndRelatedCommand([device.token, appName]));
+                killAllProcessAndRelatedCommand([device.token, appName]);
             } else {
                 const appInfo = { ddi: undefined, appId: bundleId, deviceId: device.token }
                 const dl = await IOSController.getDl();

@@ -1,13 +1,12 @@
 import { AndroidVirtualDevice } from "./android-virtual-device";
 import { DeviceSignal } from "../enums/DeviceSignals";
 import { DeviceController } from "../device-controller";
-import { IOSController } from "../ios-controller";
 import { Status, Platform } from "../enums";
 import { assert } from "chai";
 import { AndroidController } from "../android-controller";
 
-describe("start and kill android device", async () => {
-
+describe("start and kill android device", async function () {
+    this.retries(2);
     before("before all", () => {
         AndroidController.killAll();
     });
@@ -20,7 +19,7 @@ describe("start and kill android device", async () => {
         const queryApi23 = { apiLevel: "23", platform: Platform.ANDROID };
         const queryApi6 = { apiLevel: "6.0", platform: Platform.ANDROID };
 
-        const bootedDevice = await DeviceController.startDevice(queryApi6);
+        const bootedDevice = await DeviceController.startDevice(Object.assign({}, queryApi6));
 
         const deviceApiLevel23 = (await DeviceController.getDevices(queryApi23))[0];
         assert.isTrue(deviceApiLevel23 != null && deviceApiLevel23.status === Status.BOOTED);
@@ -31,18 +30,18 @@ describe("start and kill android device", async () => {
         AndroidController.killAll();
     });
 
-    it("start and kill device 10 times Emulator-Api18-Default -wipe-data", async () => {
+    it("start and kill devices api17 api18 -wipe-data", async () => {
         const deviceQueries = [
-             { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
-             { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
-             { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
-             { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
-             { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
-             { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
-             { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
+            { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
+            { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
+            { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
+            { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
+            { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
+            { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
+            { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
         ]
         for (let index = 0; index < deviceQueries.length; index++) {
-            await DeviceController.startDevice(deviceQueries[index], index % 2 !== 0 ? "-wipe-data" : "");
+            await DeviceController.startDevice(deviceQueries[index], undefined, index % 2 === 0 ? true : false);
             await DeviceController.kill(deviceQueries[index]);
             const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED, platform: Platform.ANDROID });
             assert.isEmpty(bootedDevices);
@@ -56,8 +55,8 @@ describe("start and kill android device", async () => {
         for (let index = 0; index < 10; index++) {
             await DeviceController.startDevice(deviceQuery, index % 2 !== 0 ? "-wipe-data" : "");
             await DeviceController.kill(deviceQuery);
-            const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
-            assert.isEmpty(bootedDevices);
+            const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED, platform: Platform.ANDROID });
+            assert.isEmpty(bootedDevices, `Actual not empty ${bootedDevices}`);
         }
 
         AndroidController.killAll();
@@ -65,25 +64,32 @@ describe("start and kill android device", async () => {
 
     it("star device 10 times Emulator-Api21-Default -wipe-data", async () => {
         const deviceQuery = { name: "Emulator-Api21-Default", platform: Platform.ANDROID };
-        for (let index = 0; index < 10; index++) {
-            await DeviceController.startDevice(deviceQuery, index % 2 !== 0 ? "-wipe-data" : "");
-            const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
-            assert.isTrue(bootedDevices.length === 1);
+        for (let index = 0; index < 5; index++) {
+            await DeviceController.startDevice(deviceQuery, "", false);
+            const bootedDevices = await DeviceController.getDevices({
+                status: Status.BOOTED,
+                platform: Platform.ANDROID
+            });
+            assert.isTrue(bootedDevices.length === 1, `actual ${bootedDevices.length}; expected 1`);
         }
 
         AndroidController.killAll();
     });
 
-    it("start diff devices with option -wipe-data and same token", async () => {
+    it("start diff devices with option -wipe-data and no token passed", async () => {
         const deviceQuery21 = { name: "Emulator-Api21-Default", platform: Platform.ANDROID };
         const deviceQuery23 = { name: "Emulator-Api23-Default", platform: Platform.ANDROID };
         const deviceQuery25 = { name: "Emulator-Api25-Google", platform: Platform.ANDROID };
         const deviceQuery26 = { name: "Emulator-Api26-Google", platform: Platform.ANDROID };
-        let ds = [deviceQuery21, deviceQuery23, deviceQuery25, deviceQuery26, deviceQuery21, deviceQuery23, deviceQuery25, deviceQuery26]
+        let ds = [deviceQuery21, deviceQuery23, deviceQuery25, deviceQuery26,
+            deviceQuery21, deviceQuery23, deviceQuery25, deviceQuery26]
         for (let index = 0; index < ds.length; index++) {
-            await DeviceController.startDevice(ds[index], "-wipe-data");
-            const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
-            assert.isTrue(bootedDevices.length === 1);
+            await DeviceController.startDevice(ds[index]);
+            const bootedDevices = await DeviceController.getDevices({
+                status: Status.BOOTED,
+                platform: Platform.ANDROID
+            });
+            assert.isTrue(bootedDevices.length >= 1 && bootedDevices.length < 5, `Device length: ${bootedDevices.length}`);
         }
 
         AndroidController.killAll();
@@ -94,11 +100,12 @@ describe("start and kill android device", async () => {
         const deviceQuery23 = { name: "Emulator-Api23-Default", platform: Platform.ANDROID, token: "5556" };
         const deviceQuery25 = { name: "Emulator-Api25-Google", platform: Platform.ANDROID, token: "5558" };
         const deviceQuery26 = { name: "Emulator-Api26-Google", platform: Platform.ANDROID, token: "5560" };
-        let ds = [deviceQuery21, deviceQuery23, deviceQuery25, deviceQuery26, deviceQuery21, deviceQuery23, deviceQuery25, deviceQuery26]
+        let ds = [deviceQuery21, deviceQuery23, deviceQuery25, deviceQuery26,
+            deviceQuery21, deviceQuery23, deviceQuery25, deviceQuery26]
         for (let index = 0; index < ds.length; index++) {
             await DeviceController.startDevice(ds[index], "-wipe-data");
-            const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
-            assert.isTrue(bootedDevices.length >= 1 && bootedDevices.length < 5);
+            const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED, platform: Platform.ANDROID });
+            assert.isTrue(bootedDevices.length >= 1 && bootedDevices.length < 5, `Actual ${bootedDevices}`);
         }
 
         AndroidController.killAll();
@@ -109,15 +116,17 @@ describe("start and kill android device", async () => {
         const deviceQuery23 = { name: "Emulator-Api23-Default", platform: Platform.ANDROID };
         const deviceQuery25 = { name: "Emulator-Api25-Google", platform: Platform.ANDROID };
         const deviceQuery26 = { name: "Emulator-Api26-Google", platform: Platform.ANDROID };
-        let ds = [deviceQuery21, deviceQuery23, deviceQuery25, deviceQuery26, deviceQuery21, deviceQuery23, deviceQuery25, deviceQuery26]
+        let ds = [deviceQuery21, deviceQuery23, deviceQuery25,
+            deviceQuery26, deviceQuery21, deviceQuery23,
+            deviceQuery25, deviceQuery26]
         for (let index = 0; index < ds.length; index++) {
             const d = (await DeviceController.getDevices(ds[index]))[0];
             await DeviceController.startDevice(d);
-            const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
+            const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED, platform: Platform.ANDROID });
             assert.isTrue(bootedDevices.length >= 1 && bootedDevices.length < 5);
         }
 
-        const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
+        const bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED, platform: Platform.ANDROID });
         assert.isTrue(bootedDevices.length === 4);
 
         AndroidController.killAll();
@@ -137,7 +146,7 @@ describe("start and kill android device", async () => {
                 resolve();
             });
 
-            IOSController.kill(d.token);
+            AndroidController.kill(d);
         });
     });
 
@@ -168,7 +177,7 @@ describe("start and kill android device", async () => {
             const attachedDevices = await androidVirtualDevice.attachToDevice(d);
             console.log(attachedDevices);
 
-            IOSController.kill(d.token);
+            AndroidController.kill(d);
         });
     });
 
@@ -206,7 +215,7 @@ describe("start and kill android device", async () => {
             await androidVirtualDevice.attachToDevice(d);
             await androidVirtualDevice.attachToDevice(d);
 
-            IOSController.kill(d.token);
+            AndroidController.kill(d);
         });
     });
 

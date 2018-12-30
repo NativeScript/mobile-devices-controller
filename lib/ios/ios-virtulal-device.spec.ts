@@ -5,9 +5,6 @@ import { IOSController } from "../ios-controller";
 import { Status, Platform } from "../enums";
 import { assert } from "chai";
 import { IDevice } from "lib/device";
-import { mkdirSync, copyFileSync } from "fs";
-import { spawnSync } from "child_process";
-import { dirname } from "path";
 
 describe("start and kill ios device", async () => {
 
@@ -24,11 +21,11 @@ describe("start and kill ios device", async () => {
         for (let index = 0; index < 10; index++) {
             console.log("index: ", index);
             const startedDevice = await DeviceController.startDevice(deviceQuery);
-            let bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
-            assert.isTrue(bootedDevices.length === 1);
+            let bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED, platform: Platform.IOS });
+            assert.isTrue(bootedDevices.length === 1, `Actual length ${bootedDevices.length}`);
             await DeviceController.kill(startedDevice);
-            bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED });
-            assert.isEmpty(bootedDevices);
+            bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED, platform: Platform.IOS });
+            assert.isEmpty(bootedDevices, `Actual length ${bootedDevices.length}`);
         }
 
         IOSController.killAll();
