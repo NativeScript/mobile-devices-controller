@@ -313,6 +313,14 @@ export class AndroidController {
         return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'", commandTimeout);
     }
 
+    public static checkApiLevelIsLessThan(device: IDevice, apiLevel: number) {
+        let dApiLevel = device.apiLevel;
+        if (!device.releaseVersion) {
+            dApiLevel = /\d.\d/ig.exec(device.apiLevel)[0];
+        }
+        return +dApiLevel < apiLevel
+    }
+
     public static checkIfEmulatorIsResponding(device: IDevice) {
         try {
             const androidSettings = "com.android.settings/com.android.settings.Settings";
@@ -328,7 +336,7 @@ export class AndroidController {
             if (!errorMsg.toLowerCase()
                 .includes(androidSettings.toLowerCase())) {
                 logWarn("Emulator is not responding!", errorMsg);
-                if (device.apiLevel && !isNaN(+device.apiLevel) && +device.apiLevel < 5) {
+                if (AndroidController.checkApiLevelIsLessThan(device, 5)) {
                     console.log(`Skip check if device is responding since api level is lower than 5.0`);
                     return true;
                 }
