@@ -84,7 +84,7 @@ export class AndroidController {
             });
     }
 
-    public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined, retries = 3): Promise<IDevice> {
+    public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined, retries: number = 3): Promise<IDevice> {
         if (!emulator.token) {
             emulator.token = emulator.apiLevel ? (AndroidController.emulatorId(emulator.apiLevel) || "5554") : "5554";
         }
@@ -139,6 +139,7 @@ export class AndroidController {
             AndroidController.kill(emulator);
             logWarn("Trying to boot emulator again!");
             retries--;
+            options = ["-no-audio", "-no-boot-anim", "-wipe-data"]
             emulator = await AndroidController.startEmulator(emulator, options, logPath, retries);
         }
 
@@ -318,7 +319,7 @@ export class AndroidController {
         if (!device.releaseVersion) {
             dApiLevel = /\d.\d/ig.exec(device.apiLevel)[0];
         }
-        return +dApiLevel < apiLevel
+        return isNaN(+dApiLevel) || +dApiLevel < apiLevel
     }
 
     public static checkIfEmulatorIsResponding(device: IDevice) {
@@ -337,7 +338,7 @@ export class AndroidController {
                 .includes(androidSettings.toLowerCase())) {
                 logWarn("Emulator is not responding!", errorMsg);
                 if (AndroidController.checkApiLevelIsLessThan(device, 19)) {
-                    console.log(`Skip check if device is responding since api level is lower than 5.0`);
+                    console.log(`Skip check if device is responding since api level is lower than 19/ 5.0`);
                     return true;
                 }
                 return false;
