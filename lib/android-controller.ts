@@ -336,7 +336,7 @@ export class AndroidController {
             if (!errorMsg.toLowerCase()
                 .includes(androidSettings.toLowerCase())) {
                 logWarn("Emulator is not responding!", errorMsg);
-                if (AndroidController.checkApiLevelIsLessThan(device, 5)) {
+                if (AndroidController.checkApiLevelIsLessThan(device, 19)) {
                     console.log(`Skip check if device is responding since api level is lower than 5.0`);
                     return true;
                 }
