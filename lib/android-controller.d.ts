@@ -1,6 +1,6 @@
 /// <reference types="node" />
-import { DeviceType, Status, AndroidKeyEvent } from "./enums";
-import { IDevice, Device } from "./device";
+import { Status, AndroidKeyEvent } from "./enums";
+import { IDevice } from "./device";
 export declare class AndroidController {
     private static DEFAULT_BOOT_TIME;
     private static ANDROID_HOME;
@@ -8,24 +8,29 @@ export declare class AndroidController {
     private static ADB;
     private static LIST_DEVICES_COMMAND;
     private static AVD_MANAGER;
-    private static LIST_AVDS;
     private static _emulatorIds;
     private static lockFilesPredicate;
+    private static emulators;
+    static DEFAULT_SNAPSHOT_NAME: string;
+    static readonly NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE: string[];
+    static NO_WIPE_DATA_NO_SNAPSHOT_SAVE: string[];
     static runningProcesses: any[];
-    static getAllDevices(verbose?: boolean): Promise<Map<string, Array<IDevice>>>;
+    private static getAndroidHome;
+    static getAllDevices(verbose?: boolean): Promise<Array<IDevice>>;
     static getPhysicalDensity(device: IDevice): number;
     static calculateScreenOffset(density: number): number;
     static getPixelsOffset(device: IDevice): number;
     static setEmulatorConfig(device: IDevice): void;
-    static cleanLockFile(emulator: IDevice): void;
-    static startEmulator(emulator: IDevice, options?: Array<string>, logPath?: any, retries?: number): Promise<IDevice>;
+    static cleanLockFiles(emulator: IDevice): void;
+    static getSecurity(emulator: any): Promise<any>;
+    static startEmulator(emulator: IDevice, startEmulatorOptions?: StartEmulatorOptions): Promise<IDevice>;
     static reboot(emulator: IDevice): Promise<IDevice>;
     static unlock(token: any, password?: any): void;
     /**
      * Implement kill process
      * @param emulator
      */
-    static kill(emulator: IDevice, verbose?: boolean): IDevice;
+    static kill(emulator: IDevice, verbose?: boolean, retries?: number): Promise<IDevice>;
     static killAll(): void;
     static restartDevice(device: IDevice): Promise<IDevice>;
     static startAdb(): void;
@@ -58,11 +63,14 @@ export declare class AndroidController {
     static pullFile(device: IDevice, remotePath: any, destinationFile: any): any;
     static pushFile(device: IDevice, fileName: any, deviceParh: any): any;
     private static getAaptPath;
+    private static parsePlatforms;
+    private static parseEmulatorsAvds;
     private static runAaptCommand;
     private static startEmulatorProcess;
     private static waitUntilEmulatorBoot;
     private static checkIfEmulatorIsRunning;
     static refreshDeviceStatus(token: string, verbose?: boolean): Promise<Status>;
+    static sendEmulatorConsoleCommands(emulator: IDevice, options: EmulatorConsoleOptions): Promise<string>;
     private static parseEmulators;
     static getTokenForEmulator(busyTokens: Array<number>): number;
     /**
@@ -72,19 +80,29 @@ export declare class AndroidController {
  *
  * @return {string} The actual output of the given command.
  */
-    static sendTelnetCommand(port: any, command: any, shouldFailOnError?: boolean): Promise<string>;
-    static parseRunningDevicesList(verbose: any): AndroidDevice[];
+    static sendTelnetCommand(options: EmulatorConsoleOptions): Promise<string>;
+    static parseRunningDevicesList(verbose: any): IDevice[];
     private static parseRealDevices;
     static emulatorId(platformVersion: any): string;
     private static sendKeyCommand;
     static clearLog(device: IDevice): Promise<void>;
-    private static checkAndroid;
     private static executeAdbCommand;
     static executeAdbShellCommand(device: IDevice, command: string, timeout?: number): string;
     private static getTokenPrefix;
     private static getAlwaysFinishActivitiesGlobalSettingValue;
     static setDontKeepActivities(value: boolean, device: IDevice): void;
 }
-export declare class AndroidDevice extends Device {
-    constructor(name: string, apiLevel: any, type: DeviceType, releaseVersion: string, token?: string, status?: Status, pid?: number);
+export interface EmulatorConsoleOptions {
+    port: string;
+    commands?: Array<string>;
+    getAllData?: boolean;
+    shouldFailOnError?: boolean;
+    retries?: number;
+    matchExit?: RegExp;
+}
+export interface StartEmulatorOptions {
+    shouldHardResetDevices?: boolean;
+    options?: Array<string>;
+    retries?: number;
+    logPath?: string;
 }

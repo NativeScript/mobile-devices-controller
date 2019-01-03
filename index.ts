@@ -3,15 +3,11 @@ import { IDevice } from "./lib/device";
 import { AndroidController } from "./lib/android-controller";
 import { IOSController } from "./lib/ios-controller";
 import { DeviceController } from "./lib/device-controller";
-import { VirtualDeviceController } from "./lib/mobile-base/virtual-device-controller";
-import { VirtualDevice } from "./lib/mobile-base/virtual-device";
-import { DeviceSignal } from "./lib/enums/DeviceSignals";
-import { sortAscByApiLevelPredicate, sortDescByApiLevelPredicate, filterPredicate } from "./lib/utils";
 
 export { Platform, DeviceType, Status, AndroidKeyEvent } from "./lib/enums";
-export { Device, IDevice } from "./lib/device";
-export { AndroidController, AndroidDevice } from "./lib/android-controller";
-export { IOSController, IOSDevice } from "./lib/ios-controller";
+export { IDevice } from "./lib/device";
+export { AndroidController } from "./lib/android-controller";
+export { IOSController } from "./lib/ios-controller";
 export { DeviceController } from "./lib/device-controller";
 export { VirtualDeviceController } from "./lib/mobile-base/virtual-device-controller";
 export { VirtualDevice } from "./lib/mobile-base/virtual-device";

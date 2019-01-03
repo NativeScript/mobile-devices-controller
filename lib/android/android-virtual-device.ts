@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { VirtualDevice } from "../mobile-base/virtual-device";
 import { DeviceSignal } from "../enums/DeviceSignals";
-import { Device, IDevice } from "../device";
+import { IDevice } from "../device";
 import { AndroidController } from "../android-controller";
 import { logError, logInfo, logWarn } from "../utils";
 
@@ -10,10 +10,10 @@ export class AndroidVirtualDevice extends VirtualDevice {
 
     constructor() { super(); }
 
-    public async startDevice(device: IDevice): Promise<IDevice> {
-        this.detachFromEventListeners();
+    public async startDevice(device: IDevice, options?: string): Promise<IDevice> {
+        this.detachFromEventListeners(true);
 
-        const startedDevice = await AndroidController.startEmulator(device);
+        const startedDevice = await AndroidController.startEmulator(device, { options: options && options.split(" ") });
         this._deviceProcess = startedDevice.process;
         this._device = <any>startedDevice;
         delete this._device.process;
@@ -21,9 +21,10 @@ export class AndroidVirtualDevice extends VirtualDevice {
         this.subscribeForEvents();
 
         // This check is android when the emulator has s black screen and doesn't respond at all.
-        this._checkEmulatorState = setInterval(() => {
+        this._checkEmulatorState = setInterval(async () => {
             if (AndroidController.getCurrentFocusedScreen(this._device).trim() === "") {
-                this.stopDevice();
+                console.log("Device is not responding");
+                await AndroidController.reboot(this._device);
             }
         }, 30000);
 
@@ -40,7 +41,7 @@ export class AndroidVirtualDevice extends VirtualDevice {
 
         this._device = <any>deviceInfo || this._device;
 
-        this.detachFromEventListeners();
+        this.detachFromEventListeners(false);
 
         this._deviceProcess = AndroidVirtualDevice.spawnLog(this._device.token);
 
@@ -51,18 +52,18 @@ export class AndroidVirtualDevice extends VirtualDevice {
         return this._device;
     }
 
-    public detach(){
+    public detach() {
         this._isAttached = false;
-        this.detachFromEventListeners();
+        this.detachFromEventListeners(false);
     }
 
-    public stopDevice() {
+    public async stopDevice() {
         if (!this._isAlive) return;
 
-        AndroidController.kill(<any>this._device);
+        await AndroidController.kill(<any>this._device);
         this._isAlive = false;
         this._isAttached = false;
-        this.detachFromEventListeners();
+        this.detachFromEventListeners(true);
         this.emit(DeviceSignal.onDeviceKilledSignal, this._device);
     }
 
@@ -75,11 +76,11 @@ export class AndroidVirtualDevice extends VirtualDevice {
     }
 
     protected onDeviceKilled(deviceInfo: IDevice) {
-        this.detachFromEventListeners();
+        this.detachFromEventListeners(true);
         if (this._isAlive) {
             this._isAlive = false;
             logWarn("Killed: ", deviceInfo);
-            AndroidController.cleanLockFile(this._device);
+            AndroidController.cleanLockFiles(this._device);
         }
     }
 
@@ -87,10 +88,15 @@ export class AndroidVirtualDevice extends VirtualDevice {
         console.log("Attached to device", deviceInfo);
     }
 
-    private detachFromEventListeners() {
-        if (this._deviceProcess) {
-            this._deviceProcess.kill("SIGTERM");
+    private detachFromEventListeners(shouldKill: boolean) {
+        if (this._deviceProcess && shouldKill) {
             this._deviceProcess.removeAllListeners();
+            this._deviceProcess.kill("SIGTERM");
+        }
+
+        if (this._deviceProcess) {
+            this._deviceProcess.removeAllListeners();
+            this._deviceProcess = null;
         }
 
         if (this._checkEmulatorState) {

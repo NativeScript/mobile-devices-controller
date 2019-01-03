@@ -1,12 +1,12 @@
 import { VirtualDevice } from "../mobile-base/virtual-device";
-import { Device, IDevice } from "../device";
+import { IDevice } from "../device";
 export declare class AndroidVirtualDevice extends VirtualDevice {
     private _checkEmulatorState;
     constructor();
-    startDevice(device: IDevice): Promise<IDevice>;
-    attachToDevice(deviceInfo: IDevice): Device;
+    startDevice(device: IDevice, options?: string): Promise<IDevice>;
+    attachToDevice(deviceInfo: IDevice): IDevice;
     detach(): void;
-    stopDevice(): void;
+    stopDevice(): Promise<void>;
     protected onDeviceStarted(deviceInfo: IDevice): void;
     protected onDeviceError(args: any): void;
     protected onDeviceKilled(deviceInfo: IDevice): void;

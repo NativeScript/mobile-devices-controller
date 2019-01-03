@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { VirtualDevice } from "../mobile-base/virtual-device";
 import { DeviceSignal } from "../enums/DeviceSignals";
-import { IDevice, Device } from "../device";
+import { IDevice } from "../device";
 import { IOSController } from "../ios-controller";
 import { logInfo, logError, logWarn } from "../utils";
 
@@ -70,7 +70,7 @@ export class IOSVirtualDevice extends VirtualDevice {
         }
     }
 
-    protected onDeviceAttach(deviceInfo: Device) {
+    protected onDeviceAttach(deviceInfo: IDevice) {
         console.log("Attached to device", deviceInfo);
     }
 

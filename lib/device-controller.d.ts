@@ -26,7 +26,7 @@ export declare class DeviceController {
     static kill(device: IDevice): Promise<void>;
     static killAll(type: DeviceType): void;
     static refreshDeviceStatus(token: string, platform?: Platform, verbose?: boolean): Promise<Status>;
-    static getRunningDevices(shouldFailOnError: boolean): Promise<IDevice[]>;
+    static getRunningDevices(): Promise<IDevice[]>;
     static filter(devices: Array<IDevice>, searchQuery: any): IDevice[];
     static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<any>;

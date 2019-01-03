@@ -1,9 +1,9 @@
 import { Platform } from "./lib/enums";
 import { IDevice } from "./lib/device";
 export { Platform, DeviceType, Status, AndroidKeyEvent } from "./lib/enums";
-export { Device, IDevice } from "./lib/device";
-export { AndroidController, AndroidDevice } from "./lib/android-controller";
-export { IOSController, IOSDevice } from "./lib/ios-controller";
+export { IDevice } from "./lib/device";
+export { AndroidController } from "./lib/android-controller";
+export { IOSController } from "./lib/ios-controller";
 export { DeviceController } from "./lib/device-controller";
 export { VirtualDeviceController } from "./lib/mobile-base/virtual-device-controller";
 export { VirtualDevice } from "./lib/mobile-base/virtual-device";

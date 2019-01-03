@@ -3,7 +3,6 @@ import { resolve, dirname, basename, sep, extname } from "path";
 import { tmpdir } from "os";
 import { existsSync, unlinkSync, statSync } from "fs";
 import { glob } from "glob";
-import * as rimraf from "rimraf";
 import {
     executeCommand,
     tailFileUntil,
@@ -13,7 +12,7 @@ import {
     logError,
     isProcessAlive,
 } from "./utils";
-import { IDevice, Device } from "./device";
+import { IDevice } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
 import { IOSDeviceLib } from "ios-device-lib";
 import { DeviceController } from "./device-controller";
@@ -22,6 +21,7 @@ export class IOSController {
 
     private static XCRUN = "xcrun ";
     private static SIMCTL = `${IOSController.XCRUN} simctl`;
+    private static XCRUN_SIMCTL_LIST_COMMAND = `${IOSController.SIMCTL} list `;
     private static XCRUNLISTDEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
     private static GET_BOOTED_DEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
@@ -64,12 +64,12 @@ export class IOSController {
             IOSController.loadIOSDevicesScreenInfo();
         }
         const devices = IOSController.parseSimulators();
-        const allDevices = IOSController.parseRealDevices(devices);
+        IOSController.parseRealDevices(devices);
         if (verbose) {
             console.log("All devices: ", devices);
         }
 
-        return Promise.resolve(allDevices);
+        return Promise.resolve(devices);
     }
 
     static getSimulatorPidByToken(token: string) {
@@ -139,7 +139,7 @@ export class IOSController {
         return simulator;
     }
 
-    public static async startSimulator(simulator: IDevice, directory: string = tmpdir(), shouldFullResetSimulator: boolean = true): Promise<IDevice> {
+    public static async startSimulator(simulator: IDevice, directory: string = tmpdir(), shouldFullResetSimulator: boolean = true, retries: number = 3): Promise<IDevice> {
         simulator.type = DeviceType.SIMULATOR;
         simulator.platform = Platform.IOS;
         if (!simulator.token) {
@@ -164,19 +164,18 @@ export class IOSController {
         }
 
         let startedProcess = IOSController.startSimulatorProcess(udid, directory);
-        if (startedProcess.stderr.toString().toLowerCase().includes("unable to boot deleted device")
-            || startedProcess.stderr.toString().toLowerCase().includes("Failed to load")) {
+        if (startedProcess.stderr
+            && (startedProcess.stderr.toString().toLowerCase().includes("unable to boot deleted device")
+                || startedProcess.stderr.toString().toLowerCase().includes("Failed to load"))
+            || startedProcess.status !== 0) {
             simulator = IOSController.fullResetOfSimulator(simulator);
             udid = simulator.token;
-            startedProcess = IOSController.startSimulatorProcess(udid, directory);
-        }
-        // let response: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
-        if (startedProcess.stderr 
-            && startedProcess.stderr.toString().trim() !== "" 
-            || startedProcess.status !== 0) {
             logError(`Probably the simulator ${simulator.name}\ ${simulator.token} failed to start!`);
             logError(startedProcess.stderr.toString());
+            retries--;
+            startedProcess = IOSController.startSimulatorProcess(udid, directory, retries);
         }
+        // let response: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
 
         if (startedProcess.stdout.toString().includes("Instruments Trace Complete")) {
             const response = IOSController.checkIfSimulatorIsBooted(udid, IOSController.WAIT_DEVICE_TO_RESPONSE);
@@ -210,14 +209,14 @@ export class IOSController {
         executeCommand(IOSController.OSASCRIPT_QUIT_SIMULATOR_COMMAND);
     }
 
-    public static kill(udid: string) {
+    public static async kill(udid: string) {
         if (!udid) {
             logError("Please provide device token!");
         }
         console.log(`Killing simulator with udid ${udid}`);
         executeCommand(`${IOSController.SIMCTL} shutdown ${udid}`);
         // Kill all the processes related with sim.id (for example WDA agents).
-        killAllProcessAndRelatedCommand(udid);
+        await killAllProcessAndRelatedCommand(udid);
     }
 
     public static getInstalledApps(device: IDevice) {
@@ -274,7 +273,7 @@ export class IOSController {
             }
             if (device.type && device.type === DeviceType.SIMULATOR) {
                 executeCommand(`${IOSController.SIMCTL} ${device.token} terminate ${bundleId}`);
-                killAllProcessAndRelatedCommand([device.token, appName]);
+                await killAllProcessAndRelatedCommand([device.token, appName]);
             } else {
                 const appInfo = { ddi: undefined, appId: bundleId, deviceId: device.token }
                 const dl = await IOSController.getDl();
@@ -370,59 +369,40 @@ export class IOSController {
     }
 
     public static parseSimulators(stdout = undefined): Map<string, Array<IDevice>> {
-        if (!stdout) {
-            stdout = executeCommand(IOSController.XCRUNLISTDEVICES_COMMAND);
-        }
-
-        let deviceSectionRe = /-- iOS (.+) --(\n\s{4}.+)*/mg;
-        let matches = [];
-        let match = deviceSectionRe.exec(stdout);
-
-        while (match !== null) {
-            matches.push(match);
-            match = deviceSectionRe.exec(stdout);
-        }
-        if (matches.length < 1) {
-            throw new Error("No matching devices!!!");
-        }
-
+        const devicesObj = JSON.parse(executeCommand(`${IOSController.XCRUNLISTDEVICES_COMMAND} --json`).toString());
+        const deviceObjDevice = devicesObj["devices"];
         const devices: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>();
-        for (match of matches) {
-            let apiLevel = match[1];
-            // split the full match into lines and remove the first
-            for (let line of match[0].split('\n').slice(1)) {
-                let lineRe = /([^\s].+) \((\w+-.+\w+)\) \((\w+\s?\w+)\)/; // https://regex101.com/r/lG7mK6/3
-                let lineMatch = lineRe.exec(line);
-                if (lineMatch === null) {
-                    throw new Error(`Could not match line: ${line}`);
-                }
+        Object.getOwnPropertyNames(devicesObj["devices"])
+            .forEach(level => {
+                deviceObjDevice[level].forEach(deviceObj => {
+                    const status: Status = <Status>deviceObj.state.toLowerCase();
+                    const apiLevel = /\d+(\.\d{1,2})?/.exec(level)[0];
+                    const device = <IDevice>{
+                        token: deviceObj.udid,
+                        name: deviceObj.name,
+                        status: status,
+                        type: DeviceType.SIMULATOR,
+                        apiLevel: apiLevel,
+                        platform: Platform.IOS
+                    };
 
-                const status: Status = <Status>lineMatch[3].toLowerCase();
-                const device = new IOSDevice(
-                    lineMatch[2],
-                    lineMatch[1],
-                    status,
-                    DeviceType.SIMULATOR,
-                    apiLevel
-                );
+                    IOSController.devicesScreenInfo.forEach((v, k, m) => {
+                        if (device.name.includes(k)) {
+                            device.config = {
+                                density: v.density,
+                                offsetPixels: v.actionBarHeight
+                            };
+                        }
+                    });
 
-                IOSController.devicesScreenInfo.forEach((v, k, m) => {
-                    if (device.name.includes(k)) {
-                        device.config = {
-                            density: v.density,
-                            offsetPixels: v.actionBarHeight
-                        };
+                    if (!devices.has(device.name)) {
+                        devices.set(device.name, new Array<IDevice>());
+                        devices.get(device.name).push(device);
+                    } else {
+                        devices.get(device.name).push(device);
                     }
                 });
-
-                if (!devices.has(device.name)) {
-                    devices.set(device.name, new Array<IDevice>());
-                    devices.get(device.name).push(device);
-                } else {
-                    devices.get(device.name).push(device);
-                }
-            }
-        }
+            });
 
         return devices;
     }
@@ -432,7 +412,12 @@ export class IOSController {
         devicesUDID.forEach(udid => {
             if (udid && udid !== "") {
                 const deviceInfo = executeCommand(`ideviceinfo -s -u ${udid}`).split('\n');
-                const device = new Device(undefined, undefined, DeviceType.DEVICE, Platform.IOS, udid, Status.BOOTED);
+                const device = <IDevice>{
+                    type: DeviceType.DEVICE,
+                    platform: Platform.IOS,
+                    token: udid,
+                    status: Status.BOOTED,
+                }
                 deviceInfo.forEach(info => {
                     if (info && info.trim() !== "") {
                         if (info.toLowerCase().includes('devicename')) {
@@ -468,7 +453,7 @@ export class IOSController {
         mappedDevices.forEach(devices => {
             devices.forEach(device => {
                 let shouldAdd = true;
-                const deviceToString = (<Device>device).toString().toLocaleLowerCase();
+                const deviceToString = JSON.stringify(<IDevice>device).toLocaleLowerCase();
                 args.forEach(arg => {
                     if (deviceToString.includes(arg.toLocaleLowerCase())) {
                         shouldAdd = shouldAdd && true;
@@ -701,17 +686,77 @@ export class IOSController {
         // IOSController.devicesScreenInfo.set("iPhone 5C", new IOSDeviceScreenInfo("iPhone 5C", 640, 1336, 326, 30));
         // IOSController.devicesScreenInfo.set("iPhone 5S", new IOSDeviceScreenInfo("iPhone 5S", 640, 1336, 326, 30));
 
-        IOSController.devicesScreenInfo.set("iPhone 6", new IOSDeviceScreenInfo("iPhone 6", 750, 1334, 2, 33));
-        IOSController.devicesScreenInfo.set("iPhone 6s", new IOSDeviceScreenInfo("iPhone 6s", 750, 1334, 2, 33));
-        IOSController.devicesScreenInfo.set("iPhone 7", new IOSDeviceScreenInfo("iPhone 7", 750, 1334, 2, 33));
-        IOSController.devicesScreenInfo.set("iPhone 8", new IOSDeviceScreenInfo("iPhone 8", 750, 1334, 2, 33));
+        IOSController.devicesScreenInfo.set("iPhone 6", {
+            deviceType: "iPhone 6",
+            width: 750,
+            height: 1334,
+            density: 2,
+            actionBarHeight: 33
+        });
 
-        IOSController.devicesScreenInfo.set("6 Plus", new IOSDeviceScreenInfo("iPhone 6 Plus", 1242, 2208, 3, 50));
-        IOSController.devicesScreenInfo.set("6s Plus", new IOSDeviceScreenInfo("iPhone 6 Plus", 1242, 2208, 3, 50));
-        IOSController.devicesScreenInfo.set("7 Plus", new IOSDeviceScreenInfo("iPhone 7 Plus", 1242, 2208, 3, 50));
-        IOSController.devicesScreenInfo.set("8 Plus", new IOSDeviceScreenInfo("iPhone 8 Plus", 1242, 2208, 3, 50));
+        IOSController.devicesScreenInfo.set("iPhone 6s", {
+            deviceType: "iPhone 6s",
+            width: 750,
+            height: 1334,
+            density: 2,
+            actionBarHeight: 33
+        });
 
-        IOSController.devicesScreenInfo.set("X", new IOSDeviceScreenInfo("iPhone X", 11242, 2208, 3, 87));
+        IOSController.devicesScreenInfo.set("iPhone 7", {
+            deviceType: "iPhone 7",
+            width: 750,
+            height: 1334,
+            density: 2,
+            actionBarHeight: 33
+        });
+
+        IOSController.devicesScreenInfo.set("iPhone 8", {
+            deviceType: "iPhone 8",
+            width: 750,
+            height: 1334,
+            density: 2,
+            actionBarHeight: 33
+        });
+
+        IOSController.devicesScreenInfo.set("iPhone 6 Plus", {
+            deviceType: "iPhone 6 Plus",
+            width: 1242,
+            height: 2208,
+            density: 3,
+            actionBarHeight: 50
+        });
+
+        IOSController.devicesScreenInfo.set("6 Plus", {
+            deviceType: "iPhone 6 Plus",
+            width: 1242,
+            height: 2208,
+            density: 3,
+            actionBarHeight: 50
+        });
+
+        IOSController.devicesScreenInfo.set("7 Plus", {
+            deviceType: "iPhone 7 Plus",
+            width: 1242,
+            height: 2208,
+            density: 3,
+            actionBarHeight: 50
+        });
+
+        IOSController.devicesScreenInfo.set("8 Plus", {
+            deviceType: "iPhone 8 Plus",
+            width: 1242,
+            height: 2208,
+            density: 3,
+            actionBarHeight: 50
+        });
+
+        IOSController.devicesScreenInfo.set("X", {
+            deviceType: "iPhone X",
+            width: 1242,
+            height: 2208,
+            density: 3,
+            actionBarHeight: 87
+        });
 
         // IOSController.devicesScreenInfo("Mini 2", new IOSDeviceScreenInfo("Mini 2", 11242, 2208, 401));
         // IOSController.devicesScreenInfo("Mini 3", new IOSDeviceScreenInfo("Mini 3", 11242, 2208, 401));
@@ -728,13 +773,12 @@ export class IOSController {
     }
 }
 
-export class IOSDevice extends Device {
-    constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, pid?: number) {
-        super(name, apiLevel, type, Platform.IOS, token, status, pid);
-    }
-}
 
-export class IOSDeviceScreenInfo {
+export interface IOSDeviceScreenInfo {
     // In the context of iOS, the proper term for `density` is `screen scale`. Adhere to `density` for unified API.
-    constructor(public deviceType, public width, public height, public density, public actionBarHeight) { }
+    deviceType,
+    width,
+    height,
+    density,
+    actionBarHeight
 }

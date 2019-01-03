@@ -1,8 +1,9 @@
 import { spawn } from "child_process";
-import { resolve, sep, dirname, join } from "path";
-import { existsSync, unlinkSync } from "fs";
+import { glob } from "glob";
+import { resolve, sep, dirname, join, basename } from "path";
+import { existsSync, unlinkSync, readdirSync, readFileSync } from "fs";
 import { Platform, DeviceType, Status, AndroidKeyEvent } from "./enums";
-import { IDevice, Device } from "./device";
+import { IDevice } from "./device";
 import * as net from "net";
 import {
     executeCommand,
@@ -24,22 +25,45 @@ const OFFSET_DI_PIXELS = 16;
 
 export class AndroidController {
     private static DEFAULT_BOOT_TIME = 150000;
-    private static ANDROID_HOME = process.env["ANDROID_HOME"] || "";
+    private static ANDROID_HOME = AndroidController.getAndroidHome();
     private static EMULATOR = resolve(AndroidController.ANDROID_HOME, "emulator", "emulator");
     private static ADB = resolve(AndroidController.ANDROID_HOME, "platform-tools", "adb");
     private static LIST_DEVICES_COMMAND = AndroidController.ADB + " devices -l";
     private static AVD_MANAGER = resolve(AndroidController.ANDROID_HOME, "tools", "bin", "avdmanager");
-    private static LIST_AVDS = AndroidController.AVD_MANAGER + " list avd";
     private static _emulatorIds: Map<string, string> = new Map();
     private static lockFilesPredicate = f => { return f.endsWith(".lock") || f.startsWith("snapshot.lock.") };
+    private static emulators = new Array<IDevice>();
+
+    public static DEFAULT_SNAPSHOT_NAME = "clean_boot"
+    public static readonly NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE = ["-no-audio", "-no-boot-anim", "-wipe-data", "-no-snapshot-load", "-no-snapshot-save"];
+    public static NO_WIPE_DATA_NO_SNAPSHOT_SAVE = ["-snapshot", AndroidController.DEFAULT_SNAPSHOT_NAME, "-no-snapshot-save"];
 
     public static runningProcesses = new Array();
 
-    public static async getAllDevices(verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
-        AndroidController.checkAndroid();
+    private static getAndroidHome() {
+        if (process.env["ANDROID_HOME"]) {
+            return process.env["ANDROID_HOME"];
+        }
+        let androidHome = `${process.env["HOME"]}/Library/Android/sdk`;
+        if (existsSync(androidHome)) {
+            return androidHome;
+        }
+
+        androidHome = `/usr/local/share/android-sdk`;
+        if (existsSync(androidHome)) {
+            return androidHome;
+        }
+
+        androidHome = `${process.env["HOME"]}/Android/Sdk`;
+        if (existsSync(androidHome)) {
+            return androidHome;
+        }
+    }
+
+    public static async getAllDevices(verbose: boolean = false): Promise<Array<IDevice>> {
         // this should be always first.
         const runningDevices = AndroidController.parseRunningDevicesList(verbose);
-        const devices: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>();
+        const devices: Array<IDevice> = AndroidController.emulators;
         await AndroidController.parseEmulators(runningDevices, devices);
         await AndroidController.parseRealDevices(runningDevices, devices);
 
@@ -66,7 +90,7 @@ export class AndroidController {
         };
     }
 
-    public static cleanLockFile(emulator: IDevice) {
+    public static cleanLockFiles(emulator: IDevice) {
         const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
         const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
 
@@ -84,10 +108,40 @@ export class AndroidController {
             });
     }
 
-    public static async startEmulator(emulator: IDevice, options: Array<string> = undefined, logPath = undefined, retries: number = 3): Promise<IDevice> {
+    public static async getSecurity(emulator) {
+        const receivedData = await AndroidController.sendEmulatorConsoleCommands(emulator, {
+            port: emulator.token,
+            commands: undefined,
+            shouldFailOnError: true,
+            matchExit: /\w+/ig,
+            retries: 10,
+            getAllData: true
+        });
+        const emulator_console_auth_token_line = receivedData && receivedData.split("\n")
+            .filter(l => l.includes("emulator_console_auth_token"))[0]
+        const line = emulator_console_auth_token_line && emulator_console_auth_token_line.trim().replace('\'', "").replace('\'', "");
+        let security;
+        if (existsSync(line)) {
+            security = readFileSync(line, "UTF8");
+        }
+
+        security = security || readFileSync(`${process.env["HOME"]}/.emulator_console_auth_token`, "UTF8").toString().trim();
+
+        return security;
+    }
+
+    public static async startEmulator(emulator: IDevice, startEmulatorOptions?: StartEmulatorOptions): Promise<IDevice> {
+        if (!startEmulatorOptions || !startEmulatorOptions.options) {
+            startEmulatorOptions = {
+                options: Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE),
+                retries: 3,
+            }
+        }
         if (!emulator.token) {
             emulator.token = emulator.apiLevel ? (AndroidController.emulatorId(emulator.apiLevel) || "5554") : "5554";
         }
+
+        // trying to find device since name and apiLevel are mandatory;
         if (!emulator.name || !emulator.apiLevel) {
             emulator.type = DeviceType.EMULATOR;
             emulator.platform = Platform.ANDROID;
@@ -106,51 +160,92 @@ export class AndroidController {
             if (devices && devices.length > 0) {
                 copyIDeviceQuery(devices[0], emulator);
             } else {
-                logError("Requested device is missing", devices);
+                logError("Requested device is missing", emulator);
             }
         }
+
         if (!emulator.name) {
             logError("Please provide emulator name");
+            return {};
         }
 
-        AndroidController.kill(emulator, false);
-
-        const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
-        const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
-        getAllFileNames(avd)
-            .filter(f => AndroidController.lockFilesPredicate(f))
-            .forEach(f => {
-                try {
-                    const path = resolve(avd, f);
-                    if (existsSync(path)) {
-                        unlinkSync(path);
-                    }
-                } catch (error) {
-                    logWarn(`Failed to delete lock file for ${avd}!`);
-                    emulator.status = Status.SHUTDOWN;
-                }
-            });
+        // kill emulator instance in case some process are still alive
+        await AndroidController.kill(emulator, false);
+        // clean lock files
+        AndroidController.cleanLockFiles(emulator);
 
         emulator.type = DeviceType.EMULATOR;
-        emulator = await AndroidController.startEmulatorProcess(emulator, logPath, options);
+        emulator = await AndroidController.startEmulatorProcess(emulator, startEmulatorOptions.logPath, startEmulatorOptions.options);
         let result = await AndroidController.waitUntilEmulatorBoot(emulator, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
 
-        if (result !== Status.BOOTED) {
-            AndroidController.kill(emulator);
+        let security;
+        let snapshot = AndroidController.DEFAULT_SNAPSHOT_NAME;
+        // Check for snapshot. In case snapshot option is provided but doesn't exists, it will be created.  
+        if (startEmulatorOptions.options && startEmulatorOptions.options.indexOf("-snapshot") >= 0) {
+            const snapshotName = startEmulatorOptions.options[startEmulatorOptions.options.indexOf("-snapshot") + 1];
+            security = await AndroidController.getSecurity(emulator);
+            const availableSnapshots = await AndroidController.sendEmulatorConsoleCommands(emulator, {
+                port: emulator.token,
+                commands: [`auth ${security}`, "avd snapshot list"],
+                shouldFailOnError: true,
+                matchExit: /\w+/ig,
+                retries: 10,
+                getAllData: true
+            });
+            if (!availableSnapshots.includes(snapshotName)) {
+                logWarn(`This snapshot is not available. We are going to recreate a clean one with the same name`);
+                snapshot = snapshotName;
+                await AndroidController.kill(emulator);
+                AndroidController.cleanLockFiles(emulator);
+                emulator = await AndroidController.startEmulatorProcess(emulator, startEmulatorOptions.logPath, AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE);
+                result = await AndroidController.waitUntilEmulatorBoot(emulator, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
+                startEmulatorOptions.options.push("-wipe-data");
+            }
+        }
+
+        if (result === Status.BOOTED
+            && startEmulatorOptions.options.indexOf("-wipe-data") >= 0
+            && startEmulatorOptions.options.indexOf("-snapshot") >= 0) {
+            console.log(`Reset emulator and save snapshot ${snapshot}!`);
+            security = security || await AndroidController.getSecurity(emulator);
+
+            await AndroidController.sendEmulatorConsoleCommands(emulator, {
+                port: emulator.token,
+                commands: [`auth ${security}`, `avd snapshot save ${snapshot}`],
+                shouldFailOnError: true,
+                matchExit: /^\s*$/,
+                retries: 10,
+                getAllData: false
+            });
+            await AndroidController.kill(emulator);
+
+            AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE[AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE.indexOf("-snapshot") + 1] = snapshot;
+            startEmulatorOptions.options = Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE);
+            await AndroidController.startEmulator(emulator, startEmulatorOptions);
+        }
+        if (!result || result !== Status.BOOTED) {
+            await AndroidController.kill(emulator);
             logWarn("Trying to boot emulator again!");
-            retries--;
-            options = ["-no-audio", "-no-boot-anim", "-wipe-data"]
-            emulator = await AndroidController.startEmulator(emulator, options, logPath, retries);
+            startEmulatorOptions.retries--;
+            const newOptions = Array.from(AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE);
+            newOptions.push("-wipe-data");
+            startEmulatorOptions.options = newOptions;
+            emulator = await AndroidController.startEmulator(emulator, startEmulatorOptions);
         }
 
         if (result === Status.BOOTED) {
             emulator.status = Status.BOOTED;
             emulator.startedAt = Date.now();
-            emulator.releaseVersion = AndroidController.executeAdbShellCommand(emulator, ` getprop ro.build.version.release`).trim();
-            emulator.apiLevel = AndroidController.executeAdbShellCommand(emulator, ` getprop ro.build.version.sdk`).trim();
+            if (!emulator.apiLevel || !emulator.releaseVersion) {
+                emulator.releaseVersion = AndroidController.executeAdbShellCommand(emulator, ` getprop ro.build.version.release`).trim();
+                emulator.apiLevel = AndroidController.executeAdbShellCommand(emulator, ` getprop ro.build.version.sdk`).trim();
+            }
         }
 
-        AndroidController.setEmulatorConfig(emulator);
+        if (!emulator.config || !emulator.config.offsetPixels) {
+            AndroidController.setEmulatorConfig(emulator);
+        }
+
         return emulator;
     }
 
@@ -173,7 +268,11 @@ export class AndroidController {
 
         if (!result) {
             emulator = await AndroidController.kill(emulator);
-            emulator = await AndroidController.startEmulator(emulator, ["-wipe-data", "-no-snapshot-load", "-no-boot-anim", "-no-audio"]);
+            const options = {
+                options: ["-wipe-data", "-no-snapshot-load", "-no-boot-anim", "-no-audio"],
+                retries: 3,
+            };
+            emulator = await AndroidController.startEmulator(emulator, options);
         }
 
         return emulator;
@@ -195,7 +294,7 @@ export class AndroidController {
      * Implement kill process
      * @param emulator 
      */
-    public static kill(emulator: IDevice, verbose = true) {
+    public static async kill(emulator: IDevice, verbose = true, retries: number = 3) {
         let isAlive: boolean = true;
         if (emulator.type !== DeviceType.DEVICE) {
             if (emulator.token) {
@@ -204,21 +303,13 @@ export class AndroidController {
                 } catch (error) { }
             }
 
-            const killProcesses = (...args) => {
-                args.forEach(arg => {
-                    if (!isNaN(arg)) {
-                        killPid(+arg);
-                    }
-                    if (!isWin()) {
-                        killAllProcessAndRelatedCommand(arg);
-                    }
-                    wait(500);
-                });
-            }
-
-            killProcesses(emulator.pid, emulator.name, `emulator-${emulator.token}`);
-
             try {
+                if (!isWin()) {
+                    killAllProcessAndRelatedCommand(emulator.name);
+                    killAllProcessAndRelatedCommand(`emulator-${emulator.token}`);
+                }
+                emulator.pid && killPid(+emulator.pid);
+
                 killProcessByName("emulator64-crash-service");
             } catch (error) { }
 
@@ -227,23 +318,20 @@ export class AndroidController {
             }
 
             const checkIfDeviceIsKilled = token => {
-                wait(1000);
                 return executeCommand(AndroidController.LIST_DEVICES_COMMAND).includes(token);
             }
 
             const startTime = Date.now();
-            while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) <= 10000) {
-                if (verbose) {
-                    logWarn(`Retrying kill all processes related to ${emulator.name}`);
-                }
-                wait(1000);
-                killProcesses(emulator.pid, emulator.name, emulator.token);
-                wait(3000);
-            }
+            while (checkIfDeviceIsKilled(emulator.token) && (Date.now() - startTime) <= 10000 && retries >= 0) { }
 
             if (checkIfDeviceIsKilled(emulator.token)) {
                 logError(`Device: ${emulator.name} is NOT killed!`);
+                retries--;
                 isAlive = true;
+                if (verbose) {
+                    logWarn(`Retrying kill all processes related to ${emulator.name}`);
+                }
+                await AndroidController.kill(emulator, verbose, retries);
             } else {
                 if (verbose) {
                     logInfo(`Device: ${emulator.name || emulator.token} is successfully killed!`);
@@ -257,7 +345,7 @@ export class AndroidController {
             emulator.status = Status.SHUTDOWN;
             emulator.pid = undefined;
         } else {
-            emulator.status = Status.BUSY;
+            emulator.status = Status.INVALID;
         }
 
         return emulator;
@@ -277,9 +365,13 @@ export class AndroidController {
     public static async restartDevice(device: IDevice) {
         if (device.type === DeviceType.EMULATOR) {
             logInfo(`Ensure device: ${device.name} is not booted!`);
-            AndroidController.kill(device);
+            await AndroidController.kill(device);
             logInfo(`Restarting device ${device.name}`);
-            AndroidController.startEmulator(device);
+            const options = <StartEmulatorOptions>{
+                options: AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE,
+                retries: 3,
+            }
+            await AndroidController.startEmulator(device, options);
         } else {
             logError("Not implemented for real device!")
         }
@@ -522,7 +614,6 @@ export class AndroidController {
     }
 
     public static pushFile(device: IDevice, fileName, deviceParh) {
-
         let output = AndroidController.executeAdbShellCommand(device, "mount -o rw,remount -t rootfs /");
 
         // Verify remotePath
@@ -570,6 +661,100 @@ export class AndroidController {
         return aaptPath;
     }
 
+    private static parsePlatforms() {
+        const platformsFolder = resolve(AndroidController.ANDROID_HOME, "system-images");
+        const platforms = new Map<string, { sdk: string, releaseVersion: string }>();
+        const files = glob.sync(`${platformsFolder}/*`);
+        for (let index = 0; index < files.length; index++) {
+            const f = files[index];
+            const versions = <any>{};
+            const file = glob.sync(`${f}/*/*/build.prop`)[0]
+            const fileContent = readFileSync(file, "UTF8");
+            const fileData = fileContent.split("\n");
+
+            for (let i = 0; i < fileData.length; i++) {
+                const line = fileData[i];
+                if (line) {
+                    if (line.includes("ro.build.version.sdk") || line.includes("AndroidVersion.ApiLevel")) {
+                        // versions.sdk = /\d+(\.\d)?(\.\d)?/.exec(line)[0];
+                        versions.sdk = line.split("=")[1].trim();
+                    }
+                    if (line.includes("ro.build.version.release") || line.includes("Platform.Version")) {
+                        // versions.releaseVersion = /\d+(\.\d)?(\.\d)?/.exec(line)[0];
+                        versions.releaseVersion = line.split("=")[1].trim();
+                    }
+
+                    if (versions.sdk && versions.releaseVersion) {
+                        i = fileData.length;
+                    }
+                }
+            }
+
+            const platformName = basename(f);
+            if (!platforms.has(platformName) && versions.sdk && versions.releaseVersion) {
+                platforms.set(platformName, versions);
+            }
+        }
+
+        return platforms;
+    }
+
+    private static parseEmulatorsAvds() {
+        const platforms = AndroidController.parsePlatforms();
+        const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
+        const emulators = new Array();
+        readdirSync(avdsDirectory)
+            .filter(f => f.endsWith(".ini"))
+            .forEach(f => {
+                readFileSync(resolve(avdsDirectory, f), "UTF8")
+                    .split("\n")
+                    .forEach(line => {
+                        if (line.includes("target=")) {
+                            const buildPlatform = line.split("=")[1].trim();
+                            const versions = platforms.get(buildPlatform)
+                            const name = f.replace(".ini", "");
+                            const emu = <IDevice>{
+                                name: name,
+                                apiLevel: versions.sdk,
+                                releaseVersion: versions.releaseVersion,
+                                platform: Platform.ANDROID,
+                                type: DeviceType.EMULATOR,
+                                status: Status.SHUTDOWN
+                            }
+                            emulators.push(emu);
+                        }
+                    });
+            });
+
+        const files = glob.sync(`${avdsDirectory}/*.avd/config.ini`);
+        for (let index = 0; index < files.length; index++) {
+            const file = files[index];
+            const fileContent = readFileSync(resolve(file), "UTF8");
+            const fileData = fileContent.split("\n");
+            const config = <any>{};
+            for (let i = 0; i < fileData.length; i++) {
+                const line = fileData[i];
+                if (line) {
+                    if (line && line.includes("hw.lcd.density=")) {
+                        config.density = +(line.split("=")[1]) * 0.01;
+                        config.offsetPixels = AndroidController.calculateScreenOffset(config.density);
+                    }
+                    if (line && line.includes("skin.name=")) {
+                        const [width, height] = line.split("=")[1].split("x");
+                        config.screen = { width: width, height: height };
+                    }
+
+                    if (config.offsetPixels && config.density && config.screen) {
+                        i = fileData.length;
+                        const emu = emulators.filter(e => e.name === basename(dirname(file)).replace(".avd", ""))[0];
+                        emu.config = config;
+                    }
+                }
+            }
+        }
+        return emulators;
+    }
+
     private static runAaptCommand(appFullName, grep) {
         let command = AndroidController.getAaptPath() + " dump badging " + appFullName;
 
@@ -597,8 +782,14 @@ export class AndroidController {
             [" -avd ", emulator.name, " -port ", emulator.token, ...options], {
                 shell: true,
                 detached: false,
-                stdio: 'ignore'
             });
+
+        process.stdout.on("data", (data) => {
+            console.log(data.toString());
+        })
+        process.stdout.on("error", (data) => {
+            console.log(data.toString());
+        })
 
         emulator.pid = process.pid;
         emulator.process = process;
@@ -642,61 +833,86 @@ export class AndroidController {
         return emulator != null ? emulator.status : Status.SHUTDOWN;
     }
 
-    private static async parseEmulators(runningDevices: Array<AndroidDevice>, emulators: Map<string, Array<IDevice>> = new Map<string, Array<Device>>(), verbose = false) {
-        let availableDevices = false;
-        const info = executeCommand(AndroidController.LIST_AVDS);
-        const infoLines = info.split("\n");
-        let emulator = null;
-        let status: Status = Status.SHUTDOWN;
-        // Name: Emulator-Api25-Google
-        // Path: /Users/progressuser/.android/avd/Emulator-Api25-Google.avd
-        // Target: Google APIs (Google Inc.)
-        //         Based on: Android 7.1.1 (Nougat) Tag/ABI: google_apis/x86
-        //   Skin: 480x800
-        // Sdcard: 12M
-        infoLines.forEach(line => {
-            if (line.toLowerCase().includes("available android")) {
-                status = Status.SHUTDOWN;
-            }
-            if (line.toLowerCase().includes("following android virtual devices could not be loaded")) {
-                status = Status.INVALID;
-            }
-
-            if (line.toLowerCase().includes("name")) {
-                const name = line.split("Name: ")[1].trim();
-                emulator = new AndroidDevice(name, undefined, DeviceType.EMULATOR, undefined, undefined, Status.SHUTDOWN);
-            }
-            if (line.includes("Tag/ABI:")) {
-                //const apiLevel = /\d+((.|,)\d+)?/gi.exec(line.split("Tag/ABI:")[0].trim());
-                const apiLevel = line.substring(line.lastIndexOf("on:") + 3, line.lastIndexOf("Tag/ABI:")).replace(/android|api/ig, "").replace(/\(\w.+\)/, "").trim();
-                emulator.apiLevel = apiLevel;
-            }
-
-            if (emulator && emulator.name && emulator.apiLevel) {
-                if (!emulators.has(emulator.name)) {
-                    emulators.set(emulator.name, new Array<IDevice>());
-                    emulators.get(emulator.name).push(emulator);
+    public static async sendEmulatorConsoleCommands(emulator: IDevice, options: EmulatorConsoleOptions) {
+        const isValidResult = (avdInfo, matchExit: RegExp) => {
+            let result = false;
+            if (matchExit) {
+                result = matchExit.test(avdInfo);
+                if (!result) {
+                    console.log(result)
                 }
+                matchExit.lastIndex = 0;
+                return result;
             }
-        });
+            return !avdInfo && avdInfo !== null;
+        }
+
+        let copiedOptions = <EmulatorConsoleOptions>{};
+        Object.assign(copiedOptions, options);
+        copiedOptions.commands = options.commands && Array.from(options.commands);
+        let avdInfo = await AndroidController.sendTelnetCommand(copiedOptions);
+        let isValid = false;
+        if (!isValidResult(avdInfo, copiedOptions.matchExit)) {
+            options.retries--;
+            if (options.retries === 5) {
+                await AndroidController.reboot(emulator);
+            }
+            avdInfo = await AndroidController.sendEmulatorConsoleCommands(emulator, options);
+        } else {
+            isValid = true;
+        }
+
+        if (!isValid && !isValidResult(avdInfo, copiedOptions.matchExit)) {
+            logError(`There is a problem with emulators console and probably
+            we could not establish connection with telnet localhost ${emulator.token}`)
+        }
+        return avdInfo;
+    }
+
+    private static async parseEmulators(runningDevices: Array<IDevice>,
+        emulators: Array<IDevice> = new Array<IDevice>(),
+        verbose = false) {
+
+        let emulatorsAvds
+        if (AndroidController.emulators.length > 0) {
+            emulators = AndroidController.emulators;
+        } else {
+            const emulatorsAvds = AndroidController.parseEmulatorsAvds();
+            emulators.push(...emulatorsAvds);
+        }
 
         const busyTokens = new Array();
+        emulators.forEach(d => d.status = Status.SHUTDOWN);
         for (let index = 0; index < runningDevices.length; index++) {
             const emu = runningDevices[index];
             if (emu.type === DeviceType.EMULATOR) {
                 try {
-                    const avdInfo = await AndroidController.sendTelnetCommand(emu.token, "avd name");
+                    let avdInfo = await AndroidController.sendEmulatorConsoleCommands(emu, {
+                        port: emu.token,
+                        commands: ["avd name"],
+                        shouldFailOnError: true,
+                        matchExit: /\w+/ig,
+                        retries: 10,
+                        getAllData: false
+                    });
 
-                    emulators.forEach((v, k, m) => {
-                        if (avdInfo && avdInfo.includes(k)) {
-                            v[0].status = Status.BOOTED;
-                            v[0].token = emu.token;
-                            v[0].releaseVersion = emu.releaseVersion;
-                            v[0].apiLevel = emu.apiLevel;
-                            busyTokens.push(emu.token);
-                            AndroidController.setEmulatorConfig(v[0]);
-                        }
-                    })
+                    avdInfo = avdInfo && avdInfo.trim();
+                    if (!avdInfo || avdInfo === null) {
+                        logError("Something went wrong. We couldn't parse the emulator name!");
+                    }
+
+                    const emulatorsToFilter = emulatorsAvds || AndroidController.emulators;
+                    let rEmu = emulatorsToFilter.filter(avd => avd.name === avdInfo)[0];
+                    if (!rEmu) {
+                        logError(`Something went wrong. We couldn't parse the running emulator ${emu.token}/ ${avdInfo} !`, emu.token);
+                    }
+
+                    rEmu.status = Status.BOOTED;
+                    rEmu.token = emu.token;
+                    rEmu.releaseVersion = emu.releaseVersion;
+                    rEmu.apiLevel = emu.apiLevel;
+                    busyTokens.push(emu.token);
+
                 } catch (error) {
                     logError(error);
                 }
@@ -706,21 +922,17 @@ export class AndroidController {
         if (busyTokens.length === 0) {
             busyTokens.push(5544);
         }
-        emulators.forEach((devices, key, map) => {
-            devices.forEach(device => {
-                if (!device.token) {
-                    const token = AndroidController.getTokenForEmulator(busyTokens);
-                    device.token = token.toString();
-                    busyTokens.push(token);
-                }
-            });
+        emulators.forEach((device) => {
+            if (!device.token) {
+                const token = AndroidController.getTokenForEmulator(busyTokens);
+                device.token = token.toString();
+                busyTokens.push(token);
+            }
         });
 
-        if (verbose) {
-            logInfo("Avds list info: ", info);
-            logInfo("Parsed emulators: ", emulators);
+        if (AndroidController.emulators.length === 0) {
+            AndroidController.emulators = emulators;
         }
-
         return emulators;
     }
 
@@ -736,56 +948,49 @@ export class AndroidController {
  *
  * @return {string} The actual output of the given command.
  */
-    public static async sendTelnetCommand(port, command, shouldFailOnError: boolean = true): Promise<string> {
+    public static async sendTelnetCommand(options: EmulatorConsoleOptions): Promise<string> {
+
         //console.debug(`Sending telnet command device: ${command} to localhost:${port}`);
+        var index = 0;
         return await new Promise<string>((resolve, reject) => {
-            let conn = net.createConnection(port, 'localhost'),
-                connected = false,
+            let conn = net.createConnection(+options.port, 'localhost'),
                 readyRegex = /^OK$/m,
-                dataStream = "",
+                allData = "",
                 res = null;
             conn.on('connect', () => {
-                //console.debug("Socket connection to device created");
             });
 
             conn.setTimeout(60000, () => {
-
             });
 
             conn.on('data', (data) => {
                 let receivedData = data.toString('utf8');
-                if (!connected) {
-                    if (readyRegex.test(receivedData)) {
-                        connected = true;
-                        //console.debug("Socket connection to device ready");
-                        conn.write(`${command}\n`);
+                allData += receivedData;
+                if (!options.commands) {
+                    res = receivedData;
+                    conn.write("quit\n");
+                }
+                if (readyRegex.test(receivedData) && options.commands && options.commands.length > 0) {
+                    const el = options.commands[index];
+                    conn.write(`${el}\n`);
+                }
+                if (options.commands && options.commands.length === 0 && readyRegex.test(receivedData)) {
+                    res = receivedData.replace(readyRegex, "").trim();
+                    if (options.getAllData) {
+                        res = allData;
                     }
-                } else {
-                    dataStream += data;
-                    if (readyRegex.test(receivedData)) {
-                        res = dataStream.replace(readyRegex, "").trim();
-                        const resArray = res.trim().split('\n');
-                        res = resArray[resArray.length - 1];
-                        //console.debug(`Telnet command got response: ${res}`);
-                        conn.write("quit\n");
-                    }
+                    conn.write("quit\n");
+                }
+
+                if (options.commands && readyRegex.test(receivedData)) {
+                    options.commands.shift();
                 }
             });
             conn.on('error', (err) => { // eslint-disable-line promise/prefer-await-to-callbacks
-                logError(`Telnet command error: ${err.message}`);
-                // if (shouldFailOnError) {
-                //     AndroidController.kill(<any>{ token: port, type: DeviceType.EMULATOR });
-                //     reject(err);
-                // } else {
-                resolve();
-                //}
+                resolve(res);
             });
             conn.on('close', () => {
-                if (res === null) {
-                    reject(new Error("Never got a response from command"));
-                } else {
-                    resolve(res);
-                }
+                resolve(res);
             });
         });
     };
@@ -803,7 +1008,7 @@ export class AndroidController {
             .replace("List of devices attached", "")
             .trim()
             .split("\n");
-        const devices: Array<AndroidDevice> = new Array();
+        const devices: Array<IDevice> = new Array();
 
         runningDevices.forEach(line => {
             const parseEmulatorToken = line => {
@@ -815,22 +1020,45 @@ export class AndroidController {
                 const apiLevel = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop ro.build.version.sdk`).trim();
                 if (line.startsWith(DeviceType.EMULATOR.toString().toLowerCase())) {
                     token = parseEmulatorToken(line);
-                    devices.push(new AndroidDevice(undefined, apiLevel, DeviceType.EMULATOR, releaseVersion, token, Status.BOOTED));
+                    devices.push(<IDevice>{
+                        token: token,
+                        apiLevel: apiLevel,
+                        releaseVersion: releaseVersion,
+                        status: Status.BOOTED,
+                        type: DeviceType.EMULATOR,
+                        platform: Platform.ANDROID
+                    });
                 }
 
                 if (line.includes(Status.OFFLINE.toString().toLowerCase())) {
                     token = parseEmulatorToken(line);
-                    devices.push(new AndroidDevice(undefined, apiLevel, DeviceType.EMULATOR, releaseVersion, token, Status.OFFLINE));
+                    devices.push(<IDevice>{
+                        token: token,
+                        apiLevel: apiLevel,
+                        releaseVersion: releaseVersion,
+                        status: Status.OFFLINE,
+                        type: DeviceType.EMULATOR,
+                    });
                 }
 
                 if (line.includes("usb") || line.includes("vbox86p")) {
                     const status: Status = Status.BOOTED;
                     const name = line.split("model:")[1].trim().split(" ")[0].trim();
-                    devices.push(new AndroidDevice(name, apiLevel, DeviceType.DEVICE, releaseVersion, token, status));
+                    devices.push(<IDevice>{
+                        name: name,
+                        token: token,
+                        apiLevel: apiLevel,
+                        releaseVersion: releaseVersion,
+                        status: status,
+                        type: DeviceType.DEVICE
+                    });
                 }
 
                 if (line.includes("unauthorized")) {
-                    devices.push(new AndroidDevice(Status.UNAUTORIZED, Status.UNAUTORIZED, DeviceType.DEVICE, undefined, "", Status.UNAUTORIZED));
+                    devices.push(<IDevice>{
+                        status: Status.UNAUTORIZED,
+                        type: DeviceType.DEVICE
+                    });
                 }
             }
         });
@@ -842,11 +1070,10 @@ export class AndroidController {
         return devices;
     }
 
-    private static parseRealDevices(runningDevices: Array<AndroidDevice>, devices: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>()) {
+    private static parseRealDevices(runningDevices: Array<IDevice>, devices: Array<IDevice> = new Array<IDevice>()) {
         runningDevices.forEach(d => {
             if (d.type === DeviceType.DEVICE) {
-                devices.set(d.name, new Array());
-                devices.get(d.name).push(d);
+                devices.push(d);
             }
         });
     }
@@ -861,29 +1088,6 @@ export class AndroidController {
 
     public static async clearLog(device: IDevice) {
         await this.executeAdbCommand(device, " logcat -c", 5000);
-    }
-
-    // public static async getDeviceLog(device: IDevice, shouldCleanLog: boolean) {
-    //     await this.executeAdbCommand(device, " logcat ");
-    //     if (shouldCleanLog) {
-    //         await this.executeAdbCommand(device, " logcat -c");
-    //     }
-    // }
-
-    private static checkAndroid() {
-        let avdMangerExt = "";
-        let emulatorExt = "";
-        if (isWin()) {
-            avdMangerExt = ".bat";
-            emulatorExt = ".exe";
-        }
-        if (!existsSync(AndroidController.AVD_MANAGER + avdMangerExt)) {
-            AndroidController.LIST_AVDS = "android list avds ";
-        }
-
-        if (!existsSync(AndroidController.EMULATOR + emulatorExt)) {
-            AndroidController.EMULATOR = "emulator ";
-        }
     }
 
     private static executeAdbCommand(device: IDevice, command: string, timeout: number = AndroidController.DEFAULT_BOOT_TIME) {
@@ -926,8 +1130,18 @@ export class AndroidController {
     }
 }
 
-export class AndroidDevice extends Device {
-    constructor(name: string, apiLevel, type: DeviceType, releaseVersion: string, token?: string, status?: Status, pid?: number) {
-        super(name, apiLevel, type, Platform.ANDROID, token, status, pid, releaseVersion);
-    }
+export interface EmulatorConsoleOptions {
+    port: string;
+    commands?: Array<string>;
+    getAllData?: boolean;
+    shouldFailOnError?: boolean;
+    retries?: number;
+    matchExit?: RegExp
+}
+
+export interface StartEmulatorOptions {
+    shouldHardResetDevices?: boolean;
+    options?: Array<string>,
+    retries?: number;
+    logPath?: string;
 }

@@ -1,5 +1,5 @@
 import { VirtualDevice } from "../mobile-base/virtual-device";
-import { IDevice, Device } from "../device";
+import { IDevice } from "../device";
 export declare class IOSVirtualDevice extends VirtualDevice {
     private _checkSimulatorState;
     constructor();
@@ -10,7 +10,7 @@ export declare class IOSVirtualDevice extends VirtualDevice {
     protected onDeviceStarted(deviceInfo: IDevice): void;
     protected onDeviceError(args: any): void;
     protected onDeviceKilled(deviceInfo: IDevice): void;
-    protected onDeviceAttach(deviceInfo: Device): void;
+    protected onDeviceAttach(deviceInfo: IDevice): void;
     private detachFromEventListeners;
     private static spawnLog;
 }

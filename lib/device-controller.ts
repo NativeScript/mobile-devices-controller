@@ -1,6 +1,6 @@
 import { Platform, DeviceType, Status } from "./enums";
 import { IDevice } from "./device";
-import { AndroidController } from "./android-controller";
+import { AndroidController, StartEmulatorOptions } from "./android-controller";
 import { IOSController } from "./ios-controller";
 import * as utils from "./utils";
 export class DeviceController {
@@ -15,22 +15,22 @@ export class DeviceController {
         return devices;
     }
 
-    public static async startDevice(device: IDevice, options?: string, shouldHardResetDevices: boolean = true): Promise<IDevice> {
+    public static async startDevice(device: IDevice, options?: string, shouldHardResetDevices: boolean = false): Promise<IDevice> {
         const type = device.type || device['_type'];
         const platform = device.platform || device['_platform'];
         if (!device.type && !device.platform) {
             device = (await DeviceController.getDevices(device))[0];
         }
-
-        if (!device) {
-            utils.logError(`Device doesn't exist!`);
-        }
+        if (!device) utils.logError(`Device doesn't exist!`);
 
         if (type === DeviceType.EMULATOR || platform === Platform.ANDROID) {
-            options = shouldHardResetDevices ? (options || "") + " -wipe-data " : options;
-            const emuOptions = options ? options.split(" ").filter(o => o.trim()) : undefined;
-
-            return await AndroidController.startEmulator(device, emuOptions);
+            let emuOptions = options ? options.split(" ").filter(o => o.trim()) : undefined;
+            const opts = shouldHardResetDevices ? Array.from(AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE) : emuOptions || Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE)
+            const startEmulatorOptions: StartEmulatorOptions = {
+                shouldHardResetDevices: shouldHardResetDevices,
+                options: opts
+            }
+            return await AndroidController.startEmulator(device, startEmulatorOptions);
         } else {
             return await IOSController.startSimulator(device, options, shouldHardResetDevices);
         }
@@ -141,13 +141,18 @@ export class DeviceController {
         }
     }
 
-    public static async getRunningDevices(shouldFailOnError: boolean) {
+    public static async getRunningDevices() {
         const devices = new Array<IDevice>();
         const emulators = AndroidController.parseRunningDevicesList(false);
 
         for (let index = 0; index < emulators.length; index++) {
             const emulator = emulators[index];
-            emulator.name = await AndroidController.sendTelnetCommand(emulator.token, "avd name", shouldFailOnError);
+            emulator.name = await AndroidController.sendEmulatorConsoleCommands(emulator, {
+                port: emulator.token,
+                commands: ["avd name"],
+                shouldFailOnError: false,
+                matchExit: /\w+/ig
+            });
         }
         devices.push(...emulators);
 
@@ -221,7 +226,7 @@ export class DeviceController {
 
         if (!query.platform || (query.platform && query.platform.toLowerCase() === Platform.ANDROID)) {
             (await AndroidController.getAllDevices(verbose))
-                .forEach((v, k, map) => v.forEach(d => utils.filterAndroidPredicate(query, d) && devices.push(d)));
+                .forEach(d => utils.filterAndroidPredicate(query, d) && devices.push(d));
         }
 
         return devices;

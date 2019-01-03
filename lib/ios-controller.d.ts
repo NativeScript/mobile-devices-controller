@@ -1,8 +1,9 @@
-import { IDevice, Device } from "./device";
-import { DeviceType, Status } from "./enums";
+import { IDevice } from "./device";
+import { DeviceType } from "./enums";
 export declare class IOSController {
     private static XCRUN;
     private static SIMCTL;
+    private static XCRUN_SIMCTL_LIST_COMMAND;
     private static XCRUNLISTDEVICES_COMMAND;
     private static GET_BOOTED_DEVICES_COMMAND;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND;
@@ -18,10 +19,10 @@ export declare class IOSController {
     static getSimulatorPidByToken(token: string): any;
     static deleteDevice(token: string): void;
     static fullResetOfSimulator(simulator: IDevice): IDevice;
-    static startSimulator(simulator: IDevice, directory?: string, shouldFullResetSimulator?: boolean): Promise<IDevice>;
+    static startSimulator(simulator: IDevice, directory?: string, shouldFullResetSimulator?: boolean, retries?: number): Promise<IDevice>;
     static restartDevice(device: IDevice): Promise<void>;
     static killAll(): void;
-    static kill(udid: string): void;
+    static kill(udid: string): Promise<void>;
     static getInstalledApps(device: IDevice): any[];
     static installApp(device: IDevice, fullAppName: any): Promise<void>;
     /**
@@ -64,14 +65,10 @@ export declare class IOSController {
     static getLogDir(token: any): string;
     private static loadIOSDevicesScreenInfo;
 }
-export declare class IOSDevice extends Device {
-    constructor(token: string, name: string, status: Status, type: DeviceType, apiLevel?: string, pid?: number);
-}
-export declare class IOSDeviceScreenInfo {
+export interface IOSDeviceScreenInfo {
     deviceType: any;
     width: any;
     height: any;
     density: any;
     actionBarHeight: any;
-    constructor(deviceType: any, width: any, height: any, density: any, actionBarHeight: any);
 }

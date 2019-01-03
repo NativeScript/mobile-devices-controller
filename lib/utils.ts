@@ -8,19 +8,17 @@ import {
 import { resolve } from "path";
 import { createInterface } from "readline";
 import { DeviceType, Platform } from "./enums";
+import { isRegExp } from "util";
 
 export const killAllProcessAndRelatedCommand = args => {
     if (!args || args.length === 0) return;
     args = Array.isArray(args) ? args : [args];
     const greps = new Array();
-    args.forEach(e => greps.push(`| grep -ie "${e}"`));
+    args.forEach(e => greps.push(`| grep -ie '${e}'`));
+    greps.push("| grep -v grep ");
     greps.push("| awk '{print $2}'", "| xargs kill -9");
-
-    const output = childProcess.execSync("/bin/ps aux", ...greps, {
-        shell: true,
-        encoding: "UTF8",
-        timeout: 10000
-    });
+    // console.log(`Executing "/bin/ps aux ${greps.join(" ")}"`);
+    const output = childProcess.spawnSync(`/bin/ps aux`, [...greps]);
 };
 
 export const isProcessAlive = (arg: any) => {
@@ -121,10 +119,24 @@ export function tailFileUntil(file, condition, index = 0) {
 export const sortDescByApiLevelPredicate = (a, b) => { return (+a.apiLevel !== NaN && +b.apiLevel) ? +b.apiLevel - +a.apiLevel : -1 };
 export const sortAscByApiLevelPredicate = (a, b) => { return (+a.apiLevel !== NaN && +b.apiLevel) ? +a.apiLevel - +b.apiLevel : -1 };
 
+const basicPredicateFilter = (searchQuery, device, prop) => {
+    if (searchQuery[prop]) {
+        if (typeof searchQuery[prop] === 'object' && !isRegExp(searchQuery[prop])) {
+            return true;
+        } else {
+            return new RegExp(searchQuery[prop], "ig").test(device[prop]);
+        }
+    } else {
+        return true;
+    }
+}
+
 export const filterPredicate = (searchQuery, device) =>
     (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0)
         ? true : Object.getOwnPropertyNames(searchQuery)
-            .every(prop => searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop], "ig").test(device[prop]) : true);
+            .every(prop => {
+                return basicPredicateFilter(searchQuery, device, prop);
+            });
 
 export const filterAndroidPredicate = (searchQuery, device) =>
     (!searchQuery || searchQuery === null || Object.getOwnPropertyNames(searchQuery).length === 0)
@@ -134,7 +146,7 @@ export const filterAndroidPredicate = (searchQuery, device) =>
                     && (prop === "apiLevel" || prop === "releaseVersion")) {
                     return new RegExp(searchQuery[prop], "ig").test(device[prop]) || new RegExp(searchQuery[prop], "ig").test(device["releaseVersion"]);
                 }
-                return searchQuery[prop] && typeof searchQuery[prop] !== 'object' ? new RegExp(searchQuery[prop], "ig").test(device[prop]) : true
+                return basicPredicateFilter(searchQuery, device, prop);
             });
 
 export function filter<T>(devices: Array<T>, searchQuery) {

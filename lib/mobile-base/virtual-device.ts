@@ -2,13 +2,13 @@ import { EventEmitter } from "events";
 import { IVirtualDevice } from "../interfaces/virtual-device";
 import { ChildProcess } from "child_process";
 import { DeviceSignal } from "../enums/DeviceSignals";
-import { IDevice, Device } from "../device";
+import { IDevice } from "../device";
 
 export abstract class VirtualDevice extends EventEmitter implements IVirtualDevice {
     protected _isAttached = false;
     protected _isAlive: boolean;
     protected _deviceProcess: ChildProcess;
-    protected _device: Device;
+    protected _device: IDevice;
 
     constructor() {
         super();
@@ -18,7 +18,7 @@ export abstract class VirtualDevice extends EventEmitter implements IVirtualDevi
         this.addListener(DeviceSignal.onDeviceErrorSignal, (args) => this.onDeviceError(args));
     }
 
-    get device(): Device {
+    get device(): IDevice {
         return this._device;
     }
 
