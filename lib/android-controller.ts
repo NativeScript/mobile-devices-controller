@@ -131,10 +131,9 @@ export class AndroidController {
 
     public static async startEmulator(emulator: IDevice, startEmulatorOptions?: StartEmulatorOptions): Promise<IDevice> {
         if (!startEmulatorOptions || !startEmulatorOptions.options) {
-            startEmulatorOptions = {
-                options: Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE),
-                retries: 3,
-            }
+            startEmulatorOptions = new StartEmulatorOptions();
+            startEmulatorOptions.options = Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE);
+            startEmulatorOptions.retries = 3;
         }
         if (!emulator.token) {
             emulator.token = emulator.apiLevel ? (AndroidController.emulatorId(emulator.apiLevel) || "5554") : "5554";
@@ -175,7 +174,7 @@ export class AndroidController {
 
         emulator.type = DeviceType.EMULATOR;
         emulator = await AndroidController.startEmulatorProcess(emulator, startEmulatorOptions.logPath, startEmulatorOptions.options);
-        let result = (await AndroidController.waitUntilEmulatorBoot(emulator, startEmulatorOptions.defaultBootTime) === true) ? Status.BOOTED : Status.SHUTDOWN;
+        let result = (await AndroidController.waitUntilEmulatorBoot(emulator, startEmulatorOptions.defaultBootTime || AndroidController.DEFAULT_BOOT_TIME) === true) ? Status.BOOTED : Status.SHUTDOWN;
 
         let security;
         let snapshot = AndroidController.DEFAULT_SNAPSHOT_NAME;

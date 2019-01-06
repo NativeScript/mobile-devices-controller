@@ -20,11 +20,10 @@
                 "tdd",
                 "--timeout",
                 "999999",
-                "--colors",
                 "${workspaceFolder}/lib",
                 "--recursive",
                 "--grep", 
-                "install/ uninstall app"
+                "android"
             ],
             "internalConsoleOptions": "openOnSessionStart"
         }
