@@ -16,9 +16,13 @@ export const killAllProcessAndRelatedCommand = args => {
     const greps = new Array();
     args.forEach(e => greps.push(`| grep -ie '${e}'`));
     greps.push("| grep -v grep ");
-    greps.push("| awk '{print $2}'", "| xargs kill -9");
-    // console.log(`Executing "/bin/ps aux ${greps.join(" ")}"`);
-    const output = childProcess.spawnSync(`/bin/ps aux`, [...greps]);
+    greps.push("| awk '{print $2}'");
+    console.log(`Executing "/bin/ps aux ${greps.join(" ")}"`);
+    childProcess.execSync(`/bin/ps aux ${greps.join(" ")}`, {
+        stdio: "pipe",
+        cwd: process.cwd(),
+        env: process.env
+    });
 };
 
 export const isProcessAlive = (arg: any) => {

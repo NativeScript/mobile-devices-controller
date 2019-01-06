@@ -2,15 +2,14 @@
 import { Status, AndroidKeyEvent } from "./enums";
 import { IDevice } from "./device";
 export declare class AndroidController {
-    private static DEFAULT_BOOT_TIME;
     private static ANDROID_HOME;
     private static EMULATOR;
     private static ADB;
     private static LIST_DEVICES_COMMAND;
-    private static AVD_MANAGER;
     private static _emulatorIds;
     private static lockFilesPredicate;
     private static emulators;
+    static DEFAULT_BOOT_TIME: number;
     static DEFAULT_SNAPSHOT_NAME: string;
     static readonly NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE: string[];
     static NO_WIPE_DATA_NO_SNAPSHOT_SAVE: string[];
@@ -30,7 +29,7 @@ export declare class AndroidController {
      * Implement kill process
      * @param emulator
      */
-    static kill(emulator: IDevice, verbose?: boolean, retries?: number): Promise<IDevice>;
+    static kill(emulator: IDevice, verbose?: boolean, retries?: number, hardKillByName?: boolean): Promise<IDevice>;
     static killAll(): void;
     static restartDevice(device: IDevice): Promise<IDevice>;
     static startAdb(): void;
@@ -100,9 +99,11 @@ export interface EmulatorConsoleOptions {
     retries?: number;
     matchExit?: RegExp;
 }
-export interface StartEmulatorOptions {
+export declare class StartEmulatorOptions {
     shouldHardResetDevices?: boolean;
     options?: Array<string>;
     retries?: number;
     logPath?: string;
+    hardKillByName?: boolean;
+    defaultBootTime?: number;
 }

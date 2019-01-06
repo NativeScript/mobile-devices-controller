@@ -11,6 +11,7 @@ import {
     killAllProcessAndRelatedCommand,
     logError,
     isProcessAlive,
+    logInfo,
 } from "./utils";
 import { IDevice } from "./device";
 import { Platform, DeviceType, Status } from "./enums";
@@ -19,16 +20,67 @@ import { DeviceController } from "./device-controller";
 
 export class IOSController {
 
-    private static XCRUN = "xcrun ";
+    private static XCRUN = "/usr/bin/xcrun ";
     private static SIMCTL = `${IOSController.XCRUN} simctl`;
-    private static XCRUN_SIMCTL_LIST_COMMAND = `${IOSController.SIMCTL} list `;
-    private static XCRUNLISTDEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
-    private static GET_BOOTED_DEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
+    private static XCRUN_LISTDEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
     private static IOS_DEVICE = "ios-device";
     private static devicesScreenInfo = new Map<string, IOSDeviceScreenInfo>();
-    private static DEVICE_BOOT_TIME = 180000;
-    private static WAIT_DEVICE_TO_RESPONSE = 180000;
+    
+    public static DEVICE_BOOT_TIME = 180000;
+    public static WAIT_DEVICE_TO_RESPONSE = 180000;
+    public static XCRUN_COMMAND_TIMEOUT = 180000;
+
+    private static execXCRUNCommand(command: string, args: Array<any>, timeout = IOSController.XCRUN_COMMAND_TIMEOUT): Promise<{ succeeded: boolean, result?: any }> {
+        return new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+                clearTimeout(timer);
+                resolve({ succeeded: false });
+            }, timeout);
+
+            const proc = spawn(IOSController.XCRUN.trim(), [command, ...args], {
+                stdio: "inherit",
+            });
+            let data;
+
+            proc.on("data", (d) => {
+                data += d;
+                clearTimeout(timer);
+            })
+            proc.on('error', (err) => {
+                logError(`Command '${command}' errored out: ${err.stack}`);
+                clearTimeout(timer);
+                resolve({ succeeded: false });
+            });
+            if (proc.stdin) {
+                proc.stdin.on('error', (err) => {
+                    console.log(new Error(`Standard input '${err.name}' error: ${err.stack}`));
+                    logError(`Command '${command}' errored out: ${err.stack}`);
+                    clearTimeout(timer);
+                    resolve({ succeeded: false });
+                });
+            }
+            if (proc.stdout) {
+                proc.stdout.on('error', (err) => {
+                    console.log(new Error(`Standard output '${err.name}' error: ${err.stack}`));
+                    clearTimeout(timer);
+                    resolve({ succeeded: false });
+                });
+            }
+            if (proc.stderr) {
+                proc.stderr.on('error', (err) => {
+                    console.log(new Error(`Standard error '${err.name}' error: ${err.stack}`));
+                    clearTimeout(timer);
+                    resolve({ succeeded: false });
+                });
+            }
+
+            proc.on("close", (close) => {
+                clearTimeout(timer);
+                resolve({ succeeded: true, result: data });
+            })
+        });
+    }
 
     private static _dl: IOSDeviceLib.IOSDeviceLib;
     static getDl() {
@@ -148,10 +200,11 @@ export class IOSController {
 
         let udid = simulator.token;
 
-        // && simulator.name
-        // && !simulator.name.toLowerCase().includes("iphone 7")
-        // && !simulator.name.toLowerCase().includes("iphone 8")
-        if (isProcessAlive("Simulator.app") && shouldFullResetSimulator) {
+        if (isProcessAlive("Simulator.app")
+            && shouldFullResetSimulator
+            && !(simulator.name
+                && simulator.name.toLowerCase().includes("iphone 7")
+                || simulator.name.toLowerCase().includes("iphone 8"))) {
             try {
                 const newSim = IOSController.fullResetOfSimulator(simulator);
                 if (newSim.token) {
@@ -160,7 +213,8 @@ export class IOSController {
                 }
             } catch (error) { }
         } else if (shouldFullResetSimulator) {
-            const eraseSimResult = executeCommand(`${IOSController.SIMCTL} erase ${udid}`);
+            const eraseSimResult = await IOSController.execXCRUNCommand("simctl", ["erase", udid]);
+            console.log("Result of erasing simulator: ", eraseSimResult);
         }
 
         let startedProcess = IOSController.startSimulatorProcess(udid, directory);
@@ -254,7 +308,14 @@ export class IOSController {
                 console.error(installProcess.response);
             }
         } else {
-            const result = executeCommand(`${IOSController.SIMCTL} install ${device.token} ${fullAppName}`);
+            let result = await IOSController.execXCRUNCommand("simctl", ["install", device.token, fullAppName]);
+            if (!result.succeeded) {
+                logInfo("Reinstalling application!");
+                result = await IOSController.execXCRUNCommand("simctl", ["install", device.token, fullAppName]);
+                if (!result.succeeded) {
+                    console.log("Probably the application is not successfully installed");
+                }
+            }
         }
     }
 
@@ -272,7 +333,7 @@ export class IOSController {
                 device.type = d && d.type;
             }
             if (device.type && device.type === DeviceType.SIMULATOR) {
-                executeCommand(`${IOSController.SIMCTL} ${device.token} terminate ${bundleId}`);
+                //const r = await IOSController.execXCRUNCommand("simctl", ["terminate", device.token, `${bundleId}`]);
                 await killAllProcessAndRelatedCommand([device.token, appName]);
             } else {
                 const appInfo = { ddi: undefined, appId: bundleId, deviceId: device.token }
@@ -369,7 +430,7 @@ export class IOSController {
     }
 
     public static parseSimulators(stdout = undefined): Map<string, Array<IDevice>> {
-        const devicesObj = JSON.parse(executeCommand(`${IOSController.XCRUNLISTDEVICES_COMMAND} --json`).toString());
+        const devicesObj = JSON.parse(executeCommand(`${IOSController.XCRUN_LISTDEVICES_COMMAND} --json`).toString());
         const deviceObjDevice = devicesObj["devices"];
         const devices: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>();
         Object.getOwnPropertyNames(devicesObj["devices"])

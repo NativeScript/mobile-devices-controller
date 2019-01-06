@@ -32,7 +32,7 @@ export declare class DeviceController {
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<any>;
     static reinstallApplication(device: IDevice, appFullName: string, bundleId: any): Promise<void>;
     static installApplication(device: IDevice, appFullName: string, bundleId?: string): Promise<string | void>;
-    static uninstallAppWithBundle(device: IDevice, bundleId: any): Promise<void>;
+    static uninstallAppWithBundle(device: IDevice, appId: any): Promise<void>;
     static copyProperties(from: IDevice): IDevice;
     private static mapDevicesToArray;
 }

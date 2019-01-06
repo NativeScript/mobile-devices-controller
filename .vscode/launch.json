@@ -24,7 +24,7 @@
                 "${workspaceFolder}/lib",
                 "--recursive",
                 "--grep", 
-                "android controller"
+                "install/ uninstall app"
             ],
             "internalConsoleOptions": "openOnSessionStart"
         }

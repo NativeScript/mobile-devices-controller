@@ -24,16 +24,15 @@ import { DeviceController } from "./device-controller";
 const OFFSET_DI_PIXELS = 16;
 
 export class AndroidController {
-    private static DEFAULT_BOOT_TIME = 150000;
     private static ANDROID_HOME = AndroidController.getAndroidHome();
     private static EMULATOR = resolve(AndroidController.ANDROID_HOME, "emulator", "emulator");
     private static ADB = resolve(AndroidController.ANDROID_HOME, "platform-tools", "adb");
     private static LIST_DEVICES_COMMAND = AndroidController.ADB + " devices -l";
-    private static AVD_MANAGER = resolve(AndroidController.ANDROID_HOME, "tools", "bin", "avdmanager");
     private static _emulatorIds: Map<string, string> = new Map();
     private static lockFilesPredicate = f => { return f.endsWith(".lock") || f.startsWith("snapshot.lock.") };
     private static emulators = new Array<IDevice>();
 
+    public static DEFAULT_BOOT_TIME = 150000;
     public static DEFAULT_SNAPSHOT_NAME = "clean_boot"
     public static readonly NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE = ["-no-audio", "-no-boot-anim", "-wipe-data", "-no-snapshot-load", "-no-snapshot-save"];
     public static NO_WIPE_DATA_NO_SNAPSHOT_SAVE = ["-snapshot", AndroidController.DEFAULT_SNAPSHOT_NAME, "-no-snapshot-save"];
@@ -170,13 +169,13 @@ export class AndroidController {
         }
 
         // kill emulator instance in case some process are still alive
-        await AndroidController.kill(emulator, false);
+        await AndroidController.kill(emulator, false, startEmulatorOptions.retries, startEmulatorOptions.shouldHardResetDevices);
         // clean lock files
         AndroidController.cleanLockFiles(emulator);
 
         emulator.type = DeviceType.EMULATOR;
         emulator = await AndroidController.startEmulatorProcess(emulator, startEmulatorOptions.logPath, startEmulatorOptions.options);
-        let result = await AndroidController.waitUntilEmulatorBoot(emulator, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
+        let result = (await AndroidController.waitUntilEmulatorBoot(emulator, startEmulatorOptions.defaultBootTime) === true) ? Status.BOOTED : Status.SHUTDOWN;
 
         let security;
         let snapshot = AndroidController.DEFAULT_SNAPSHOT_NAME;
@@ -263,7 +262,7 @@ export class AndroidController {
         let result;
         try {
             AndroidController.executeAdbCommand(emulator, 'reboot bootloader');
-            result = AndroidController.waitUntilEmulatorBoot(emulator, AndroidController.DEFAULT_BOOT_TIME / 3);
+            result = await AndroidController.waitUntilEmulatorBoot(emulator, AndroidController.DEFAULT_BOOT_TIME / 3);
         } catch{ }
 
         if (!result) {
@@ -294,7 +293,7 @@ export class AndroidController {
      * Implement kill process
      * @param emulator 
      */
-    public static async kill(emulator: IDevice, verbose = true, retries: number = 3) {
+    public static async kill(emulator: IDevice, verbose = true, retries: number = 3, hardKillByName: boolean = true) {
         let isAlive: boolean = true;
         if (emulator.type !== DeviceType.DEVICE) {
             if (emulator.token) {
@@ -305,11 +304,12 @@ export class AndroidController {
 
             try {
                 if (!isWin()) {
-                    killAllProcessAndRelatedCommand(emulator.name);
-                    killAllProcessAndRelatedCommand(`emulator-${emulator.token}`);
+                    emulator.pid && killAllProcessAndRelatedCommand(emulator.pid);
+                    if (hardKillByName) {
+                        killAllProcessAndRelatedCommand(emulator.name);
+                    }
                 }
                 emulator.pid && killPid(+emulator.pid);
-
                 killProcessByName("emulator64-crash-service");
             } catch (error) { }
 
@@ -417,7 +417,7 @@ export class AndroidController {
     public static checkIfEmulatorIsResponding(device: IDevice) {
         try {
             const androidSettings = "com.android.settings/com.android.settings.Settings";
-            AndroidController.executeAdbShellCommand(device, ` am start -n ${androidSettings}`);
+            AndroidController.executeAdbShellCommand(device, ` am start -n ${androidSettings}`, 15000);
 
             let errorMsg = AndroidController.getCurrentFocusedScreen(device);
             const startTime = Date.now();
@@ -437,11 +437,11 @@ export class AndroidController {
             }
         } catch (error) {
             logError('Command timeout received', error);
-            AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings");
+            AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings", 15000);
             return false
         }
         try {
-            AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings");
+            AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings", 15000);
         } catch (error) { }
 
         return true
@@ -797,25 +797,32 @@ export class AndroidController {
         return emulator;
     }
 
-    private static waitUntilEmulatorBoot(device: IDevice, timeOutInMilliseconds: number): boolean {
-        const startTime = Date.now();
-        let found = false;
+    private static async waitUntilEmulatorBoot(device: IDevice, timeOutInMilliseconds: number) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            let found = false;
 
-        logInfo("Booting emulator ...");
-        //emulator: ERROR: There's another emulator instance running with the current AVD 'Emulator-Api23-Default'. Exiting...
+            logInfo("Booting emulator ...");
 
-        while ((Date.now() - startTime) <= timeOutInMilliseconds && !found) {
-            found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + device.token);
-        }
+            const abortWatch = setTimeout(function () {
+                clearTimeout(abortWatch);
+                logError("Received timeout: ", timeOutInMilliseconds);
+                return resolve(false);
+            }, timeOutInMilliseconds);
 
-        found = AndroidController.checkIfEmulatorIsResponding(device);
-        if (!found) {
-            logError(`${device.token} failed to boot in ${timeOutInMilliseconds} milliseconds`, true);
-        } else {
-            logInfo("Emulator is booted!");
-        }
+            while ((Date.now() - startTime) <= timeOutInMilliseconds && !found) {
+                found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + device.token);
+            }
 
-        return found;
+            found = AndroidController.checkIfEmulatorIsResponding(device);
+            if (!found) {
+                logError(`${device.token} failed to boot in ${timeOutInMilliseconds} milliseconds`, true);
+            } else {
+                logInfo("Emulator is booted!");
+            }
+            clearTimeout(abortWatch);
+            return resolve(found);;
+        });
     }
 
     private static checkIfEmulatorIsRunning(token) {
@@ -1139,9 +1146,11 @@ export interface EmulatorConsoleOptions {
     matchExit?: RegExp
 }
 
-export interface StartEmulatorOptions {
+export class StartEmulatorOptions {
     shouldHardResetDevices?: boolean;
-    options?: Array<string>,
+    options?: Array<string>;
     retries?: number;
     logPath?: string;
+    hardKillByName?: boolean = false;
+    defaultBootTime?: number = +process.env.BOOT_ANDROID_EMULATOR_MAX_TIME || +AndroidController.DEFAULT_BOOT_TIME
 }

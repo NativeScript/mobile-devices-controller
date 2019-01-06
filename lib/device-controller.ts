@@ -26,10 +26,9 @@ export class DeviceController {
         if (type === DeviceType.EMULATOR || platform === Platform.ANDROID) {
             let emuOptions = options ? options.split(" ").filter(o => o.trim()) : undefined;
             const opts = shouldHardResetDevices ? Array.from(AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE) : emuOptions || Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE)
-            const startEmulatorOptions: StartEmulatorOptions = {
-                shouldHardResetDevices: shouldHardResetDevices,
-                options: opts
-            }
+            const startEmulatorOptions = new StartEmulatorOptions();
+            startEmulatorOptions.shouldHardResetDevices = shouldHardResetDevices;
+            startEmulatorOptions.options = opts;
             return await AndroidController.startEmulator(device, startEmulatorOptions);
         } else {
             return await IOSController.startSimulator(device, options, shouldHardResetDevices);
@@ -199,11 +198,11 @@ export class DeviceController {
         }
     }
 
-    public static async uninstallAppWithBundle(device: IDevice, bundleId) {
+    public static async uninstallAppWithBundle(device: IDevice, appId) {
         if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
-            return await AndroidController.uninstallApp(device, bundleId);
+            return await AndroidController.uninstallApp(device, appId);
         } else {
-            return await IOSController.uninstallApp(device, undefined, bundleId);
+            return await IOSController.uninstallApp(device, undefined, appId);
         }
     }
 
