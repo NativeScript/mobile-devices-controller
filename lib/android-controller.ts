@@ -190,7 +190,7 @@ export class AndroidController {
                 retries: 10,
                 getAllData: true
             });
-            if (!availableSnapshots.includes(snapshotName)) {
+            if (!availableSnapshots || !availableSnapshots.includes(snapshotName)) {
                 logWarn(`This snapshot is not available. We are going to recreate a clean one with the same name`);
                 snapshot = snapshotName;
                 await AndroidController.kill(emulator);
