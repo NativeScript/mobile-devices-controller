@@ -187,11 +187,12 @@ export class AndroidController {
                 commands: [`auth ${security}`, "avd snapshot list"],
                 shouldFailOnError: true,
                 matchExit: /\w+/ig,
-                retries: 10,
+                retries: 15,
                 getAllData: true
             });
             if (!availableSnapshots || !availableSnapshots.includes(snapshotName)) {
-                logWarn(`This snapshot is not available. We are going to recreate a clean one with the same name`);
+                console.log("Available snapshots: ", availableSnapshots);
+                logWarn(`Snapshot "${snapshotName}" is not available. Recreating a clean one with the same name...`);
                 snapshot = snapshotName;
                 await AndroidController.kill(emulator);
                 AndroidController.cleanLockFiles(emulator);
@@ -414,33 +415,37 @@ export class AndroidController {
     }
 
     public static checkIfEmulatorIsResponding(device: IDevice) {
+        if (AndroidController.checkApiLevelIsLessThan(device, 19)) {
+            console.log(`Skip check if device is responding since api level is lower than 19/ 5.0`);
+            return true;
+        }
+
+        const shortTimeout = 15000;
+        console.log("Check if simulator is responding");
         try {
             const androidSettings = "com.android.settings/com.android.settings.Settings";
-            AndroidController.executeAdbShellCommand(device, ` am start -n ${androidSettings}`, 15000);
+            AndroidController.executeAdbShellCommand(device, ` am start -n ${androidSettings}`, shortTimeout);
 
             let errorMsg = AndroidController.getCurrentFocusedScreen(device);
             const startTime = Date.now();
             while (Date.now() - startTime <= 5000
                 && !errorMsg.toLowerCase()
                     .includes(androidSettings.toLowerCase())) {
+                wait(1000);
                 errorMsg = AndroidController.getCurrentFocusedScreen(device);
             }
             if (!errorMsg.toLowerCase()
                 .includes(androidSettings.toLowerCase())) {
                 logWarn("Emulator is not responding!", errorMsg);
-                if (AndroidController.checkApiLevelIsLessThan(device, 19)) {
-                    console.log(`Skip check if device is responding since api level is lower than 19/ 5.0`);
-                    return true;
-                }
                 return false;
             }
         } catch (error) {
             logError('Command timeout received', error);
-            AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings", 15000);
+            AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings", shortTimeout);
             return false
         }
         try {
-            AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings", 15000);
+            AndroidController.executeAdbShellCommand(device, " am force-stop com.android.settings", shortTimeout);
         } catch (error) { }
 
         return true
@@ -798,37 +803,41 @@ export class AndroidController {
 
     private static async waitUntilEmulatorBoot(device: IDevice, timeOutInMilliseconds: number) {
         return new Promise((resolve, reject) => {
-            const startTime = Date.now();
-            let found = false;
-
             logInfo("Booting emulator ...");
-
             const abortWatch = setTimeout(function () {
                 clearTimeout(abortWatch);
                 logError("Received timeout: ", timeOutInMilliseconds);
                 return resolve(false);
             }, timeOutInMilliseconds);
 
-            while ((Date.now() - startTime) <= timeOutInMilliseconds && !found) {
-                found = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + device.token);
-            }
-
-            found = AndroidController.checkIfEmulatorIsResponding(device);
-            if (!found) {
+            let isBooted = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + device.token, timeOutInMilliseconds);
+            isBooted = AndroidController.checkIfEmulatorIsResponding(device);
+            if (!isBooted) {
                 logError(`${device.token} failed to boot in ${timeOutInMilliseconds} milliseconds`, true);
             } else {
                 logInfo("Emulator is booted!");
             }
             clearTimeout(abortWatch);
-            return resolve(found);;
+            return resolve(isBooted);;
         });
     }
 
-    private static checkIfEmulatorIsRunning(token) {
+    private static checkIfEmulatorIsRunning(token, timeOutInMilliseconds = AndroidController.DEFAULT_BOOT_TIME) {
+        console.log(`Check if "${DeviceType.EMULATOR}-${token}" is running.`);
+
         let isBooted = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop sys.boot_completed`).trim() === "1";
+        let isBootedSecondCheck = false;
         if (isBooted) {
-            isBooted = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop init.svc.bootanim`).toLowerCase().trim() === "stopped";
+            isBootedSecondCheck = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop init.svc.bootanim`).toLowerCase().trim() === "stopped";
         }
+        const startTime = Date.now();
+        while ((Date.now() - startTime) <= timeOutInMilliseconds && (!isBooted || !isBootedSecondCheck)) {
+            isBooted = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop sys.boot_completed`).trim() === "1";
+            if (isBooted) {
+                isBootedSecondCheck = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop init.svc.bootanim`).toLowerCase().trim() === "stopped";
+            }
+        }
+
 
         return isBooted;
     }
