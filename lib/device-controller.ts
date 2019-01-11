@@ -27,7 +27,6 @@ export class DeviceController {
             let emuOptions = options ? options.split(" ").filter(o => o.trim()) : undefined;
             const opts = shouldHardResetDevices ? Array.from(AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE) : emuOptions || Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE)
             const startEmulatorOptions = new StartEmulatorOptions();
-            startEmulatorOptions.shouldHardResetDevices = shouldHardResetDevices;
             startEmulatorOptions.options = opts;
             return await AndroidController.startEmulator(device, startEmulatorOptions);
         } else {

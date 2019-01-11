@@ -168,7 +168,7 @@ export class AndroidController {
         }
 
         // kill emulator instance in case some process are still alive
-        await AndroidController.kill(emulator, false, startEmulatorOptions.retries, startEmulatorOptions.shouldHardResetDevices);
+        await AndroidController.kill(emulator, false, startEmulatorOptions.retries);
         // clean lock files
         AndroidController.cleanLockFiles(emulator);
 
@@ -293,7 +293,7 @@ export class AndroidController {
      * Implement kill process
      * @param emulator 
      */
-    public static async kill(emulator: IDevice, verbose = true, retries: number = 3, hardKillByName: boolean = true) {
+    public static async kill(emulator: IDevice, verbose = true, retries: number = 3) {
         let isAlive: boolean = true;
         if (emulator.type !== DeviceType.DEVICE) {
             if (emulator.token) {
@@ -305,9 +305,7 @@ export class AndroidController {
             try {
                 if (!isWin()) {
                     emulator.pid && killAllProcessAndRelatedCommand(emulator.pid);
-                    if (hardKillByName) {
-                        killAllProcessAndRelatedCommand(emulator.name);
-                    }
+                    killAllProcessAndRelatedCommand(["sdk/emulator/qemu", emulator.name]);
                 }
                 emulator.pid && killPid(+emulator.pid);
                 killProcessByName("emulator64-crash-service");
@@ -421,7 +419,7 @@ export class AndroidController {
         }
 
         const shortTimeout = 15000;
-        console.log("Check if simulator is responding");
+        console.log("Check if emulator is responding");
         try {
             const androidSettings = "com.android.settings/com.android.settings.Settings";
             AndroidController.executeAdbShellCommand(device, ` am start -n ${androidSettings}`, shortTimeout);
@@ -823,7 +821,7 @@ export class AndroidController {
     }
 
     private static checkIfEmulatorIsRunning(token, timeOutInMilliseconds = AndroidController.DEFAULT_BOOT_TIME) {
-        console.log(`Check if "${DeviceType.EMULATOR}-${token}" is running.`);
+        console.log(`Check if "${token}" is running.`);
 
         let isBooted = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop sys.boot_completed`).trim() === "1";
         let isBootedSecondCheck = false;
@@ -838,7 +836,8 @@ export class AndroidController {
             }
         }
 
-
+        console.log(`Check has "${isBooted ? "passed" : "failed"}".`);
+        
         return isBooted;
     }
 
@@ -1155,10 +1154,8 @@ export interface EmulatorConsoleOptions {
 }
 
 export class StartEmulatorOptions {
-    shouldHardResetDevices?: boolean;
     options?: Array<string>;
     retries?: number;
     logPath?: string;
-    hardKillByName?: boolean = false;
     defaultBootTime?: number = +process.env.BOOT_ANDROID_EMULATOR_MAX_TIME || +AndroidController.DEFAULT_BOOT_TIME
 }

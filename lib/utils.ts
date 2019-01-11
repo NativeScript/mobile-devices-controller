@@ -17,8 +17,8 @@ export const killAllProcessAndRelatedCommand = args => {
     args.forEach(e => greps.push(`| grep -ie '${e}'`));
     greps.push("| grep -v grep ");
     greps.push("| awk '{print $2}'");
-    console.log(`Executing "/bin/ps aux ${greps.join(" ")}"`);
-    childProcess.execSync(`/bin/ps aux ${greps.join(" ")}`, {
+    console.log(`Executing "/bin/ps aux ${greps.join(" ")} | xargs kill -9"`);
+    childProcess.execSync(`/bin/ps aux ${greps.join(" ")} | xargs kill -9`, {
         stdio: "pipe",
         cwd: process.cwd(),
         env: process.env
@@ -125,11 +125,14 @@ export const sortAscByApiLevelPredicate = (a, b) => { return (+a.apiLevel !== Na
 
 const basicPredicateFilter = (searchQuery, device, prop) => {
     if (searchQuery[prop]) {
-        if (typeof searchQuery[prop] === 'object' && !isRegExp(searchQuery[prop])) {
+        if (typeof searchQuery[prop] === 'object') {
             return true;
-        } else {
-            return new RegExp(searchQuery[prop], "ig").test(device[prop]);
         }
+        if (isRegExp(searchQuery[prop])) {
+            return searchQuery[prop].test(device[prop]);
+        }
+
+        return searchQuery[prop] === device[prop];
     } else {
         return true;
     }

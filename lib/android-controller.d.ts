@@ -29,7 +29,7 @@ export declare class AndroidController {
      * Implement kill process
      * @param emulator
      */
-    static kill(emulator: IDevice, verbose?: boolean, retries?: number, hardKillByName?: boolean): Promise<IDevice>;
+    static kill(emulator: IDevice, verbose?: boolean, retries?: number): Promise<IDevice>;
     static killAll(): void;
     static restartDevice(device: IDevice): Promise<IDevice>;
     static startAdb(): void;
@@ -100,10 +100,8 @@ export interface EmulatorConsoleOptions {
     matchExit?: RegExp;
 }
 export declare class StartEmulatorOptions {
-    shouldHardResetDevices?: boolean;
     options?: Array<string>;
     retries?: number;
     logPath?: string;
-    hardKillByName?: boolean;
     defaultBootTime?: number;
 }

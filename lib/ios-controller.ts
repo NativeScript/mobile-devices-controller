@@ -26,7 +26,7 @@ export class IOSController {
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
     private static IOS_DEVICE = "ios-device";
     private static devicesScreenInfo = new Map<string, IOSDeviceScreenInfo>();
-    
+
     public static DEVICE_BOOT_TIME = 180000;
     public static WAIT_DEVICE_TO_RESPONSE = 180000;
     public static XCRUN_COMMAND_TIMEOUT = 180000;
@@ -438,11 +438,17 @@ export class IOSController {
                 deviceObjDevice[level].forEach(deviceObj => {
                     const status: Status = <Status>deviceObj.state.toLowerCase();
                     const apiLevel = /\d+(\.\d{1,2})?/.exec(level)[0];
+                    const stringType = /\w+[a-z]/.test(level) &&  /\w+[a-z]/.exec(level)[0];
+                    let type = DeviceType.SIMULATOR;
+                    if (stringType) {
+                        type = stringType === "tv" ? DeviceType.TV : DeviceType.WATCH;
+                    }
+
                     const device = <IDevice>{
                         token: deviceObj.udid,
                         name: deviceObj.name,
                         status: status,
-                        type: DeviceType.SIMULATOR,
+                        type: type,
                         apiLevel: apiLevel,
                         platform: Platform.IOS
                     };

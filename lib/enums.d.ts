@@ -5,7 +5,9 @@ export declare enum Platform {
 export declare enum DeviceType {
     SIMULATOR = "simulator",
     EMULATOR = "emulator",
-    DEVICE = "device"
+    DEVICE = "device",
+    TV = "tv",
+    WATCH = "watch"
 }
 export declare enum Status {
     SHUTDOWN = "shutdown",
