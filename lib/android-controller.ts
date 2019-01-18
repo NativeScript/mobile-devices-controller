@@ -129,6 +129,33 @@ export class AndroidController {
         return security;
     }
 
+    public static async getSnapshots(emulator: IDevice, securityToken?: string) {
+        const commands = securityToken ? [`auth ${securityToken}`, "avd snapshot list"] : ["avd snapshot list"];
+        const availableSnapshots = await AndroidController.sendEmulatorConsoleCommands(emulator, {
+            port: emulator.token,
+            commands: commands,
+            shouldFailOnError: true,
+            matchExit: /\w+/ig,
+            retries: 15,
+            getAllData: true
+        });
+
+        return availableSnapshots;
+    }
+
+
+    public static async saveSnapshot(emulator: IDevice, snapshotName: string, securityToken?: string) {
+        const commands = securityToken ? [`auth ${securityToken}`, `avd snapshot save ${snapshotName}`] : [`avd snapshot save ${snapshotName}`];
+        await AndroidController.sendEmulatorConsoleCommands(emulator, {
+            port: emulator.token,
+            commands: commands,
+            shouldFailOnError: true,
+            matchExit: /^\s*$/,
+            retries: 10,
+            getAllData: false
+        });
+    }
+
     public static async startEmulator(emulator: IDevice, startEmulatorOptions?: StartEmulatorOptions): Promise<IDevice> {
         if (!startEmulatorOptions || !startEmulatorOptions.options) {
             startEmulatorOptions = new StartEmulatorOptions();
@@ -182,14 +209,7 @@ export class AndroidController {
         if (startEmulatorOptions.options && startEmulatorOptions.options.indexOf("-snapshot") >= 0) {
             const snapshotName = startEmulatorOptions.options[startEmulatorOptions.options.indexOf("-snapshot") + 1];
             security = await AndroidController.getSecurity(emulator);
-            const availableSnapshots = await AndroidController.sendEmulatorConsoleCommands(emulator, {
-                port: emulator.token,
-                commands: [`auth ${security}`, "avd snapshot list"],
-                shouldFailOnError: true,
-                matchExit: /\w+/ig,
-                retries: 15,
-                getAllData: true
-            });
+            const availableSnapshots = await AndroidController.getSnapshots(emulator, security);
             if (!availableSnapshots || !availableSnapshots.includes(snapshotName)) {
                 console.log("Available snapshots: ", availableSnapshots);
                 logWarn(`Snapshot "${snapshotName}" is not available. Recreating a clean one with the same name...`);
@@ -207,15 +227,7 @@ export class AndroidController {
             && startEmulatorOptions.options.indexOf("-snapshot") >= 0) {
             console.log(`Reset emulator and save snapshot ${snapshot}!`);
             security = security || await AndroidController.getSecurity(emulator);
-
-            await AndroidController.sendEmulatorConsoleCommands(emulator, {
-                port: emulator.token,
-                commands: [`auth ${security}`, `avd snapshot save ${snapshot}`],
-                shouldFailOnError: true,
-                matchExit: /^\s*$/,
-                retries: 10,
-                getAllData: false
-            });
+            await AndroidController.saveSnapshot(emulator, snapshot, security);
             await AndroidController.kill(emulator);
 
             AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE[AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE.indexOf("-snapshot") + 1] = snapshot;
@@ -837,7 +849,7 @@ export class AndroidController {
         }
 
         console.log(`Check has "${isBooted ? "passed" : "failed"}".`);
-        
+
         return isBooted;
     }
 

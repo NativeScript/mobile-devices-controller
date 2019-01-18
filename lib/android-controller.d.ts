@@ -22,6 +22,8 @@ export declare class AndroidController {
     static setEmulatorConfig(device: IDevice): void;
     static cleanLockFiles(emulator: IDevice): void;
     static getSecurity(emulator: any): Promise<any>;
+    static getSnapshots(emulator: IDevice, securityToken?: string): Promise<string>;
+    static saveSnapshot(emulator: IDevice, snapshotName: string, securityToken?: string): Promise<void>;
     static startEmulator(emulator: IDevice, startEmulatorOptions?: StartEmulatorOptions): Promise<IDevice>;
     static reboot(emulator: IDevice): Promise<IDevice>;
     static unlock(token: any, password?: any): void;
