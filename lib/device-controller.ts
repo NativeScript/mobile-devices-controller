@@ -8,7 +8,7 @@ export class DeviceController {
      * 
      * @param query of type IDevice
      */
-    public static async getDevices(query: any) {
+    public static async getDevices(query: IDevice) {
         const searchQuery = DeviceController.copyProperties(query);
         const devices: Array<IDevice> = await DeviceController.mapDevicesToArray(searchQuery);
 

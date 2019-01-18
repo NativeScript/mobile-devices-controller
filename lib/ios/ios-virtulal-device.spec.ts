@@ -52,14 +52,14 @@ describe("start and kill ios device", async () => {
     });
 
     it("create simulator iPhone X", async () => {
-        const device = (await DeviceController.getDevices({ name: "^iPhone X$" }))[0];
+        const device = (await DeviceController.getDevices({ name: "/^iPhone X$/" }))[0];
         const createdDevice = IOSController.fullResetOfSimulator({ name: device.name, apiLevel: device.apiLevel });
         const isNewDeviceAvailable = (await DeviceController.getDevices(createdDevice))[0];
         assert.isTrue(isNewDeviceAvailable && isNewDeviceAvailable.token === createdDevice.token && isNewDeviceAvailable.token !== device.token);
     })
 
     it("create simulator iPhone XR and delete old one", async () => {
-        const device = (await DeviceController.getDevices({ name: "iPhone XR$" }))[0];
+        const device = (await DeviceController.getDevices({ name: <any>/^iPhone X$/ }))[0];
         const createdDevice = IOSController.fullResetOfSimulator({ name: device.name, apiLevel: device.apiLevel, token: device.token });
         const isNewDeviceAvailable = (await DeviceController.getDevices(createdDevice))[0];
         assert.isTrue(isNewDeviceAvailable && isNewDeviceAvailable.token === createdDevice.token && isNewDeviceAvailable.token !== device.token);
@@ -68,9 +68,9 @@ describe("start and kill ios device", async () => {
     })
 
     it("create simulator with invalid options", async () => {
-        const device = (await DeviceController.getDevices({ name: "iPhone XR$" }))[0];
+        const device = (await DeviceController.getDevices({ name: <any>/^iPhone X$/ }))[0];
         const createdDevice = IOSController.fullResetOfSimulator({ name: device.name });
-        assert.isTrue(createdDevice.name == "iPhone XR" && !createdDevice.token);
+        assert.isTrue(createdDevice.name == "iPhone X" && !createdDevice.token);
     })
 
     it("test start device", () => {

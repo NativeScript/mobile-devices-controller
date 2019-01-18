@@ -5,7 +5,7 @@ export declare class DeviceController {
      *
      * @param query of type IDevice
      */
-    static getDevices(query: any): Promise<IDevice[]>;
+    static getDevices(query: IDevice): Promise<IDevice[]>;
     static startDevice(device: IDevice, options?: string, shouldHardResetDevices?: boolean): Promise<IDevice>;
     static refreshApplication(device: IDevice, appFullPath: any): Promise<void>;
     static startApplication(device: IDevice, appFullPath: any, bundleId?: string): Promise<void>;

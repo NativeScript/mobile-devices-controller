@@ -17,8 +17,9 @@ export const killAllProcessAndRelatedCommand = args => {
     args.forEach(e => greps.push(`| grep -ie '${e}'`));
     greps.push("| grep -v grep ");
     greps.push("| awk '{print $2}'");
-    console.log(`Executing "/bin/ps aux ${greps.join(" ")} | xargs kill -9"`);
-    childProcess.execSync(`/bin/ps aux ${greps.join(" ")} | xargs kill -9`, {
+    const killCommand = `/bin/ps aux ${greps.join(" ")} | xargs kill -9`;
+    console.log(`Executing "${killCommand}"`);
+    childProcess.execSync(killCommand, {
         stdio: "pipe",
         cwd: process.cwd(),
         env: process.env
@@ -123,13 +124,28 @@ export function tailFileUntil(file, condition, index = 0) {
 export const sortDescByApiLevelPredicate = (a, b) => { return (+a.apiLevel !== NaN && +b.apiLevel) ? +b.apiLevel - +a.apiLevel : -1 };
 export const sortAscByApiLevelPredicate = (a, b) => { return (+a.apiLevel !== NaN && +b.apiLevel) ? +a.apiLevel - +b.apiLevel : -1 };
 
+export const convertStringToRegExp = (phrase) => {
+    if (!phrase) return phrase;
+    if (isRegExp(phrase)) {
+        return phrase;
+    }
+
+    if (/(^\"\/|^\/)(\w.+.|\W.+.)\/([a-z]+$|[a-z]+\"$|\"|$)/.test(phrase)) {
+        const match = /(^\"\/|^\/)(\w.+.|\W.+.)\/([a-z]+$|[a-z]+\"$|\"|$)/.exec(phrase);
+        return new RegExp(match[2], match[3]);
+    }
+
+    return phrase;
+}
+
 const basicPredicateFilter = (searchQuery, device, prop) => {
     if (searchQuery[prop]) {
-        if (typeof searchQuery[prop] === 'object') {
+        const searchPropValue = convertStringToRegExp(searchQuery[prop]);
+        if (!isRegExp(searchPropValue) && typeof searchQuery[prop] === 'object') {
             return true;
         }
-        if (isRegExp(searchQuery[prop])) {
-            return searchQuery[prop].test(device[prop]);
+        if (isRegExp(searchPropValue)) {
+            return searchPropValue.test(device[prop]);
         }
 
         return searchQuery[prop] === device[prop];

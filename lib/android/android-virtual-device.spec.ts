@@ -25,7 +25,7 @@ describe("android", async function () {
                 const element = devices[index];
                 assert.isTrue(element.name.includes("Emulator-Api23-Default"));
             }
-            const singleDevices = await DeviceController.getDevices({ name: new RegExp("^Emulator-Api23-Default$") });
+            const singleDevices = await DeviceController.getDevices({ name: <any>/^Emulator-Api23-Default$/ });
             assert.isTrue(singleDevices.length === 1 && singleDevices[0].name === "Emulator-Api23-Default")
         });
 

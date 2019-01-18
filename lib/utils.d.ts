@@ -12,6 +12,7 @@ export declare function tailFileUntil(file: any, condition: any, index?: number)
 };
 export declare const sortDescByApiLevelPredicate: (a: any, b: any) => number;
 export declare const sortAscByApiLevelPredicate: (a: any, b: any) => number;
+export declare const convertStringToRegExp: (phrase: any) => any;
 export declare const filterPredicate: (searchQuery: any, device: any) => boolean;
 export declare const filterAndroidPredicate: (searchQuery: any, device: any) => boolean;
 export declare function filter<T>(devices: Array<T>, searchQuery: any): T[];
