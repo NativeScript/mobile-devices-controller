@@ -16,7 +16,8 @@ export {
     sortAscByApiLevelPredicate, 
     sortDescByApiLevelPredicate, 
     filterPredicate, 
-    killAllProcessAndRelatedCommand 
+    killAllProcessAndRelatedCommand,
+    convertStringToRegExp
 } from "./lib/utils";
 
 export async function getAndroidDevices(verbose = false) {
