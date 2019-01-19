@@ -12,14 +12,15 @@ export { DeviceController } from "./lib/device-controller";
 export { VirtualDeviceController } from "./lib/mobile-base/virtual-device-controller";
 export { VirtualDevice } from "./lib/mobile-base/virtual-device";
 export { DeviceSignal } from "./lib/enums/DeviceSignals";
-export { 
-    sortAscByApiLevelPredicate, 
-    sortDescByApiLevelPredicate, 
-    filterPredicate, 
+export {
+    sortAscByApiLevelPredicate,
+    sortDescByApiLevelPredicate,
+    filterPredicate,
     killAllProcessAndRelatedCommand,
     convertStringToRegExp
 } from "./lib/utils";
 
+// (async () => await DeviceController.getDevices({ platform: Platform.ANDROID }))()
 export async function getAndroidDevices(verbose = false) {
     await AndroidController.getAllDevices(verbose);
 }

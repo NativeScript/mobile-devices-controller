@@ -66,6 +66,10 @@ export class AndroidController {
         await AndroidController.parseEmulators(runningDevices, devices);
         await AndroidController.parseRealDevices(runningDevices, devices);
 
+        if (devices.length === 0) {
+            logError(`No devices found!
+             Please check if any errors are logged and if the ANDROID_HOME is set correctly!`);
+        }
         return devices;
     }
 
@@ -90,7 +94,7 @@ export class AndroidController {
     }
 
     public static cleanLockFiles(emulator: IDevice) {
-        const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
+        const avdsDirectory = process.env["ANDROID_AVD_HOME"] || join(process.env["HOME"], "/.android/avd");
         const avd = resolve(avdsDirectory, `${emulator.name}.avd`);
 
         getAllFileNames(avd)
@@ -679,35 +683,46 @@ export class AndroidController {
         const platformsFolder = resolve(AndroidController.ANDROID_HOME, "system-images");
         const platforms = new Map<string, { sdk: string, releaseVersion: string }>();
         const files = glob.sync(`${platformsFolder}/*`);
+        const errors = new Array();
         for (let index = 0; index < files.length; index++) {
             const f = files[index];
             const versions = <any>{};
-            const file = glob.sync(`${f}/*/*/build.prop`)[0]
-            const fileContent = readFileSync(file, "UTF8");
-            const fileData = fileContent.split("\n");
+            const file = glob.sync(`${f}/*/*/build.prop`)[0];
+            if (file) {
+                const fileContent = readFileSync(file, "UTF8");
+                const fileData = fileContent.split("\n");
 
-            for (let i = 0; i < fileData.length; i++) {
-                const line = fileData[i];
-                if (line) {
-                    if (line.includes("ro.build.version.sdk") || line.includes("AndroidVersion.ApiLevel")) {
-                        // versions.sdk = /\d+(\.\d)?(\.\d)?/.exec(line)[0];
-                        versions.sdk = line.split("=")[1].trim();
-                    }
-                    if (line.includes("ro.build.version.release") || line.includes("Platform.Version")) {
-                        // versions.releaseVersion = /\d+(\.\d)?(\.\d)?/.exec(line)[0];
-                        versions.releaseVersion = line.split("=")[1].trim();
-                    }
+                for (let i = 0; i < fileData.length; i++) {
+                    const line = fileData[i];
+                    if (line) {
+                        if (line.includes("ro.build.version.sdk") || line.includes("AndroidVersion.ApiLevel")) {
+                            // versions.sdk = /\d+(\.\d)?(\.\d)?/.exec(line)[0];
+                            versions.sdk = line.split("=")[1].trim();
+                        }
+                        if (line.includes("ro.build.version.release") || line.includes("Platform.Version")) {
+                            // versions.releaseVersion = /\d+(\.\d)?(\.\d)?/.exec(line)[0];
+                            versions.releaseVersion = line.split("=")[1].trim();
+                        }
 
-                    if (versions.sdk && versions.releaseVersion) {
-                        i = fileData.length;
+                        if (versions.sdk && versions.releaseVersion) {
+                            i = fileData.length;
+                        }
                     }
                 }
-            }
 
-            const platformName = basename(f);
-            if (!platforms.has(platformName) && versions.sdk && versions.releaseVersion) {
-                platforms.set(platformName, versions);
+                const platformName = basename(f);
+                if (!platforms.has(platformName) && versions.sdk && versions.releaseVersion) {
+                    platforms.set(platformName, versions);
+                }
+            } else {
+                errors.push(f);
             }
+        }
+
+        if (errors.length > 0) {
+            logError(`System images ${errors.join(", ")} needs to be preinstalled!
+        We found that some files which are important for handling of devices are missing!
+        The best way to fix it is to reinstall the platform.`);
         }
 
         return platforms;
@@ -715,8 +730,15 @@ export class AndroidController {
 
     private static parseEmulatorsAvds() {
         const platforms = AndroidController.parsePlatforms();
-        const avdsDirectory = process.env["AVDS_STORAGE"] || join(process.env["HOME"], "/.android/avd");
+        const avdsDirectory = process.env["ANDROID_AVD_HOME"] || join(process.env["HOME"], "/.android/avd");
         const emulators = new Array();
+
+        if (!existsSync(avdsDirectory)) {
+            logError(`Path to avds storage is not valid '${avdsDirectory}'! 
+        Please provide the correct path using enviroment variable ANDROID_AVD_HOME="path to avds"!
+        Ussualy, when android studio is installed it should be on home/.android/avd`);
+            return emulators;
+        }
         readdirSync(avdsDirectory)
             .filter(f => f.endsWith(".ini"))
             .forEach(f => {

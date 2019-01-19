@@ -167,7 +167,9 @@ export const filterAndroidPredicate = (searchQuery, device) =>
             .every(prop => {
                 if (searchQuery[prop]
                     && (prop === "apiLevel" || prop === "releaseVersion")) {
-                    return new RegExp(searchQuery[prop], "ig").test(device[prop]) || new RegExp(searchQuery[prop], "ig").test(device["releaseVersion"]);
+                    let searchApiLevelQueryValue = convertStringToRegExp(searchQuery[prop]);
+                    searchApiLevelQueryValue = isRegExp(searchApiLevelQueryValue) ? searchApiLevelQueryValue : new RegExp(searchApiLevelQueryValue);
+                    return searchApiLevelQueryValue.test(device[prop]) || searchApiLevelQueryValue.test(device["releaseVersion"]);
                 }
                 return basicPredicateFilter(searchQuery, device, prop);
             });
