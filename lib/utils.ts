@@ -130,8 +130,8 @@ export const convertStringToRegExp = (phrase) => {
         return phrase;
     }
 
-    if (/(^\"\/|^\/)(\w.+.|\W.+.)\/([a-z]+$|[a-z]+\"$|\"|$)/.test(phrase)) {
-        const match = /(^\"\/|^\/)(\w.+.|\W.+.)\/([a-z]+$|[a-z]+\"$|\"|$)/.exec(phrase);
+    if (/(^\"\/|^\/)(\w+|\w.+)\/([a-z]+$|[a-z]+\"$|\"|$)/.test(phrase)) {
+        const match = /(^\"\/|^\/)(\w+|\w.+)\/([a-z]+$|[a-z]+\"$|\"|$)/.exec(phrase);
         return new RegExp(match[2], match[3]);
     }
 
