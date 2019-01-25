@@ -456,39 +456,41 @@ export class IOSController {
         const devices: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>();
         Object.getOwnPropertyNames(devicesObj["devices"])
             .forEach(level => {
-                deviceObjDevice[level].forEach(deviceObj => {
-                    const status: Status = <Status>deviceObj.state.toLowerCase();
-                    const apiLevel = /\d+(\.\d{1,2})?/.exec(level)[0];
-                    const stringType = /\w+[a-z]/.test(level) && /\w+[a-z]/.exec(level)[0];
-                    let type = DeviceType.SIMULATOR;
-                    if (stringType) {
-                        type = stringType === "tv" ? DeviceType.TV : DeviceType.WATCH;
-                    }
-
-                    const device = <IDevice>{
-                        token: deviceObj.udid,
-                        name: deviceObj.name,
-                        status: status,
-                        type: type,
-                        apiLevel: apiLevel,
-                        platform: Platform.IOS
-                    };
-
-                    IOSController.devicesScreenInfo.forEach((v, k, m) => {
-                        if (device.name.includes(k)) {
-                            device.config = {
-                                density: v.density,
-                                offsetPixels: v.actionBarHeight
-                            };
+                deviceObjDevice[level]
+                    .filter(d=>d.availability ===  "(available)")
+                    .forEach(deviceObj => {
+                        const status: Status = <Status>deviceObj.state.toLowerCase();
+                        const apiLevel = /\d{1,3}(\.|\-)+.+|\d+/.exec(level)[0].replace("-",".");
+                        const stringType = /\w+[a-z]/g.test(level) && /\w+[a-z]/g.exec(level)[0];
+                        let type = DeviceType.SIMULATOR;
+                        if (stringType) {
+                            type = stringType === "tv" ? DeviceType.TV : DeviceType.WATCH;
                         }
-                    });
 
-                    if (!devices.has(device.name)) {
-                        devices.set(device.name, new Array<IDevice>());
-                        devices.get(device.name).push(device);
-                    } else {
-                        devices.get(device.name).push(device);
-                    }
+                        const device = <IDevice>{
+                            token: deviceObj.udid,
+                            name: deviceObj.name,
+                            status: status,
+                            type: type,
+                            apiLevel: apiLevel,
+                            platform: Platform.IOS
+                        };
+
+                        IOSController.devicesScreenInfo.forEach((v, k, m) => {
+                            if (device.name.includes(k)) {
+                                device.config = {
+                                    density: v.density,
+                                    offsetPixels: v.actionBarHeight
+                                };
+                            }
+                        });
+
+                        if (!devices.has(device.name)) {
+                            devices.set(device.name, new Array<IDevice>());
+                            devices.get(device.name).push(device);
+                        } else {
+                            devices.get(device.name).push(device);
+                        }
                 });
             });
 
