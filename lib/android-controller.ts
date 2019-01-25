@@ -57,6 +57,8 @@ export class AndroidController {
         if (existsSync(androidHome)) {
             return androidHome;
         }
+
+        return androidHome;
     }
 
     public static async getAllDevices(verbose: boolean = false): Promise<Array<IDevice>> {
@@ -439,7 +441,7 @@ export class AndroidController {
         try {
             const androidSettings = "com.android.settings/com.android.settings.Settings";
             AndroidController.executeAdbShellCommand(device, ` am start -n ${androidSettings}`, shortTimeout);
-
+            wait(500);
             let errorMsg = AndroidController.getCurrentFocusedScreen(device);
             const startTime = Date.now();
             while (Date.now() - startTime <= 5000
@@ -559,10 +561,10 @@ export class AndroidController {
     }
 
     public static async recordVideo(device: IDevice, dir, fileName, callback: () => Promise<any>) {
-        const { pathToVideo, devicePath, videoRecoringProcess } = AndroidController.startRecordingVideo(device, dir, fileName);
+        const { pathToVideo, devicePath, videoRecordingProcess } = AndroidController.startRecordingVideo(device, dir, fileName);
         new Promise(async (res, reject) => {
             callback().then((result) => {
-                videoRecoringProcess.kill("SIGINT");
+                videoRecordingProcess.kill("SIGINT");
                 AndroidController.pullFile(device, devicePath, pathToVideo);
                 console.log(result);
                 res(pathToVideo);
@@ -577,16 +579,16 @@ export class AndroidController {
         const pathToVideo = resolve(dir, videoFileName);
         const devicePath = `/sdcard/${videoFileName}`;
         const prefix = AndroidController.getTokenPrefix(device);
-        const videoRecoringProcess = spawn(AndroidController.ADB, ['-s', `${prefix}${device.token}`, 'shell', 'screenrecord', `${devicePath}`]);
-        if (videoRecoringProcess) {
-            AndroidController.runningProcesses.push(videoRecoringProcess.pid);
+        const videoRecordingProcess = spawn(AndroidController.ADB, ['-s', `${prefix}${device.token}`, 'shell', 'screenrecord', `${devicePath}`]);
+        if (videoRecordingProcess) {
+            AndroidController.runningProcesses.push(videoRecordingProcess.pid);
         }
 
-        return { pathToVideo: pathToVideo, devicePath: devicePath, videoRecoringProcess: videoRecoringProcess };
+        return { pathToVideo: pathToVideo, devicePath: devicePath, videoRecordingProcess: videoRecordingProcess };
     }
 
-    public static stopRecordingVideo(device, videoRecoringProcess, devicePath, pathToVideo) {
-        videoRecoringProcess.kill("SIGINT");
+    public static stopRecordingVideo(device, videoRecordingProcess, devicePath, pathToVideo) {
+        videoRecordingProcess.kill("SIGINT");
         wait(1000);
         AndroidController.pullFile(device, devicePath, pathToVideo);
     }
@@ -735,8 +737,8 @@ export class AndroidController {
 
         if (!existsSync(avdsDirectory)) {
             logError(`Path to avds storage is not valid '${avdsDirectory}'! 
-        Please provide the correct path using enviroment variable ANDROID_AVD_HOME="path to avds"!
-        Ussualy, when android studio is installed it should be on home/.android/avd`);
+        Please provide the correct path using env variable ANDROID_AVD_HOME="path to avds"!
+        Usually, when android studio is installed it should be on home/.android/avd`);
             return emulators;
         }
         readdirSync(avdsDirectory)
@@ -782,8 +784,12 @@ export class AndroidController {
 
                     if (config.offsetPixels && config.density && config.screen) {
                         i = fileData.length;
-                        const emu = emulators.filter(e => e.name === basename(dirname(file)).replace(".avd", ""))[0];
-                        emu.config = config;
+                        const dirName = basename(dirname(file)).replace(".avd", "");
+                        if (emulators.some(e => e.name === dirName)) {
+                            emulators.filter(e => e.name === dirName)[0].config = config;
+                        } else {
+                            console.error(`avd ${file} is not valid!`);
+                        }
                     }
                 }
             }
@@ -868,6 +874,7 @@ export class AndroidController {
             if (isBooted) {
                 isBootedSecondCheck = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop init.svc.bootanim`).toLowerCase().trim() === "stopped";
             }
+            wait(500);
         }
 
         console.log(`Check has "${isBooted ? "passed" : "failed"}".`);

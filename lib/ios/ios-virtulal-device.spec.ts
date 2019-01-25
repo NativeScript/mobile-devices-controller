@@ -52,7 +52,7 @@ describe("start and kill ios device", async () => {
     });
 
     it("create simulator iPhone X", async () => {
-        const device = (await DeviceController.getDevices({ name: "/^iPhone X$/" }))[0];
+        const device = (await DeviceController.getDevices({ name: <any>/^iPhone X$/ }))[0];
         const createdDevice = IOSController.fullResetOfSimulator({ name: device.name, apiLevel: device.apiLevel });
         const isNewDeviceAvailable = (await DeviceController.getDevices(createdDevice))[0];
         assert.isTrue(isNewDeviceAvailable && isNewDeviceAvailable.token === createdDevice.token && isNewDeviceAvailable.token !== device.token);
@@ -232,15 +232,15 @@ describe("start and kill ios device", async () => {
     describe("install/ uninstall app", () => {
 
         const deviceQuery = {
-            name: "^iPhone XR$",
+            name: "/^iPhone XR$/ig",
             apiLevel: "12.1",
             platform: Platform.IOS,
             status: Status.BOOTED
         };
 
-        let appToInstall = "/Users/tsenov/git/nativescript/e2e/modal-navigation/platforms/ios/build/emulator/modalnavigation.app";
-        let appBundleId = "org.nativescript.modalnavigation";
-        let appName = "modalnavigation";
+        let appToInstall;
+        let appBundleId;
+        let appName;
 
 
         it("install app", async () => {

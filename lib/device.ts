@@ -16,5 +16,5 @@ export interface IDevice {
   config?: any,
   process?: ChildProcess;
   parentProcessPid?: number;
-  initType?: any;
+  createDeviceOptions?: any;
 }

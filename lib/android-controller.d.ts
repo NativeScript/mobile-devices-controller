@@ -56,9 +56,9 @@ export declare class AndroidController {
     static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
         pathToVideo: string;
         devicePath: string;
-        videoRecoringProcess: import("child_process").ChildProcess;
+        videoRecordingProcess: import("child_process").ChildProcess;
     };
-    static stopRecordingVideo(device: any, videoRecoringProcess: any, devicePath: any, pathToVideo: any): void;
+    static stopRecordingVideo(device: any, videoRecordingProcess: any, devicePath: any, pathToVideo: any): void;
     static getPackageId(appFullName: any): string;
     static getLaunchableActivity(appFullName: any): string;
     static pullFile(device: IDevice, remotePath: any, destinationFile: any): any;

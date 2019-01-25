@@ -130,15 +130,15 @@ export const convertStringToRegExp = (phrase) => {
         return phrase;
     }
 
-    if (/(^\"\/|^\/)(\w+|\w.+)\/([a-z]+$|[a-z]+\"$|\"|$)/.test(phrase)) {
-        const match = /(^\"\/|^\/)(\w+|\w.+)\/([a-z]+$|[a-z]+\"$|\"|$)/.exec(phrase);
+    if (/(^\/|^\"\/)(.+)\/([a-z]+$|[a-z]+\"$|\"|$)/.test(phrase)) {
+        const match = /(^\/|^\"\/)(.+)\/([a-z]+$|[a-z]+\"$|\"|$)/.exec(phrase);
         return new RegExp(match[2], match[3]);
     }
 
     return phrase;
 }
 
-const basicPredicateFilter = (searchQuery, device, prop) => {
+export const basicPredicateFilter = (searchQuery, device, prop) => {
     if (searchQuery[prop]) {
         const searchPropValue = convertStringToRegExp(searchQuery[prop]);
         if (!isRegExp(searchPropValue) && typeof searchQuery[prop] === 'object') {
