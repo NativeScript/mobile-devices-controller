@@ -1090,6 +1090,7 @@ export class AndroidController {
                     devices.push(<IDevice>{
                         token: token,
                         apiLevel: apiLevel,
+                        platform: Platform.ANDROID,
                         releaseVersion: releaseVersion,
                         status: Status.OFFLINE,
                         type: DeviceType.EMULATOR,
@@ -1105,6 +1106,7 @@ export class AndroidController {
                         apiLevel: apiLevel,
                         releaseVersion: releaseVersion,
                         status: status,
+                        platform: Platform.ANDROID,
                         type: DeviceType.DEVICE
                     });
                 }
@@ -1112,6 +1114,7 @@ export class AndroidController {
                 if (line.includes("unauthorized")) {
                     devices.push(<IDevice>{
                         status: Status.UNAUTORIZED,
+                        platform: Platform.ANDROID,
                         type: DeviceType.DEVICE
                     });
                 }

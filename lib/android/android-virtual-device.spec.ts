@@ -1,7 +1,7 @@
 import { AndroidVirtualDevice } from "./android-virtual-device";
 import { DeviceSignal } from "../enums/DeviceSignals";
 import { DeviceController } from "../device-controller";
-import { Status, Platform } from "../enums";
+import { Status, Platform, DeviceType } from "../enums";
 import { assert } from "chai";
 import { AndroidController } from "../android-controller";
 import { glob } from "glob";
@@ -274,3 +274,12 @@ describe("android", async function () {
         });
     });
 });
+
+// describe("parse-real-devices", () => {
+//     it("find real device", async () => {
+//         const devices = await DeviceController.getDevices({ platform: Platform.ANDROID });
+//         const ds = devices.filter(d => d.type === DeviceType.DEVICE);
+//         console.log(ds);
+//         assert.isTrue(ds.length > 0);
+//     })
+// })
