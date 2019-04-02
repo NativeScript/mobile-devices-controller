@@ -381,7 +381,12 @@ export class IOSController {
         bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
         let result = "";
         try {
-            await IOSController.stopApplication(device, bundleId, basename(fullAppName));
+            if (!fullAppName) {
+                await IOSController.stopApplication(device, bundleId, fullAppName);
+            }
+            else {
+                await IOSController.stopApplication(device, bundleId, basename(fullAppName));
+            }
             wait(500);
         } catch (error) {
             console.dir(error);
@@ -457,10 +462,10 @@ export class IOSController {
         Object.getOwnPropertyNames(devicesObj["devices"])
             .forEach(level => {
                 deviceObjDevice[level]
-                    .filter(d=>d.availability ===  "(available)")
+                    .filter(d => d.availability === "(available)")
                     .forEach(deviceObj => {
                         const status: Status = <Status>deviceObj.state.toLowerCase();
-                        const apiLevel = /\d{1,3}(\.|\-)+.+|\d+/.exec(level)[0].replace("-",".");
+                        const apiLevel = /\d{1,3}(\.|\-)+.+|\d+/.exec(level)[0].replace("-", ".");
                         const stringType = /\w+[a-z]/g.test(level) && /\w+[a-z]/g.exec(level)[0];
                         let type = DeviceType.SIMULATOR;
                         if (stringType) {
@@ -491,7 +496,7 @@ export class IOSController {
                         } else {
                             devices.get(device.name).push(device);
                         }
-                });
+                    });
             });
 
         return devices;
