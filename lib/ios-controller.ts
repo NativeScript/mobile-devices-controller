@@ -466,10 +466,14 @@ export class IOSController {
                     .forEach(deviceObj => {
                         const status: Status = <Status>deviceObj.state.toLowerCase();
                         const apiLevel = /\d{1,3}(\.|\-)+.+|\d+/.exec(level)[0].replace("-", ".");
-                        const stringType = /\w+[a-z]/g.test(level) && /\w+[a-z]/g.exec(level)[0];
+                        const stringType = /(watchos|tvos|ios)/g.exec(level.toLowerCase())[0];
                         let type = DeviceType.SIMULATOR;
                         if (stringType) {
-                            type = stringType === "tv" ? DeviceType.TV : DeviceType.WATCH;
+                            if (stringType === "tvos") {
+                                type = DeviceType.TV;
+                            } else if (stringType === "watchos") {
+                                type = DeviceType.WATCH;
+                            }
                         }
 
                         const device = <IDevice>{
