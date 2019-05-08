@@ -12,7 +12,7 @@ export class DeviceController {
         const searchQuery = DeviceController.copyProperties(query);
         const devices: Array<IDevice> = await DeviceController.mapDevicesToArray(searchQuery);
 
-        return devices;
+        return devices; 
     }
 
     public static async startDevice(device: IDevice, options?: string, shouldHardResetDevices: boolean = false): Promise<IDevice> {

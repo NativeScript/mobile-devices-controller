@@ -732,9 +732,17 @@ export class AndroidController {
 
     private static parseEmulatorsAvds() {
         const platforms = AndroidController.parsePlatforms();
-        const avdsDirectory = process.env["ANDROID_AVD_HOME"] || join(process.env["HOME"], "/.android/avd");
+        const avdsHomeDir = process.env["ANDROID_AVD_HOME"] || process.env["HOME"] || process.env["HOMEPATH"] || process.env["USERPROFILE:"];
         const emulators = new Array();
-
+        
+        if (!existsSync(avdsHomeDir)) {
+            logError(`Path to avds storage is not valid '${avdsHomeDir}'! 
+            Please provide the correct path using env variable ANDROID_AVD_HOME="path to avds"!
+            Usually, when android studio is installed it should be on home/.android/avd`);
+            return emulators;
+        }
+        
+        const avdsDirectory = join(avdsHomeDir, "/.android/avd");
         if (!existsSync(avdsDirectory)) {
             logError(`Path to avds storage is not valid '${avdsDirectory}'! 
         Please provide the correct path using env variable ANDROID_AVD_HOME="path to avds"!
