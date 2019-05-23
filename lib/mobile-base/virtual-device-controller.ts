@@ -4,7 +4,7 @@ import { AndroidVirtualDevice } from "../android/android-virtual-device";
 import { IOSVirtualDevice } from "../ios/ios-virtual-device";
 import { IVirtualDevice } from "../interfaces/virtual-device";
 import { IDevice } from "../device";
-import { link } from "fs";
+import { AndroidController } from "../android-controller";
 
 export class VirtualDeviceController implements IVirtualDevice {
     private _virtualDevice: VirtualDevice;
@@ -16,15 +16,15 @@ export class VirtualDeviceController implements IVirtualDevice {
         return this._virtualDevice;
     }
 
-    async startDevice(deviceInfo: IDevice, options){
+    async startDevice(deviceInfo: IDevice, options) {
         return await this._virtualDevice.startDevice(deviceInfo, options);
     }
 
-    async stopDevice(){
+    async stopDevice() {
         return await this._virtualDevice.stopDevice();
     }
 
-    async attachToDevice(deviceInfo: IDevice){
+    async attachToDevice(deviceInfo: IDevice) {
         return await this._virtualDevice.attachToDevice(deviceInfo);
     }
 }

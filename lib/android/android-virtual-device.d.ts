@@ -3,7 +3,7 @@ import { IDevice } from "../device";
 export declare class AndroidVirtualDevice extends VirtualDevice {
     private _checkEmulatorState;
     constructor();
-    startDevice(device: IDevice, options?: string): Promise<IDevice>;
+    startDevice(device: IDevice, options?: any): Promise<IDevice>;
     attachToDevice(deviceInfo: IDevice): IDevice;
     detach(): void;
     stopDevice(): Promise<void>;

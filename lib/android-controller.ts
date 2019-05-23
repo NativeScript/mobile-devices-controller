@@ -1209,5 +1209,7 @@ export class StartEmulatorOptions {
     options?: Array<string>;
     retries?: number;
     logPath?: string;
-    defaultBootTime?: number = +process.env.BOOT_ANDROID_EMULATOR_MAX_TIME || +AndroidController.DEFAULT_BOOT_TIME
+    defaultBootTime?: number = +process.env.BOOT_ANDROID_EMULATOR_MAX_TIME 
+    || +AndroidController.DEFAULT_BOOT_TIME 
+    || 1000 
 }

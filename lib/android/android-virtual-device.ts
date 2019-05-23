@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import { VirtualDevice } from "../mobile-base/virtual-device";
 import { DeviceSignal } from "../enums/DeviceSignals";
 import { IDevice } from "../device";
-import { AndroidController } from "../android-controller";
+import { AndroidController, StartEmulatorOptions } from "../android-controller";
 import { logError, logInfo, logWarn } from "../utils";
 
 export class AndroidVirtualDevice extends VirtualDevice {
@@ -10,10 +10,14 @@ export class AndroidVirtualDevice extends VirtualDevice {
 
     constructor() { super(); }
 
-    public async startDevice(device: IDevice, options?: string): Promise<IDevice> {
+    public async startDevice(device: IDevice, options?: any): Promise<IDevice> {
         this.detachFromEventListeners(true);
 
-        const startedDevice = await AndroidController.startEmulator(device, { options: options && options.split(" ") });
+        if (options && typeof (options) === "string") {
+            options = options.split(" ");
+        }
+
+        const startedDevice = await AndroidController.startEmulator(device, { options: options });
         this._deviceProcess = startedDevice.process;
         this._device = <any>startedDevice;
         delete this._device.process;

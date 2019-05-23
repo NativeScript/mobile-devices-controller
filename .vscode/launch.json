@@ -23,7 +23,7 @@
                 "${workspaceFolder}/lib",
                 "--recursive",
                 "--grep", 
-                "android"
+                "parse-real-devices"
             ],
             "internalConsoleOptions": "openOnSessionStart"
         }
