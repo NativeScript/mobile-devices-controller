@@ -25,8 +25,8 @@ export interface IDevice {
     };
     statBarHeight?: number;
     deviceScreenSize?: {
-        x: number;
-        y: number;
+        width: number;
+        height: number;
     };
     deviceScreenDensity?: number;
     pixelRatio?: number;

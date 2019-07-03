@@ -19,8 +19,7 @@ export interface IDevice {
   createDeviceOptions?: any;
   viewportRect?: { left: number, top: number, width: number, height: number };
   statBarHeight?: number;
-  deviceScreenSize?: { x: number, y: number },
+  deviceScreenSize?: { width: number, height: number },
   deviceScreenDensity?: number,
   pixelRatio?: number;
-
 }
