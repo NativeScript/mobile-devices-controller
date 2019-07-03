@@ -19,6 +19,7 @@ export declare class IOSController {
     static getSimulatorPidByToken(token: string): any;
     static deleteDevice(token: string): void;
     static fullResetOfSimulator(simulator: IDevice): IDevice;
+    private static startSimulatorInternal;
     static startSimulator(simulator: IDevice, directory?: string, shouldFullResetSimulator?: boolean, retries?: number): Promise<IDevice>;
     static restartDevice(device: IDevice): Promise<void>;
     static killAll(): void;

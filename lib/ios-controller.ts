@@ -212,7 +212,7 @@ export class IOSController {
         return simulator;
     }
 
-    public static async startSimulator(simulator: IDevice, directory: string = tmpdir(), shouldFullResetSimulator: boolean = true, retries: number = 3): Promise<IDevice> {
+    private static async startSimulatorInternal(simulator: IDevice, directory: string = tmpdir(), shouldFullResetSimulator: boolean = true, retries: number = 3): Promise<IDevice> {
         simulator.type = DeviceType.SIMULATOR;
         simulator.platform = Platform.IOS;
         if (!simulator.token) {
@@ -239,20 +239,18 @@ export class IOSController {
         }
 
         let startedProcess = IOSController.startSimulatorProcess(udid, directory);
-        if (startedProcess.stderr
-            && (startedProcess.stderr.toString().toLowerCase().includes("unable to boot deleted device")
-                || startedProcess.stderr.toString().toLowerCase().includes("Failed to load"))
-            || startedProcess.status !== 0) {
-            simulator = IOSController.fullResetOfSimulator(simulator);
-            udid = simulator.token;
-            logError(`Probably the simulator ${simulator.name}\ ${simulator.token} failed to start!`);
-            logError(startedProcess.stderr.toString());
-            retries--;
-            startedProcess = IOSController.startSimulatorProcess(udid, directory, retries);
-        }
-        // let response: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
 
-        if (startedProcess.stdout.toString().includes("Instruments Trace Complete")) {
+        // let response: boolean = await waitForOutput(process, /Instruments Trace Complete:/ig, /Failed to load/ig, IOSController.DEVICE_BOOT_TIME);
+        if (
+            startedProcess
+            && (startedProcess.error
+                || (startedProcess.stderr
+                    && startedProcess.stderr.toString().toLowerCase().includes("unable to boot deleted device")
+                    || startedProcess.stderr.toString().toLowerCase().includes("Failed to load")))) {
+            simulator.status = Status.SHUTDOWN;
+
+        }
+        if (startedProcess && startedProcess.stdout && startedProcess.stdout.toString().includes("Instruments Trace Complete")) {
             const response = IOSController.checkIfSimulatorIsBooted(udid, IOSController.WAIT_DEVICE_TO_RESPONSE);
             if (response) {
                 simulator.type = DeviceType.SIMULATOR;
@@ -263,6 +261,20 @@ export class IOSController {
             }
         } else {
             console.log("Simulator is probably already started!");
+        }
+
+        return simulator;
+    }
+
+    public static async startSimulator(simulator: IDevice, directory: string = tmpdir(), shouldFullResetSimulator: boolean = true, retries: number = 3): Promise<IDevice> {
+        simulator = await IOSController.startSimulatorInternal(simulator, directory, shouldFullResetSimulator, retries);
+        while (
+            retries > 0
+            &&
+            (!simulator
+                || (simulator && simulator.status !== Status.BOOTED))) {
+            retries--;
+            simulator = await IOSController.startSimulatorInternal(simulator, tmpdir(), shouldFullResetSimulator, retries);
         }
 
         return simulator;

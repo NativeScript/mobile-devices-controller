@@ -22,11 +22,11 @@ export declare class DeviceController {
     static uninstallApp(device: IDevice, appFullPath: any): Promise<void>;
     static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
         pathToVideo: string;
-        devicePath: string;
-        videoRecordingProcess: import("child_process").ChildProcess;
+        videoRecoringProcess: any;
     } | {
         pathToVideo: string;
-        videoRecoringProcess: any;
+        devicePath: string;
+        videoRecordingProcess: import("child_process").ChildProcess;
     };
     static kill(device: IDevice): Promise<void>;
     static killAll(type: DeviceType): void;
