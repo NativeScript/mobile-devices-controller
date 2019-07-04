@@ -419,7 +419,7 @@ export class AndroidController {
     }
 
     public static getCurrentFocusedScreen(device: IDevice, commandTimeout: number = 1000) {
-        return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mCurrentFocus'", commandTimeout);
+        return this.executeAdbCommand(device, " shell dumpsys window windows | grep -E 'mSurface'", commandTimeout);
     }
 
     public static checkApiLevelIsLessThan(device: IDevice, apiLevel: number) {
