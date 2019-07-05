@@ -17,7 +17,7 @@ export interface IDevice {
   process?: ChildProcess;
   parentProcessPid?: number;
   createDeviceOptions?: any;
-  viewportRect?: { left: number, top: number, width: number, height: number };
+  viewportRect?: { x: number, y: number, width: number, height: number };
   statBarHeight?: number;
   deviceScreenSize?: { width: number, height: number },
   deviceScreenDensity?: number,
