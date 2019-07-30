@@ -234,7 +234,7 @@ export class IOSController {
                 }
             } catch (error) { }
         } else if (shouldFullResetSimulator) {
-            const eraseSimResult = await IOSController.execXCRUNCommand("simctl", ["erase", udid]);
+            const eraseSimResult = await IOSController.execXCRUNCommand("simctl", ["erase", udid], 120000);
             console.log("Result of erasing simulator: ", eraseSimResult);
         }
 
@@ -468,7 +468,12 @@ export class IOSController {
     }
 
     public static parseSimulators(stdout = undefined): Map<string, Array<IDevice>> {
-        const devicesObj = JSON.parse(executeCommand(`${IOSController.XCRUN_LISTDEVICES_COMMAND} --json`).toString());
+        const devicesAsString = executeCommand(`${IOSController.XCRUN_LISTDEVICES_COMMAND} --json`, process.cwd(), 10000);
+        if (!devicesAsString) {
+            logError(`${IOSController.XCRUN_LISTDEVICES_COMMAND} command is not responding!`);
+            process.exit(1);
+        }
+        const devicesObj = JSON.parse(devicesAsString.toString());
         const deviceObjDevice = devicesObj["devices"];
         const devices: Map<string, Array<IDevice>> = new Map<string, Array<IDevice>>();
         Object.getOwnPropertyNames(devicesObj["devices"])
