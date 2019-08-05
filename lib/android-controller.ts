@@ -76,7 +76,7 @@ export class AndroidController {
     }
 
     public static getPhysicalDensity(device: IDevice) {
-        return parseInt(AndroidController.executeAdbShellCommand(device, "wm density", 2000).split(":")[1]) * 0.01;
+        return (+(/(\d+)/img.exec(AndroidController.executeAdbShellCommand(device, "wm density", 2000)))[0]) * 0.01;
     }
 
     public static calculateScreenOffset(density: number) {
