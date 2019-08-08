@@ -306,7 +306,7 @@ export class IOSController {
         await killAllProcessAndRelatedCommand(udid);
     }
 
-    public static getInstalledApps(device: IDevice) {
+    public static getInstalledApplications(device: IDevice) {
         const apps = new Array();
         if (device.type === DeviceType.DEVICE) {
             const rowData = executeCommand(`ideviceinstaller -u ${device.token} -l`).replace("package:", "").split("\n");
@@ -333,7 +333,7 @@ export class IOSController {
         return apps;
     }
 
-    public static async installApp(device: IDevice, fullAppName) {
+    public static async installApplication(device: IDevice, fullAppName) {
         if (device.type === DeviceType.DEVICE) {
             const installProcess = await (await IOSController.getDl()).install(fullAppName, [device.token])[0];
             await IOSController.disposeDL();
@@ -358,7 +358,7 @@ export class IOSController {
     * @param appName - should be provided when DeviceType.SIMULATOR else undefined
     **/
    public static async stopApplication(device: IDevice, bundleId: string, appName: string): Promise<boolean> {
-        const apps = IOSController.getInstalledApps(device);
+        const apps = IOSController.getInstalledApplications(device);
         if (apps.some(app => app.includes(bundleId))) {
             if (!device.type) {
                 device.platform = Platform.IOS;
@@ -409,7 +409,7 @@ export class IOSController {
     public static async reinstallApplication(device: IDevice, fullAppName, bundleId: string = undefined) {
         bundleId = bundleId || IOSController.getBundleId(device.type, fullAppName);
         await IOSController.uninstallApplication(device, fullAppName, bundleId);
-        await IOSController.installApp(device, fullAppName);
+        await IOSController.installApplication(device, fullAppName);
     }
 
     public static async refreshApplication(device: IDevice, fullAppName, bundleId: string = undefined) {

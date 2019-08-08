@@ -45,9 +45,9 @@ export declare class AndroidController {
     static reinstallApplication(device: any, appFullName: any, packageId?: string): void;
     static refreshApplication(device: any, appFullName: any, packageId?: string): void;
     static startApplication(device: IDevice, packageId: string): void;
-    static getInstalledApps(device: any): string[];
+    static getInstalledApplications(device: any): string[];
     static isAppInstalled(device: IDevice, packageId: any): boolean;
-    static installApp(device: IDevice, testAppName: any, packageId?: string): string;
+    static installApplication(device: IDevice, testAppName: any, packageId?: string): string;
     static uninstallApplication(device: any, packageId: any): void;
     static stopApplication(device: IDevice, packageId: any): void;
     static executeKeyEvent(device: IDevice, keyEvent: AndroidKeyEvent | string | number): void;

@@ -475,7 +475,7 @@ export class AndroidController {
     public static reinstallApplication(device, appFullName, packageId: string = undefined) {
         packageId = packageId || AndroidController.getPackageId(appFullName);
         AndroidController.uninstallApplication(device, packageId);
-        AndroidController.installApp(device, appFullName, packageId);
+        AndroidController.installApplication(device, appFullName, packageId);
     }
 
     public static refreshApplication(device, appFullName, packageId: string = undefined) {
@@ -490,17 +490,17 @@ export class AndroidController {
         Promise.resolve(AndroidController.executeAdbShellCommand(device, commandToExecute));
     }
 
-    public static getInstalledApps(device) {
+    public static getInstalledApplications(device) {
         const list = AndroidController.executeAdbShellCommand(device, `pm list packages -3`).split("\n");
         return list;
     }
 
     public static isAppInstalled(device: IDevice, packageId) {
-        let isAppInstalled = AndroidController.getInstalledApps(device).some(pack => pack.includes(packageId));
+        let isAppInstalled = AndroidController.getInstalledApplications(device).some(pack => pack.includes(packageId));
         return isAppInstalled
     }
 
-    public static installApp(device: IDevice, testAppName, packageId: string = undefined) {
+    public static installApplication(device: IDevice, testAppName, packageId: string = undefined) {
         packageId = packageId || AndroidController.getPackageId(testAppName);
         let isAppInstalled = AndroidController.isAppInstalled(device, packageId);
         if (isAppInstalled) {
@@ -535,7 +535,7 @@ export class AndroidController {
             logInfo(`Application: ${packageId} is not installed!`);
         }
 
-        if (AndroidController.getInstalledApps(device).some(app => app === packageId)) {
+        if (AndroidController.getInstalledApplications(device).some(app => app === packageId)) {
             logError("We couldn't uninstall application!");
         }
     }

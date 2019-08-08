@@ -24,8 +24,8 @@ export declare class IOSController {
     static restartDevice(device: IDevice): Promise<void>;
     static killAll(): void;
     static kill(udid: string): Promise<void>;
-    static getInstalledApps(device: IDevice): any[];
-    static installApp(device: IDevice, fullAppName: any): Promise<void>;
+    static getInstalledApplications(device: IDevice): any[];
+    static installApplication(device: IDevice, fullAppName: any): Promise<void>;
     /**
     * @param device - of type {token: string, type: DeviceType}
     * @param bundleId - should be provided when DeviceType.DEVICE else undefined

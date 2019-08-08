@@ -52,9 +52,9 @@ export class DeviceController {
 
     public static async getInstalledApplication(device: IDevice): Promise<string[]> {
         if (device.platform === Platform.IOS) {
-            return await IOSController.getInstalledApps(device);
+            return await IOSController.getInstalledApplications(device);
         } else {
-            return await AndroidController.getInstalledApps(device);
+            return await AndroidController.getInstalledApplications(device);
         }
     }
 
@@ -181,9 +181,9 @@ export class DeviceController {
 
     public static async installApplication(device: IDevice, appFullName: string, appId: string = undefined) {
         if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
-            return await AndroidController.installApp(device, appFullName, appId);
+            return await AndroidController.installApplication(device, appFullName, appId);
         } else {
-            return await IOSController.installApp(device, appFullName);
+            return await IOSController.installApplication(device, appFullName);
         }
     }
 
