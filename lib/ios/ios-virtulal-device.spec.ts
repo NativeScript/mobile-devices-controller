@@ -253,7 +253,7 @@ describe("start and kill ios device", async () => {
             await IOSController.installApp(device, appToInstall);
             let startAppResult = await IOSController.startApplication(device, appToInstall);
             await IOSController.stopApplication(device, appBundleId, appName);
-            let uninstallApp = await IOSController.uninstallApp(device, appToInstall, appBundleId);
+            let uninstallApp = await IOSController.uninstallApplication(device, appToInstall, appBundleId);
             let apps = await IOSController.getInstalledApps(device);
             assert.isTrue(!apps.some(app => app.includes(appName)));
 

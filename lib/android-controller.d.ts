@@ -37,7 +37,7 @@ export declare class AndroidController {
     static startAdb(): void;
     static stopAdb(): void;
     static killAdbProcess(): void;
-    static isAppRunning(device: IDevice, appId: string): boolean;
+    static isAppRunning(device: IDevice, packageId: string): boolean;
     static getCurrentFocusedScreen(device: IDevice, commandTimeout?: number): string;
     static checkApiLevelIsLessThan(device: IDevice, apiLevel: number): boolean;
     static checkIfEmulatorIsResponding(device: IDevice): boolean;
@@ -48,8 +48,8 @@ export declare class AndroidController {
     static getInstalledApps(device: any): string[];
     static isAppInstalled(device: IDevice, packageId: any): boolean;
     static installApp(device: IDevice, testAppName: any, packageId?: string): string;
-    static uninstallApp(device: any, appId: any): void;
-    static stopApplication(device: IDevice, appId: any): void;
+    static uninstallApplication(device: any, packageId: any): void;
+    static stopApplication(device: IDevice, packageId: any): void;
     static executeKeyEvent(device: IDevice, keyEvent: AndroidKeyEvent | string | number): void;
     static getScreenshot(device: IDevice, dir: any, fileName: any): Promise<string>;
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<void>;

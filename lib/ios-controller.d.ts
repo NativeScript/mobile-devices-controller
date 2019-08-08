@@ -32,7 +32,7 @@ export declare class IOSController {
     * @param appName - should be provided when DeviceType.SIMULATOR else undefined
     **/
     static stopApplication(device: IDevice, bundleId: string, appName: string): Promise<boolean>;
-    static uninstallApp(device: IDevice, fullAppName: string, bundleId?: string): Promise<void>;
+    static uninstallApplication(device: IDevice, fullAppName: string, bundleId?: string): Promise<void>;
     static reinstallApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
     static refreshApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<void>;
     static startApplication(device: IDevice, fullAppName: any, bundleId?: string): Promise<{
@@ -52,7 +52,7 @@ export declare class IOSController {
         videoRecoringProcess: any;
     };
     private static checkIfSimulatorIsBooted;
-    static getIOSPackageId(deviceType: DeviceType, fullAppName: any): string;
+    static getBundleId(deviceType: DeviceType, fullAppName: any): string;
     static getDevicesScreenInfo(): Map<string, IOSDeviceScreenInfo>;
     /**
      * Get path of Info.plist of iOS app under test.

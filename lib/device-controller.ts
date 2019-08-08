@@ -42,11 +42,11 @@ export class DeviceController {
         }
     }
 
-    public static async startApplication(device: IDevice, appFullPath, bundleId: string = undefined): Promise<void> {
+    public static async startApplication(device: IDevice, appFullPath, appId: string = undefined): Promise<void> {
         if (device.platform === Platform.IOS) {
-            await IOSController.startApplication(device, appFullPath, bundleId)
+            await IOSController.startApplication(device, appFullPath, appId)
         } else {
-            await AndroidController.startApplication(device, bundleId);
+            await AndroidController.startApplication(device, appId);
         }
     }
 
@@ -61,32 +61,22 @@ export class DeviceController {
     /**
      * 
      * @param device { token: string, type: DeviceType, platform: Platform }
-     * @param bundleId or package id 
+     * @param appId 
      * @param appName required for ios devices
      */
-    public static async stopApplication(device: IDevice, bundleId: string, appName?: string): Promise<void> {
+    public static async stopApplication(device: IDevice, appId: string, appName?: string): Promise<void> {
         if (device.platform === Platform.IOS || device.type === DeviceType.SIMULATOR) {
-            await IOSController.stopApplication(device, bundleId, appName)
+            await IOSController.stopApplication(device, appId, appName)
         } else {
-            await AndroidController.stopApplication(device, bundleId);
+            await AndroidController.stopApplication(device, appId);
         }
     }
 
     public static getApplicationId(device: IDevice, appFullPath): string {
         if (device.platform === Platform.IOS) {
-            return IOSController.getIOSPackageId(device.type, appFullPath)
+            return IOSController.getBundleId(device.type, appFullPath);
         } else {
             return AndroidController.getPackageId(appFullPath);
-        }
-    }
-
-    public static async uninstallApp(device: IDevice, appFullPath): Promise<void> {
-        if (device.platform === Platform.IOS) {
-            const bundleId = IOSController.getIOSPackageId(device.type, appFullPath);
-            await IOSController.uninstallApp(device, appFullPath, bundleId)
-        } else {
-            const packageId = AndroidController.getPackageId(appFullPath);
-            await AndroidController.uninstallApp(device, packageId);
         }
     }
 
@@ -181,27 +171,28 @@ export class DeviceController {
         }
     }
 
-    public static async reinstallApplication(device: IDevice, appFullName: string, bundleId) {
+    public static async reinstallApplication(device: IDevice, appFullName: string, appId) {
         if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
-            return await AndroidController.reinstallApplication(device, appFullName, bundleId);
+            return await AndroidController.reinstallApplication(device, appFullName, appId);
         } else {
-            return await IOSController.reinstallApplication(device, appFullName, bundleId);
+            return await IOSController.reinstallApplication(device, appFullName, appId);
         }
     }
 
-    public static async installApplication(device: IDevice, appFullName: string, bundleId: string = undefined) {
+    public static async installApplication(device: IDevice, appFullName: string, appId: string = undefined) {
         if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
-            return await AndroidController.installApp(device, appFullName, bundleId);
+            return await AndroidController.installApp(device, appFullName, appId);
         } else {
             return await IOSController.installApp(device, appFullName);
         }
     }
 
-    public static async uninstallAppWithBundle(device: IDevice, appId) {
+    public static async uninstallApplication(device: IDevice, appFullPath, appId: string = undefined): Promise<void> {
+        appId = appId || DeviceController.getApplicationId(device, appFullPath);
         if (device.type === DeviceType.EMULATOR || device.platform === Platform.ANDROID) {
-            return await AndroidController.uninstallApp(device, appId);
+            return await AndroidController.uninstallApplication(device, appId);
         } else {
-            return await IOSController.uninstallApp(device, undefined, appId);
+            return await IOSController.uninstallApplication(device, appFullPath, appId);
         }
     }
 
