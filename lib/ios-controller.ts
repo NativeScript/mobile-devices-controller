@@ -306,7 +306,7 @@ export class IOSController {
         await killAllProcessAndRelatedCommand(udid);
     }
 
-    public static getInstalledApps(device: IDevice) {
+    public static getInstalledApplications(device: IDevice) {
         const apps = new Array();
         if (device.type === DeviceType.DEVICE) {
             const rowData = executeCommand(`ideviceinstaller -u ${device.token} -l`).replace("package:", "").split("\n");
@@ -333,7 +333,7 @@ export class IOSController {
         return apps;
     }
 
-    public static async installApp(device: IDevice, fullAppName) {
+    public static async installApplication(device: IDevice, fullAppName) {
         if (device.type === DeviceType.DEVICE) {
             const installProcess = await (await IOSController.getDl()).install(fullAppName, [device.token])[0];
             await IOSController.disposeDL();
@@ -357,8 +357,8 @@ export class IOSController {
     * @param bundleId - should be provided when DeviceType.DEVICE else undefined
     * @param appName - should be provided when DeviceType.SIMULATOR else undefined
     **/
-    public static async stopApplication(device: IDevice, bundleId: string, appName: string): Promise<boolean> {
-        const apps = IOSController.getInstalledApps(device);
+   public static async stopApplication(device: IDevice, bundleId: string, appName: string): Promise<boolean> {
+        const apps = IOSController.getInstalledApplications(device);
         if (apps.some(app => app.includes(bundleId))) {
             if (!device.type) {
                 device.platform = Platform.IOS;
@@ -389,16 +389,11 @@ export class IOSController {
         }
     }
 
-    public static async uninstallApp(device: IDevice, fullAppName: string, bundleId: string = undefined) {
-        bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
+    public static async uninstallApplication(device: IDevice, fullAppName: string, bundleId: string = undefined) {
+        bundleId = bundleId || IOSController.getBundleId(device.type, fullAppName);
         let result = "";
         try {
-            if (!fullAppName) {
-                await IOSController.stopApplication(device, bundleId, fullAppName);
-            }
-            else {
-                await IOSController.stopApplication(device, bundleId, basename(fullAppName));
-            }
+            await IOSController.stopApplication(device, bundleId, !fullAppName ? fullAppName : basename(fullAppName));
             wait(500);
         } catch (error) {
             console.dir(error);
@@ -412,19 +407,19 @@ export class IOSController {
     }
 
     public static async reinstallApplication(device: IDevice, fullAppName, bundleId: string = undefined) {
-        bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
-        await IOSController.uninstallApp(device, fullAppName, bundleId);
-        await IOSController.installApp(device, fullAppName);
+        bundleId = bundleId || IOSController.getBundleId(device.type, fullAppName);
+        await IOSController.uninstallApplication(device, fullAppName, bundleId);
+        await IOSController.installApplication(device, fullAppName);
     }
 
     public static async refreshApplication(device: IDevice, fullAppName, bundleId: string = undefined) {
-        bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
+        bundleId = bundleId || IOSController.getBundleId(device.type, fullAppName);
         await IOSController.reinstallApplication(device, fullAppName, bundleId);
         await IOSController.startApplication(device, fullAppName, bundleId);
     }
 
     public static async startApplication(device: IDevice, fullAppName, bundleId: string = undefined): Promise<{ output: string, result: boolean }> {
-        bundleId = bundleId || IOSController.getIOSPackageId(device.type, fullAppName);
+        bundleId = bundleId || IOSController.getBundleId(device.type, fullAppName);
         let output = "";
         let result = false;
         if (device.type === DeviceType.DEVICE) {
@@ -710,7 +705,7 @@ export class IOSController {
         return booted;
     }
 
-    public static getIOSPackageId(deviceType: DeviceType, fullAppName) {
+    public static getBundleId(deviceType: DeviceType, fullAppName) {
         let result = "";
         const plistPath = IOSController.getPlistPath(fullAppName);
 

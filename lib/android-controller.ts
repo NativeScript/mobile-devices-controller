@@ -409,9 +409,9 @@ export class AndroidController {
         killProcessByName("adb.exe");
     }
 
-    public static isAppRunning(device: IDevice, appId: string) {
+    public static isAppRunning(device: IDevice, packageId: string) {
         const result = AndroidController.executeAdbShellCommand(device, "ps");
-        if (result.includes(appId)) {
+        if (result.includes(packageId)) {
             return true;
         } else {
             return false;
@@ -474,8 +474,8 @@ export class AndroidController {
 
     public static reinstallApplication(device, appFullName, packageId: string = undefined) {
         packageId = packageId || AndroidController.getPackageId(appFullName);
-        AndroidController.uninstallApp(device, packageId);
-        AndroidController.installApp(device, appFullName, packageId);
+        AndroidController.uninstallApplication(device, packageId);
+        AndroidController.installApplication(device, appFullName, packageId);
     }
 
     public static refreshApplication(device, appFullName, packageId: string = undefined) {
@@ -490,22 +490,22 @@ export class AndroidController {
         Promise.resolve(AndroidController.executeAdbShellCommand(device, commandToExecute));
     }
 
-    public static getInstalledApps(device) {
+    public static getInstalledApplications(device) {
         const list = AndroidController.executeAdbShellCommand(device, `pm list packages -3`).split("\n");
         return list;
     }
 
     public static isAppInstalled(device: IDevice, packageId) {
-        let isAppInstalled = AndroidController.getInstalledApps(device).some(pack => pack.includes(packageId));
+        let isAppInstalled = AndroidController.getInstalledApplications(device).some(pack => pack.includes(packageId));
         return isAppInstalled
     }
 
-    public static installApp(device: IDevice, testAppName, packageId: string = undefined) {
+    public static installApplication(device: IDevice, testAppName, packageId: string = undefined) {
         packageId = packageId || AndroidController.getPackageId(testAppName);
         let isAppInstalled = AndroidController.isAppInstalled(device, packageId);
         if (isAppInstalled) {
             logInfo("Uninstall a previous version " + packageId + " app.");
-            AndroidController.uninstallApp(device, packageId);
+            AndroidController.uninstallApplication(device, packageId);
         }
 
         const output = AndroidController.executeAdbCommand(device, ` install -r ${testAppName}`);
@@ -521,27 +521,27 @@ export class AndroidController {
         return packageId;
     }
 
-    public static uninstallApp(device, appId) {
-        const isAppInstalled = AndroidController.isAppInstalled(device, appId);
+    public static uninstallApplication(device, packageId) {
+        const isAppInstalled = AndroidController.isAppInstalled(device, packageId);
         if (isAppInstalled) {
-            AndroidController.stopApplication(device, appId);
-            const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${appId}`);
+            AndroidController.stopApplication(device, packageId);
+            const uninstallResult = AndroidController.executeAdbCommand(device, `uninstall ${packageId}`);
             if (uninstallResult.includes("Success")) {
-                logInfo(appId + " successfully uninstalled.");
+                logInfo(packageId + " successfully uninstalled.");
             } else {
-                logError("Failed to uninstall " + appId + ". Error: " + uninstallResult);
+                logError("Failed to uninstall " + packageId + ". Error: " + uninstallResult);
             }
         } else {
-            logInfo(`Application: ${appId} is not installed!`);
+            logInfo(`Application: ${packageId} is not installed!`);
         }
 
-        if (AndroidController.getInstalledApps(device).some(app => app === appId)) {
+        if (AndroidController.getInstalledApplications(device).some(app => app === packageId)) {
             logError("We couldn't uninstall application!");
         }
     }
 
-    public static stopApplication(device: IDevice, appId) {
-        AndroidController.executeAdbShellCommand(device, `am force-stop ${appId}`);
+    public static stopApplication(device: IDevice, packageId) {
+        AndroidController.executeAdbShellCommand(device, `am force-stop ${packageId}`);
     }
 
     public static executeKeyEvent(device: IDevice, keyEvent: AndroidKeyEvent | string | number) {

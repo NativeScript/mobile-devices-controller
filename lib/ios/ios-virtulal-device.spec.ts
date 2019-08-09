@@ -250,16 +250,16 @@ describe("start and kill ios device", async () => {
                 device = (await DeviceController.getDevices(deviceQuery))[0];
                 device = await IOSController.startSimulator(device);
             }
-            await IOSController.installApp(device, appToInstall);
+            await IOSController.installApplication(device, appToInstall);
             let startAppResult = await IOSController.startApplication(device, appToInstall);
             await IOSController.stopApplication(device, appBundleId, appName);
-            let uninstallApp = await IOSController.uninstallApp(device, appToInstall, appBundleId);
-            let apps = await IOSController.getInstalledApps(device);
+            let uninstallApp = await IOSController.uninstallApplication(device, appToInstall, appBundleId);
+            let apps = await IOSController.getInstalledApplications(device);
             assert.isTrue(!apps.some(app => app.includes(appName)));
 
-            await IOSController.installApp(device, appToInstall);
-            await IOSController.installApp(device, appToInstall);
-            apps = await IOSController.getInstalledApps(device);
+            await IOSController.installApplication(device, appToInstall);
+            await IOSController.installApplication(device, appToInstall);
+            apps = await IOSController.getInstalledApplications(device);
             startAppResult = await IOSController.startApplication(device, appToInstall);
             assert.isTrue(startAppResult.result);
             await IOSController.stopApplication(device, appBundleId, appName);
