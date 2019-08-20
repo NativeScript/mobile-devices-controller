@@ -36,7 +36,7 @@ export declare class DeviceController {
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<any>;
     static reinstallApplication(device: IDevice, appFullName: string, appId: any): Promise<void>;
     static installApplication(device: IDevice, appFullName: string, appId?: string): Promise<string | void>;
-    static uninstallApplication(device: IDevice, appFullName: string, appId?: string): Promise<string | void>;
+    static uninstallApplication(device: IDevice, appFullPath: any, appId?: string): Promise<void>;
     static copyProperties(from: IDevice): IDevice;
     private static mapDevicesToArray;
 }

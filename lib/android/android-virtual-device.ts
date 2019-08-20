@@ -14,7 +14,8 @@ export class AndroidVirtualDevice extends VirtualDevice {
         this.detachFromEventListeners(true);
 
         if (options && typeof (options) === "string") {
-            options = options.split(" ");
+            const separator = options.includes(",") ? "," : " ";
+            options = options.split(separator).filter(o => o);
         }
 
         const startedDevice = await AndroidController.startEmulator(device, { options: options });

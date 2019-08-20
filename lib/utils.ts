@@ -222,9 +222,9 @@ export function getFiles(folder: string) {
     return files;
 }
 
-/// ^nativ\w*(.+).gz$ native*.gz
-/// \w*nativ\w*(.+)\.gz$ is like *native*.gz
-/// \w*nativ\w*(.+)\.gz\w*(.+)$ is like *native*.gz*
+/// ^native\w*(.+).gz$ native*.gz
+/// \w*native\w*(.+)\.gz$ is like *native*.gz
+/// \w*native\w*(.+)\.gz\w*(.+)$ is like *native*.gz*
 export function createRegexPattern(text: string) {
     let finalRex = "";
     text.split(",").forEach(word => {
@@ -285,9 +285,9 @@ export async function waitForResult(childProcess, matcher, timeout) {
     });
 }
 
-export const wait = miliseconds => {
+export const wait = milliseconds => {
     const startTime = Date.now();
-    while (Date.now() - startTime <= miliseconds) { }
+    while (Date.now() - startTime <= milliseconds) { }
     return true;
 }
 

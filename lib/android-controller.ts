@@ -222,9 +222,28 @@ export class AndroidController {
                 snapshot = snapshotName;
                 await AndroidController.kill(emulator);
                 AndroidController.cleanLockFiles(emulator);
-                emulator = await AndroidController.startEmulatorProcess(emulator, startEmulatorOptions.logPath, AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE);
+                const options = AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE;
+                if (startEmulatorOptions.options.includes("-no-window")) {
+                    options.push("-no-window");
+                }
+                emulator = await AndroidController.startEmulatorProcess(emulator, startEmulatorOptions.logPath, options);
                 result = await AndroidController.waitUntilEmulatorBoot(emulator, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
                 startEmulatorOptions.options.push("-wipe-data");
+                console.log(`Reset emulator and save snapshot ${snapshot}!`);
+                security = security || await AndroidController.getSecurity(emulator);
+                await AndroidController.saveSnapshot(emulator, snapshot, security);
+                await AndroidController.kill(emulator);
+
+                AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE[AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE.indexOf("-snapshot") + 1] = snapshot;
+                if (startEmulatorOptions.options.includes("-no-window")) {
+                    startEmulatorOptions.options = Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE);
+                    startEmulatorOptions.options.push("-no-window");
+                } else {
+                    startEmulatorOptions.options = Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE);
+                }
+
+                // startEmulatorOptions.options.push("-wipe-data")
+                await AndroidController.startEmulator(emulator, startEmulatorOptions);
             }
         }
 
@@ -245,6 +264,9 @@ export class AndroidController {
             logWarn("Trying to boot emulator again!");
             startEmulatorOptions.retries--;
             const newOptions = Array.from(AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE);
+            if (startEmulatorOptions.options.indexOf("-no-window")) {
+                newOptions.push("-no-window")
+            }
             newOptions.push("-wipe-data");
             startEmulatorOptions.options = newOptions;
             emulator = await AndroidController.startEmulator(emulator, startEmulatorOptions);
@@ -734,14 +756,14 @@ export class AndroidController {
         const platforms = AndroidController.parsePlatforms();
         const avdsHomeDir = process.env["ANDROID_AVD_HOME"] || process.env["HOME"] || process.env["HOMEPATH"] || process.env["USERPROFILE:"];
         const emulators = new Array();
-        
+
         if (!existsSync(avdsHomeDir)) {
             logError(`Path to avds storage is not valid '${avdsHomeDir}'! 
             Please provide the correct path using env variable ANDROID_AVD_HOME="path to avds"!
             Usually, when android studio is installed it should be on home/.android/avd`);
             return emulators;
         }
-        
+
         const avdsDirectory = join(avdsHomeDir, "/.android/avd");
         if (!existsSync(avdsDirectory)) {
             logError(`Path to avds storage is not valid '${avdsDirectory}'! 
@@ -1209,7 +1231,7 @@ export class StartEmulatorOptions {
     options?: Array<string>;
     retries?: number;
     logPath?: string;
-    defaultBootTime?: number = +process.env.BOOT_ANDROID_EMULATOR_MAX_TIME 
-    || +AndroidController.DEFAULT_BOOT_TIME 
-    || 1000 
+    defaultBootTime?: number = +process.env.BOOT_ANDROID_EMULATOR_MAX_TIME
+        || +AndroidController.DEFAULT_BOOT_TIME
+        || 1000
 }

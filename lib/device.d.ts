@@ -2,6 +2,7 @@
 import { Status, DeviceType, Platform } from "./enums";
 import { ChildProcess } from "child_process";
 export interface IDevice {
+    options?: any;
     name?: string;
     token?: string;
     type?: DeviceType;
