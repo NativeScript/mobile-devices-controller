@@ -187,6 +187,7 @@ export class AndroidController {
             delete searchQuery.pid;
             delete searchQuery.config;
             delete searchQuery.token;
+            delete searchQuery.options;
             const devices = (await DeviceController.getDevices(searchQuery));
             if (devices && devices.length > 0) {
                 copyIDeviceQuery(devices[0], emulator);
@@ -210,65 +211,32 @@ export class AndroidController {
         let result = (await AndroidController.waitUntilEmulatorBoot(emulator, startEmulatorOptions.defaultBootTime || AndroidController.DEFAULT_BOOT_TIME) === true) ? Status.BOOTED : Status.SHUTDOWN;
 
         let security;
-        let snapshot = AndroidController.DEFAULT_SNAPSHOT_NAME;
-        // Check for snapshot. In case snapshot option is provided but doesn't exists, it will be created.  
-        if (startEmulatorOptions.options && startEmulatorOptions.options.indexOf("-snapshot") >= 0) {
+        //let snapshot = AndroidController.DEFAULT_SNAPSHOT_NAME;
+        if (startEmulatorOptions.options
+            && startEmulatorOptions.options.indexOf("-snapshot") >= 0
+            && result === Status.BOOTED) {
             const snapshotName = startEmulatorOptions.options[startEmulatorOptions.options.indexOf("-snapshot") + 1];
             security = await AndroidController.getSecurity(emulator);
             const availableSnapshots = await AndroidController.getSnapshots(emulator, security);
             if (!availableSnapshots || !availableSnapshots.includes(snapshotName)) {
                 console.log("Available snapshots: ", availableSnapshots);
-                logWarn(`Snapshot "${snapshotName}" is not available. Recreating a clean one with the same name...`);
-                snapshot = snapshotName;
-                await AndroidController.kill(emulator);
-                AndroidController.cleanLockFiles(emulator);
-                const options = AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE;
-                if (startEmulatorOptions.options.includes("-no-window")) {
-                    options.push("-no-window");
-                }
-                emulator = await AndroidController.startEmulatorProcess(emulator, startEmulatorOptions.logPath, options);
-                result = await AndroidController.waitUntilEmulatorBoot(emulator, parseInt(process.env.BOOT_ANDROID_EMULATOR_MAX_TIME) || AndroidController.DEFAULT_BOOT_TIME) === true ? Status.BOOTED : Status.SHUTDOWN;
-                startEmulatorOptions.options.push("-wipe-data");
-                console.log(`Reset emulator and save snapshot ${snapshot}!`);
-                security = security || await AndroidController.getSecurity(emulator);
-                await AndroidController.saveSnapshot(emulator, snapshot, security);
-                await AndroidController.kill(emulator);
-
-                AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE[AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE.indexOf("-snapshot") + 1] = snapshot;
-                if (startEmulatorOptions.options.includes("-no-window")) {
-                    startEmulatorOptions.options = Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE);
-                    startEmulatorOptions.options.push("-no-window");
-                } else {
-                    startEmulatorOptions.options = Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE);
-                }
-
-                // startEmulatorOptions.options.push("-wipe-data")
+                logWarn(`Snapshot "${snapshotName}" is not available. Saving snapshot ...`);
+                await AndroidController.saveSnapshot(emulator, snapshotName, security);
                 await AndroidController.startEmulator(emulator, startEmulatorOptions);
             }
         }
 
-        if (result === Status.BOOTED
-            && startEmulatorOptions.options.indexOf("-wipe-data") >= 0
-            && startEmulatorOptions.options.indexOf("-snapshot") >= 0) {
-            console.log(`Reset emulator and save snapshot ${snapshot}!`);
-            security = security || await AndroidController.getSecurity(emulator);
-            await AndroidController.saveSnapshot(emulator, snapshot, security);
-            await AndroidController.kill(emulator);
-
-            AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE[AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE.indexOf("-snapshot") + 1] = snapshot;
-            startEmulatorOptions.options = Array.from(AndroidController.NO_WIPE_DATA_NO_SNAPSHOT_SAVE);
-            await AndroidController.startEmulator(emulator, startEmulatorOptions);
-        }
         if (!result || result !== Status.BOOTED) {
             await AndroidController.kill(emulator);
             logWarn("Trying to boot emulator again!");
             startEmulatorOptions.retries--;
-            const newOptions = Array.from(AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE);
-            if (startEmulatorOptions.options.indexOf("-no-window")) {
-                newOptions.push("-no-window")
+            if (startEmulatorOptions.retries === 0) {
+                const newOptions = Array.from(AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE);
+                if (startEmulatorOptions.options.indexOf("-no-window")) {
+                    newOptions.push("-no-window");
+                }
+                startEmulatorOptions.options = newOptions;
             }
-            newOptions.push("-wipe-data");
-            startEmulatorOptions.options = newOptions;
             emulator = await AndroidController.startEmulator(emulator, startEmulatorOptions);
         }
 
@@ -904,7 +872,7 @@ export class AndroidController {
             if (isBooted) {
                 isBootedSecondCheck = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop init.svc.bootanim`).toLowerCase().trim() === "stopped";
             }
-            wait(500);
+            wait(1000);
         }
 
         console.log(`Check has "${isBooted ? "passed" : "failed"}".`);

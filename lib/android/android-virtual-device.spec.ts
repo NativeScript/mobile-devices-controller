@@ -46,7 +46,7 @@ describe("android", async function () {
 
         it("start and kill twice emulators from api17 api28  with -wipe-data and then -snapshot", async () => {
             const deviceQueries = [
-                { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
+                { name: "Emulator-Api17-Default", platform: Platform.ANDROID, options: "-no-window" },
                 { name: "Emulator-Api17-Default", platform: Platform.ANDROID },
                 { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
                 { name: "Emulator-Api18-Default", platform: Platform.ANDROID },
@@ -57,21 +57,23 @@ describe("android", async function () {
                 { name: "Emulator-Api22-Default", platform: Platform.ANDROID },
                 { name: "Emulator-Api22-Default", platform: Platform.ANDROID },
                 { name: "Emulator-Api23-Default", platform: Platform.ANDROID },
-                { name: "Emulator-Api23-Default", platform: Platform.ANDROID },
+                { name: "Emulator-Api23-Default", platform: Platform.ANDROID, options: "-no-window" },
                 { name: "Emulator-Api24-Default", platform: Platform.ANDROID },
                 { name: "Emulator-Api24-Default", platform: Platform.ANDROID },
                 { name: "Emulator-Api25-Google", platform: Platform.ANDROID },
                 { name: "Emulator-Api25-Google", platform: Platform.ANDROID },
-                { name: "Emulator-Api26-Google", platform: Platform.ANDROID },
+                { name: "Emulator-Api26-Google", platform: Platform.ANDROID, options: "-no-window" },
                 { name: "Emulator-Api26-Google", platform: Platform.ANDROID },
                 { name: "Emulator-Api27-Google", platform: Platform.ANDROID },
                 { name: "Emulator-Api27-Google", platform: Platform.ANDROID },
                 { name: "Emulator-Api28-Google", platform: Platform.ANDROID },
                 { name: "Emulator-Api28-Google", platform: Platform.ANDROID },
+                { name: "Emulator-Api26-Google", platform: Platform.ANDROID, options: "-no-window" },
                 { name: "Emulator-Api26-Google", platform: Platform.ANDROID },
+                { name: "Emulator-Api26-Google", platform: Platform.ANDROID, options: "-no-window" },
             ]
             for (let index = 0; index < deviceQueries.length; index++) {
-                const startedDevice = await DeviceController.startDevice(deviceQueries[index], undefined, index % 2 === 0 ? false : true);
+                const startedDevice = await DeviceController.startDevice(deviceQueries[index], deviceQueries[index].options, index % 2 !== 0 && !deviceQueries[index].options);
                 let bootedDevices = await DeviceController.getDevices({ status: Status.BOOTED, platform: Platform.ANDROID });
                 console.log("bootedDevices: ", bootedDevices);
                 assert.isTrue(bootedDevices.length === 1, `actual ${bootedDevices.length}, expected 1`);
