@@ -20,6 +20,7 @@ import {
     copyIDeviceQuery
 } from "./utils";
 import { DeviceController } from "./device-controller";
+import { isNumber } from "util";
 
 const OFFSET_DI_PIXELS = 16;
 
@@ -230,8 +231,8 @@ export class AndroidController {
             await AndroidController.kill(emulator);
             logWarn("Trying to boot emulator again!");
             logWarn(`Left retries: ${startEmulatorOptions.retries}!`);
-            startEmulatorOptions.retries--;
-            if (startEmulatorOptions.retries === 0) {
+            isNumber(startEmulatorOptions.retries) && startEmulatorOptions.retries--;
+            if (startEmulatorOptions.retries === 0 || !isNumber(startEmulatorOptions.retries)) {
                 const newOptions = Array.from(AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE);
                 if (startEmulatorOptions.options.indexOf("-no-window")) {
                     newOptions.push("-no-window");
@@ -885,7 +886,6 @@ export class AndroidController {
         const startTime = Date.now();
         while ((Date.now() - startTime) <= timeOutInMilliseconds && (!isBooted || !isBootedSecondCheck)) {
             isBootedMessage = AndroidController.getBootCompletedProp(token);
-            timeOutInMilliseconds = 0;
             isBooted = convertBootCompletedToBool(isBootedMessage);;
             if (isBooted) {
                 isBootedSecondCheck = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop init.svc.bootanim`).toLowerCase().trim() === "stopped";
