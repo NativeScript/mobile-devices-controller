@@ -8,22 +8,49 @@ import {
 import { resolve } from "path";
 import { createInterface } from "readline";
 import { DeviceType, Platform } from "./enums";
-import { isRegExp } from "util";
+import { isRegExp, isNumber } from "util";
+
 
 export const killAllProcessAndRelatedCommand = args => {
     if (!args || args.length === 0) return;
     args = Array.isArray(args) ? args : [args];
     const greps = new Array();
-    args.forEach(e => greps.push(`| grep -ie '${e}'`));
+    args.forEach(e => {
+        if (isNumber(e)) {
+            greps.push(`| grep -w '${e}'`);
+        } else {
+            greps.push(`| grep -ie '${e}'`);
+        }
+    });
     greps.push("| grep -v grep ");
-    greps.push("| awk '{print $2}'");
+
+    const matchingProcess = `/bin/ps aux ${greps.join(" ")}`;
+    let result;
     const killCommand = `/bin/ps aux ${greps.join(" ")} | xargs kill -9`;
     console.log(`Executing "${killCommand}"`);
-    childProcess.execSync(killCommand, {
-        stdio: "pipe",
-        cwd: process.cwd(),
-        env: process.env
-    });
+    try {
+        result = childProcess.execSync(matchingProcess, {
+            stdio: "pipe",
+            cwd: process.cwd(),
+            env: process.env
+        });
+        console.log(`Matching process:`);
+        console.log(result && result.toString());
+    } catch (error) {
+        console.log(`No matching processes to kill!`);
+    }
+
+    greps.push("| awk '{print $2}'");
+    try {
+        result = childProcess.execSync(killCommand, {
+            stdio: "pipe",
+            cwd: process.cwd(),
+            env: process.env
+        });
+        if (result && result.buffer.byteLength > 0) {
+            console.log(`Result: `, result.toString());
+        }
+    } catch (error) { }
 };
 
 export const isProcessAlive = (arg: any) => {
