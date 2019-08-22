@@ -69,9 +69,9 @@ export declare class AndroidController {
     private static runAaptCommand;
     private static startEmulatorProcess;
     private static waitUntilEmulatorBoot;
-    private static getBootAnimProp;
-    private static getBootCompletedProp;
-    private static checkIfEmulatorIsRunning;
+    static getBootAnimProp(token: string): string;
+    static getBootCompletedProp(token: string): string;
+    static checkIfEmulatorIsRunning(token: any, timeOutInMilliseconds?: number): boolean;
     static refreshDeviceStatus(token: string, verbose?: boolean): Promise<Status>;
     static sendEmulatorConsoleCommands(emulator: IDevice, options: EmulatorConsoleOptions): Promise<string>;
     private static parseEmulators;

@@ -862,15 +862,15 @@ export class AndroidController {
         });
     }
 
-    private static getBootAnimProp(token: string) {
+    public static getBootAnimProp(token: string) {
         return executeCommand(`${AndroidController.ADB} -s ${token} shell getprop sys.bootanim`).trim();
     }
 
-    private static getBootCompletedProp(token: string) {
+    public static getBootCompletedProp(token: string) {
         return executeCommand(`${AndroidController.ADB} -s ${token} shell getprop sys.boot_completed`).trim();
     }
 
-    private static checkIfEmulatorIsRunning(token, timeOutInMilliseconds = AndroidController.DEFAULT_BOOT_TIME) {
+    public static checkIfEmulatorIsRunning(token, timeOutInMilliseconds = AndroidController.DEFAULT_BOOT_TIME) {
         console.log(`Check if "${token}" is running.`);
         const convertBootCompletedToBool = (msg) => msg.trim() === "1";
         const convertBootAnimToBool = (msg) => msg.trim() === "stopped";
