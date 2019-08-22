@@ -20,6 +20,7 @@ import {
     copyIDeviceQuery
 } from "./utils";
 import { DeviceController } from "./device-controller";
+import { isNumber } from "util";
 
 const OFFSET_DI_PIXELS = 16;
 
@@ -229,8 +230,9 @@ export class AndroidController {
         if (!result || result !== Status.BOOTED) {
             await AndroidController.kill(emulator);
             logWarn("Trying to boot emulator again!");
-            startEmulatorOptions.retries--;
-            if (startEmulatorOptions.retries === 0) {
+            logWarn(`Left retries: ${startEmulatorOptions.retries}!`);
+            isNumber(startEmulatorOptions.retries) && startEmulatorOptions.retries--;
+            if (startEmulatorOptions.retries === 0 || !isNumber(startEmulatorOptions.retries)) {
                 const newOptions = Array.from(AndroidController.NO_SNAPSHOT_LOAD_NO_SNAPSHOT_SAVE);
                 if (startEmulatorOptions.options.indexOf("-no-window")) {
                     newOptions.push("-no-window");
@@ -847,7 +849,9 @@ export class AndroidController {
             }, timeOutInMilliseconds);
 
             let isBooted = AndroidController.checkIfEmulatorIsRunning(DeviceType.EMULATOR + "-" + device.token, timeOutInMilliseconds);
-            isBooted = AndroidController.checkIfEmulatorIsResponding(device);
+            if (isBooted) {
+                isBooted = AndroidController.checkIfEmulatorIsResponding(device);
+            }
             if (!isBooted) {
                 logError(`${device.token} failed to boot in ${timeOutInMilliseconds} milliseconds`, true);
             } else {
@@ -858,17 +862,31 @@ export class AndroidController {
         });
     }
 
-    private static checkIfEmulatorIsRunning(token, timeOutInMilliseconds = AndroidController.DEFAULT_BOOT_TIME) {
-        console.log(`Check if "${token}" is running.`);
+    public static getBootAnimProp(token: string) {
+        return executeCommand(`${AndroidController.ADB} -s ${token} shell getprop sys.bootanim`).trim();
+    }
 
-        let isBooted = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop sys.boot_completed`).trim() === "1";
+    public static getBootCompletedProp(token: string) {
+        return executeCommand(`${AndroidController.ADB} -s ${token} shell getprop sys.boot_completed`).trim();
+    }
+
+    public static checkIfEmulatorIsRunning(token, timeOutInMilliseconds = AndroidController.DEFAULT_BOOT_TIME) {
+        console.log(`Check if "${token}" is running.`);
+        const convertBootCompletedToBool = (msg) => msg.trim() === "1";
+        const convertBootAnimToBool = (msg) => msg.trim() === "stopped";
+        let isBootedMessage = AndroidController.getBootCompletedProp(token);
+        if (isBootedMessage.includes("closed")) {
+            return false;
+        }
+        let isBooted = convertBootCompletedToBool(isBootedMessage);
         let isBootedSecondCheck = false;
         if (isBooted) {
-            isBootedSecondCheck = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop init.svc.bootanim`).toLowerCase().trim() === "stopped";
+            isBootedSecondCheck = convertBootAnimToBool(AndroidController.getBootAnimProp(token));
         }
         const startTime = Date.now();
         while ((Date.now() - startTime) <= timeOutInMilliseconds && (!isBooted || !isBootedSecondCheck)) {
-            isBooted = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop sys.boot_completed`).trim() === "1";
+            isBootedMessage = AndroidController.getBootCompletedProp(token);
+            isBooted = convertBootCompletedToBool(isBootedMessage);;
             if (isBooted) {
                 isBootedSecondCheck = executeCommand(`${AndroidController.ADB} -s ${token} shell getprop init.svc.bootanim`).toLowerCase().trim() === "stopped";
             }
