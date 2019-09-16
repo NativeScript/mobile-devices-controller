@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { Platform, DeviceType, Status } from "./enums";
 import { IDevice } from "./device";
 export declare class DeviceController {
@@ -21,11 +20,7 @@ export declare class DeviceController {
     static getApplicationId(device: IDevice, appFullPath: any): string;
     static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
         pathToVideo: string;
-        devicePath: string;
-        videoRecordingProcess: import("child_process").ChildProcess;
-    } | {
-        pathToVideo: string;
-        videoRecoringProcess: any;
+        videoRecordingProcess: any;
     };
     static kill(device: IDevice): Promise<void>;
     static killAll(type: DeviceType): void;
