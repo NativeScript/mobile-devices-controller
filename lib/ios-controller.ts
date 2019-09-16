@@ -474,7 +474,7 @@ export class IOSController {
         Object.getOwnPropertyNames(devicesObj["devices"])
             .forEach(level => {
                 deviceObjDevice[level]
-                    .filter(d => d.availability === "(available)")
+                    .filter(d => d["availability"] === "(available)" || !!d["isAvailable"])
                     .forEach(deviceObj => {
                         const status: Status = <Status>deviceObj.state.toLowerCase();
                         const apiLevel = /\d{1,3}(\.|\-)+.+|\d+/.exec(level)[0].replace("-", ".");
@@ -591,16 +591,16 @@ export class IOSController {
     }
 
     public static async recordVideo(device: IDevice, dir, fileName, callback: () => Promise<any>): Promise<any> {
-        const { pathToVideo, videoRecoringProcess } = IOSController.startRecordingVideo(device, dir, fileName);
+        const { pathToVideo, videoRecordingProcess } = IOSController.startRecordingVideo(device, dir, fileName);
 
         return new Promise(async (res, reject) => {
             callback().then((result) => {
-                videoRecoringProcess.kill("SIGINT");
+                videoRecordingProcess.kill("SIGINT");
                 console.log(result);
                 res(pathToVideo);
             }).catch((error) => {
-                if (videoRecoringProcess) {
-                    videoRecoringProcess.kill("SIGINT");
+                if (videoRecordingProcess) {
+                    videoRecordingProcess.kill("SIGINT");
                 }
                 console.log('', error);
                 reject(error);
@@ -613,7 +613,7 @@ export class IOSController {
         if (existsSync(pathToVideo)) {
             unlinkSync(pathToVideo);
         }
-        let videoRecoringProcess;
+        let videoRecordingProcess;
         if (device.type === DeviceType.DEVICE) {
             const p = resolve(__dirname, "../", "bin", "xrecord");
             console.log(`${p} --quicktime --id=${device.token} --out=${pathToVideo} --force`);
@@ -625,7 +625,7 @@ export class IOSController {
                 });
             }
 
-            videoRecoringProcess = startRecording();
+            videoRecordingProcess = startRecording();
             wait(3000);
 
             const checkHasStartedRecording = (timeout, pathToVideo) => {
@@ -643,7 +643,7 @@ export class IOSController {
                     execSync("killall 'QuickTime Player'");
                 } catch (error) { }
                 try {
-                    videoRecoringProcess.kill("SIGTERM");
+                    videoRecordingProcess.kill("SIGTERM");
                 } catch (error) { }
 
                 retryCount--;
@@ -655,7 +655,7 @@ export class IOSController {
                     stdio: 'inherit'
                 });
 
-                videoRecoringProcess = startRecording();
+                videoRecordingProcess = startRecording();
                 awaitOnRecordingStart = true;
             }
 
@@ -664,22 +664,22 @@ export class IOSController {
             if (!existsSync(pathToVideo)) {
                 console.error(`Couldn't start recording process!`);
                 console.error(`Recording couldn't be started! Check device connection and quick time player`);
-                videoRecoringProcess = null;
+                videoRecordingProcess = null;
                 pathToVideo = null;
             }
         } else {
             console.log(`${IOSController.XCRUN} simctl io ${device.token} recordVideo ${pathToVideo}`);
-            videoRecoringProcess = spawn(`xcrun`, ['simctl ', 'io', device.token, 'recordVideo', `'${pathToVideo}'`], {
+            videoRecordingProcess = spawn(`xcrun`, ['simctl ', 'io', device.token, 'recordVideo', `'${pathToVideo}'`], {
                 cwd: process.cwd(),
                 shell: true,
                 stdio: 'inherit'
             });
         }
-        if (videoRecoringProcess) {
-            IOSController.runningProcesses.push(videoRecoringProcess.pid);
+        if (videoRecordingProcess) {
+            IOSController.runningProcesses.push(videoRecordingProcess.pid);
         }
 
-        return { pathToVideo: pathToVideo, videoRecoringProcess: videoRecoringProcess };
+        return { pathToVideo: pathToVideo, videoRecordingProcess: videoRecordingProcess };
     }
 
     // Should find a better way

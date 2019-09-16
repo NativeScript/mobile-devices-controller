@@ -49,7 +49,7 @@ export declare class IOSController {
     static recordVideo(device: IDevice, dir: any, fileName: any, callback: () => Promise<any>): Promise<any>;
     static startRecordingVideo(device: IDevice, dir: any, fileName: any): {
         pathToVideo: string;
-        videoRecoringProcess: any;
+        videoRecordingProcess: any;
     };
     private static checkIfSimulatorIsBooted;
     static getBundleId(deviceType: DeviceType, fullAppName: any): string;
