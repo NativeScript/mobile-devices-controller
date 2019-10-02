@@ -65,6 +65,7 @@ export declare class IOSController {
     private static tailLogsUntil;
     static getLogDir(token: any): string;
     private static loadIOSDevicesScreenInfo;
+    static devicesDisplaysInfos(): IOSDeviceScreenInfo[];
 }
 export interface IOSDeviceScreenInfo {
     deviceType: any;

@@ -357,7 +357,7 @@ export class IOSController {
     * @param bundleId - should be provided when DeviceType.DEVICE else undefined
     * @param appName - should be provided when DeviceType.SIMULATOR else undefined
     **/
-   public static async stopApplication(device: IDevice, bundleId: string, appName: string): Promise<boolean> {
+    public static async stopApplication(device: IDevice, bundleId: string, appName: string): Promise<boolean> {
         const apps = IOSController.getInstalledApplications(device);
         if (apps.some(app => app.includes(bundleId))) {
             if (!device.type) {
@@ -499,7 +499,7 @@ export class IOSController {
                             if (device.name.includes(k)) {
                                 device.config = {
                                     density: v.density,
-                                    offsetPixels: v.actionBarHeight
+                                    offsetPixels: v.actionBarHeight * v.density
                                 };
                             }
                         });
@@ -789,99 +789,120 @@ export class IOSController {
     }
 
     private static loadIOSDevicesScreenInfo() {
-        const devices = new Map<string, IOSDeviceScreenInfo>();
+        IOSController.getDevicesScreenInfo().forEach(d => {
+            IOSController.devicesScreenInfo.set(d.deviceType, d);
+        });
+    }
 
-        // IOSController.devicesScreenInfo.set("iPhone 5", new IOSDeviceScreenInfo("iPhone 5", 640, 1336, 326, 30));
-        // IOSController.devicesScreenInfo.set("iPhone 5C", new IOSDeviceScreenInfo("iPhone 5C", 640, 1336, 326, 30));
-        // IOSController.devicesScreenInfo.set("iPhone 5S", new IOSDeviceScreenInfo("iPhone 5S", 640, 1336, 326, 30));
+    public static devicesDisplaysInfos() {
+        const devicesInfo = new Array<IOSDeviceScreenInfo>(
+            {
+                deviceType: "iPhone 6",
+                width: 750,
+                height: 1334,
+                density: 2,
+                actionBarHeight: 33
+            },
+            {
+                deviceType: "iPhone 6s",
+                width: 750,
+                height: 1334,
+                density: 2,
+                actionBarHeight: 33
+            },
+            {
+                deviceType: "iPhone 6 Plus",
+                width: 1242,
+                height: 2208,
+                density: 3,
+                actionBarHeight: 50
+            },
+            {
+                deviceType: "iPhone 7 Plus",
+                width: 1242,
+                height: 2208,
+                density: 3,
+                actionBarHeight: 50
+            },
+            {
+                deviceType: "iPhone 7",
+                width: 750,
+                height: 1334,
+                density: 2,
+                actionBarHeight: 33
+            },
+            {
+                deviceType: "iPhone 8",
+                height: 1334,
+                width: 750,
+                density: 2,
+                actionBarHeight: 20
+            },
+            {
+                deviceType: "iPhone 8 Plus",
+                width: 1242,
+                height: 2208,
+                density: 3,
+                actionBarHeight: 50
+            },
+            {
+                deviceType: "iPhone X",
+                width: 1242,
+                height: 2208,
+                density: 3,
+                actionBarHeight: 44
+            },
+            {
+                deviceType: "iPhone XR",
+                width: 828,
+                height: 1792,
+                density: 2,
+                actionBarHeight: 44
+            },
+            {
+                deviceType: "iPhone XS",
+                width: 1125,
+                height: 2436,
+                density: 3,
+                actionBarHeight: 44
+            },
+            {
+                deviceType: "iPhone XS Max",
+                width: 1242,
+                height: 2688,
+                density: 3,
+                actionBarHeight: 44
+            },
+            {
+                deviceType: "iPhone 11",
+                width: 828,
+                height: 1792,
+                density: 2,
+                actionBarHeight: 44
+            },
+            {
+                deviceType: "iPhone 11 Pro",
+                width: 375,
+                height: 812,
+                density: 3,
+                actionBarHeight: 44
+            },
+            {
+                deviceType: "iPhone 11",
+                width: 1242,
+                height: 2688,
+                density: 3,
+                actionBarHeight: 44
+            });
 
-        IOSController.devicesScreenInfo.set("iPhone 6", {
-            deviceType: "iPhone 6",
-            width: 750,
-            height: 1334,
-            density: 2,
-            actionBarHeight: 33
+        // longest names at the start
+        const sortedDevices = devicesInfo.sort((a, b) => {
+            return b.deviceType.length - a.deviceType.length;
         });
 
-        IOSController.devicesScreenInfo.set("iPhone 6s", {
-            deviceType: "iPhone 6s",
-            width: 750,
-            height: 1334,
-            density: 2,
-            actionBarHeight: 33
-        });
-
-        IOSController.devicesScreenInfo.set("iPhone 7", {
-            deviceType: "iPhone 7",
-            width: 750,
-            height: 1334,
-            density: 2,
-            actionBarHeight: 33
-        });
-
-        IOSController.devicesScreenInfo.set("iPhone 8", {
-            deviceType: "iPhone 8",
-            width: 750,
-            height: 1334,
-            density: 2,
-            actionBarHeight: 33
-        });
-
-        IOSController.devicesScreenInfo.set("iPhone 6 Plus", {
-            deviceType: "iPhone 6 Plus",
-            width: 1242,
-            height: 2208,
-            density: 3,
-            actionBarHeight: 50
-        });
-
-        IOSController.devicesScreenInfo.set("6 Plus", {
-            deviceType: "iPhone 6 Plus",
-            width: 1242,
-            height: 2208,
-            density: 3,
-            actionBarHeight: 50
-        });
-
-        IOSController.devicesScreenInfo.set("7 Plus", {
-            deviceType: "iPhone 7 Plus",
-            width: 1242,
-            height: 2208,
-            density: 3,
-            actionBarHeight: 50
-        });
-
-        IOSController.devicesScreenInfo.set("8 Plus", {
-            deviceType: "iPhone 8 Plus",
-            width: 1242,
-            height: 2208,
-            density: 3,
-            actionBarHeight: 50
-        });
-
-        IOSController.devicesScreenInfo.set("X", {
-            deviceType: "iPhone X",
-            width: 1242,
-            height: 2208,
-            density: 3,
-            actionBarHeight: 87
-        });
-
-        // IOSController.devicesScreenInfo("Mini 2", new IOSDeviceScreenInfo("Mini 2", 11242, 2208, 401));
-        // IOSController.devicesScreenInfo("Mini 3", new IOSDeviceScreenInfo("Mini 3", 11242, 2208, 401));
-        // IOSController.devicesScreenInfo("Mini 4", new IOSDeviceScreenInfo("Mini 4", 11242, 2208, 401));
-
-        // IOSController.devicesScreenInfo("iPad 3", new IOSDeviceScreenInfo("iPad 3", 1536, 2048, 264));
-        // IOSController.devicesScreenInfo("iPad 4", new IOSDeviceScreenInfo("iPad 4", 1536, 2048, 264));
-
-        // IOSController.devicesScreenInfo("iPad Air", new IOSDeviceScreenInfo("iPad Air", 1536, 2048, 264));
-        // IOSController.devicesScreenInfo.set("iPad Air 2", new IOSDeviceScreenInfo("iPad Air 2", 1536, 2048, 264, 32));
-
-        // IOSController.devicesScreenInfo("9.7-inch Pro", new IOSDeviceScreenInfo("iPad Pro", 1536, 2048, 264));
-        // IOSController.devicesScreenInfo("12.9-inch iPad Pro", new IOSDeviceScreenInfo("12.9-inch iPad Pro", 1536, 2048, 264));
+        return sortedDevices;
     }
 }
-
 
 export interface IOSDeviceScreenInfo {
     // In the context of iOS, the proper term for `density` is `screen scale`. Adhere to `density` for unified API.
