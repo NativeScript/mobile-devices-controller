@@ -27,7 +27,6 @@ export class IOSController {
     private static XCRUN_LISTDEVICES_COMMAND = `${IOSController.SIMCTL} list devices `;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND = "osascript -e 'tell application \"Simulator\" to quit'";
     private static IOS_DEVICE = "ios-device";
-    private static devicesScreenInfo = new Map<string, IOSDeviceScreenInfo>();
 
     public static DEVICE_BOOT_TIME = 180000;
     public static WAIT_DEVICE_TO_RESPONSE = 180000;
@@ -114,9 +113,6 @@ export class IOSController {
     public static runningProcesses = new Array();
 
     public static getAllDevices(verbose: boolean = false): Promise<Map<string, Array<IDevice>>> {
-        if (IOSController.devicesScreenInfo.size === 0) {
-            IOSController.loadIOSDevicesScreenInfo();
-        }
         const devices = IOSController.parseSimulators();
         IOSController.parseRealDevices(devices);
         if (verbose) {
@@ -495,8 +491,8 @@ export class IOSController {
                             platform: Platform.IOS
                         };
 
-                        IOSController.devicesScreenInfo.forEach((v, k, m) => {
-                            if (device.name.includes(k)) {
+                        IOSController.getDeviceScreenInfos().forEach((v) => {
+                            if (device.name.includes(v.deviceType)) {
                                 device.config = {
                                     density: v.density,
                                     offsetPixels: v.actionBarHeight * v.density
@@ -719,14 +715,6 @@ export class IOSController {
         return result.trim();
     }
 
-    public static getDevicesScreenInfo() {
-        if (IOSController.devicesScreenInfo.size == 0) {
-            IOSController.loadIOSDevicesScreenInfo();
-        }
-
-        return IOSController.devicesScreenInfo;
-    }
-
     /**
      * Get path of Info.plist of iOS app under test.
      * Info.plist holds information for app under test.
@@ -788,13 +776,7 @@ export class IOSController {
         return resolve(home, 'Library', 'Logs', 'CoreSimulator', token);
     }
 
-    private static loadIOSDevicesScreenInfo() {
-        IOSController.devicesDisplaysInfos().forEach(d => {
-            IOSController.devicesScreenInfo.set(d.deviceType, d);
-        });
-    }
-
-    public static devicesDisplaysInfos() {
+    public static getDeviceScreenInfos() {
         const devicesInfo = new Array<IOSDeviceScreenInfo>(
             {
                 deviceType: "iPhone 6",

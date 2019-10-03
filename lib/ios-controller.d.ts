@@ -6,7 +6,6 @@ export declare class IOSController {
     private static XCRUN_LISTDEVICES_COMMAND;
     private static OSASCRIPT_QUIT_SIMULATOR_COMMAND;
     private static IOS_DEVICE;
-    private static devicesScreenInfo;
     static DEVICE_BOOT_TIME: number;
     static WAIT_DEVICE_TO_RESPONSE: number;
     static XCRUN_COMMAND_TIMEOUT: number;
@@ -53,7 +52,6 @@ export declare class IOSController {
     };
     private static checkIfSimulatorIsBooted;
     static getBundleId(deviceType: DeviceType, fullAppName: any): string;
-    static getDevicesScreenInfo(): Map<string, IOSDeviceScreenInfo>;
     /**
      * Get path of Info.plist of iOS app under test.
      * Info.plist holds information for app under test.
@@ -64,8 +62,7 @@ export declare class IOSController {
     private static waitForBootInSystemLog;
     private static tailLogsUntil;
     static getLogDir(token: any): string;
-    private static loadIOSDevicesScreenInfo;
-    static devicesDisplaysInfos(): IOSDeviceScreenInfo[];
+    static getDeviceScreenInfos(): IOSDeviceScreenInfo[];
 }
 export interface IOSDeviceScreenInfo {
     deviceType: any;
