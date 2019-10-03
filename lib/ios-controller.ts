@@ -789,7 +789,7 @@ export class IOSController {
     }
 
     private static loadIOSDevicesScreenInfo() {
-        IOSController.getDevicesScreenInfo().forEach(d => {
+        IOSController.devicesDisplaysInfos().forEach(d => {
             IOSController.devicesScreenInfo.set(d.deviceType, d);
         });
     }
