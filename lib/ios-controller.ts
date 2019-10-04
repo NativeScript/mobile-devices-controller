@@ -801,98 +801,98 @@ export class IOSController {
                 width: 750,
                 height: 1334,
                 density: 2,
-                actionBarHeight: 33
+                actionBarHeight: 40
             },
             {
                 deviceType: "iPhone 6s",
                 width: 750,
                 height: 1334,
                 density: 2,
-                actionBarHeight: 33
+                actionBarHeight: 40
             },
             {
                 deviceType: "iPhone 6 Plus",
                 width: 1242,
                 height: 2208,
                 density: 3,
-                actionBarHeight: 50
+                actionBarHeight: 60
             },
             {
                 deviceType: "iPhone 7 Plus",
                 width: 1242,
                 height: 2208,
                 density: 3,
-                actionBarHeight: 50
+                actionBarHeight: 60
             },
             {
                 deviceType: "iPhone 7",
                 width: 750,
                 height: 1334,
                 density: 2,
-                actionBarHeight: 33
+                actionBarHeight: 40
             },
             {
                 deviceType: "iPhone 8",
                 height: 1334,
                 width: 750,
                 density: 2,
-                actionBarHeight: 20
+                actionBarHeight: 40
             },
             {
                 deviceType: "iPhone 8 Plus",
                 width: 1242,
                 height: 2208,
                 density: 3,
-                actionBarHeight: 50
+                actionBarHeight: 60
             },
             {
                 deviceType: "iPhone X",
                 width: 1242,
                 height: 2208,
                 density: 3,
-                actionBarHeight: 44
+                actionBarHeight: 132
             },
             {
                 deviceType: "iPhone XR",
                 width: 828,
                 height: 1792,
                 density: 2,
-                actionBarHeight: 44
+                actionBarHeight: 88
             },
             {
                 deviceType: "iPhone XS",
                 width: 1125,
                 height: 2436,
                 density: 3,
-                actionBarHeight: 44
+                actionBarHeight: 132
             },
             {
                 deviceType: "iPhone XS Max",
                 width: 1242,
                 height: 2688,
                 density: 3,
-                actionBarHeight: 44
+                actionBarHeight: 132
             },
             {
                 deviceType: "iPhone 11",
                 width: 828,
                 height: 1792,
                 density: 2,
-                actionBarHeight: 44
+                actionBarHeight: 88
             },
             {
                 deviceType: "iPhone 11 Pro",
                 width: 375,
                 height: 812,
                 density: 3,
-                actionBarHeight: 44
+                actionBarHeight: 132
             },
             {
                 deviceType: "iPhone 11",
                 width: 1242,
                 height: 2688,
                 density: 3,
-                actionBarHeight: 44
+                actionBarHeight: 132
             });
 
         // longest names at the start
