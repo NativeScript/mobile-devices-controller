@@ -499,7 +499,7 @@ export class IOSController {
                             if (device.name.includes(k)) {
                                 device.config = {
                                     density: v.density,
-                                    offsetPixels: v.actionBarHeight * v.density
+                                    offsetPixels: v.actionBarHeight
                                 };
                             }
                         });
