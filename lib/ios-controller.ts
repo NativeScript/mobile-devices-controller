@@ -886,13 +886,6 @@ export class IOSController {
                 height: 812,
                 density: 3,
                 actionBarHeight: 132
-            },
-            {
-                deviceType: "iPhone 11",
-                width: 1242,
-                height: 2688,
-                density: 3,
-                actionBarHeight: 132
             });
 
         // longest names at the start
